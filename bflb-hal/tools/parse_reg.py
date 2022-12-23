@@ -1,0 +1,325 @@
+# Tool used to parse registers .h difinition files from bouffalo lab official SDK.
+
+
+def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc: str):
+
+    field_bstart = None
+
+    # Fields list for the main structure being constructed.
+    mmio_struct_fields = []
+    if struct_name in STRUCT_FIELDS:
+        mmio_struct_fields.extend(STRUCT_FIELDS[struct_name])
+
+    # Registers to add after the structure definition and
+    # fields of the register currently being built.
+    mmio_regs = {}
+    mmio_reg_fields = None
+
+    for line in header_text.splitlines():
+
+        parts = list(filter(len, line.rstrip().split(" ")))
+        if not len(parts):
+            continue
+
+        if parts[0] == "#define":
+
+            if parts[1].endswith("_OFFSET") and parts[1] != parts[2]:
+
+                field_index = parse_macro_int(parts[2])
+
+                field_name = parts[1][:-7]
+                field_type = "".join(map(lambda s: f"{s[0].upper()}{s[1:].lower()}", field_name.split("_")))
+                
+                if field_name.startswith(prefix):
+                    field_name = field_name[len(prefix):]
+                field_name = field_name.lower()
+                if field_name[0].isnumeric():
+                    field_name = f"_{field_name}"
+
+                mmio_struct_fields.append({
+                    "index": field_index,
+                    "name": field_name,
+                    "type": field_type,
+                })
+
+                mmio_reg_fields = []
+                mmio_regs[field_type] = mmio_reg_fields
+
+                if field_type in REGISTER_FIELDS:
+                    mmio_reg_fields.extend(REGISTER_FIELDS[field_type])
+
+            elif mmio_reg_fields is not None:
+                
+                if parts[1].endswith("_POS"):
+                    field_bstart = parse_macro_int(parts[2])
+                elif parts[1].endswith("_LEN"):
+
+                    if field_bstart is not None:
+
+                        field_bend = field_bstart + parse_macro_int(parts[2])
+                        field_name = parts[1][:-4]
+                        if field_name.startswith(prefix):
+                            field_name = field_name[len(prefix):]
+                        if field_name.startswith("REG_"):
+                            field_name = field_name[4:]
+                        elif field_name.startswith("REG2_"):
+                            field_name = field_name[5:]
+                        field_name = field_name.lower()
+                        
+                        mmio_reg_fields.append({
+                            "start": field_bstart,
+                            "end": field_bend,
+                            "name": field_name,
+                        })
+
+                        field_bstart = None
+
+    mmio_struct_fields.sort(key=lambda field: field["index"])
+
+    with open(out_file, "wt") as out_fp:
+
+        out_fp.write(f"//! {doc}\n\n")
+        
+        out_fp.write("emhal::mmio_struct! {\n")
+        out_fp.write(f"    pub struct {struct_name} {{\n")
+        for field in mmio_struct_fields:
+            if "doc" in field:
+                out_fp.write(f"        /// {field['doc']}\n")
+            out_fp.write(f"        [0x{field['index']:03X}] rw {field['name']}: {field['type']},\n")
+        out_fp.write("    }\n}\n")
+
+        for reg_name, reg_fields in mmio_regs.items():
+            out_fp.write("\nemhal::mmio_reg! {\n")
+            out_fp.write(f"    pub struct {reg_name}: u32 {{\n")
+            for reg_field in reg_fields:
+                if "doc" in reg_field:
+                    out_fp.write(f"        /// {reg_field['doc']}\n")
+                out_fp.write(f"        [{reg_field['start']}..{reg_field['end']}] {reg_field['name']},\n")
+            out_fp.write("    }\n}\n")
+
+
+def parse_macro_int(val: str) -> int:
+    val = val.strip("()U")
+    if val.startswith("0x"):
+        return int(val[2:], base=16)
+    else:
+        return int(val)
+
+
+def process_auto(out_dir: str):
+
+    from os import path
+    import requests
+    
+    for struct_id, struct_info in STRUCTS.items():
+
+        print(f"Downloading and processing {struct_id}... ", end="", flush=True)
+
+        header_url = BASE_URL.format(struct_info["header"])
+        header_res = requests.get(header_url)
+
+        out_file = path.join(out_dir, f"{struct_id}.rs")
+
+        process(header_res.text, out_file, struct_info["name"], struct_info["prefix"], struct_info["doc"])
+
+        print("done")
+
+
+BASE_URL = "https://raw.githubusercontent.com/bouffalolab/bl_mcu_sdk/master/drivers/soc/bl808/std/include/hardware/{}"
+
+STRUCTS = {
+    "mcu_misc": {
+        "header": "mcu_misc_reg.h",
+        "name": "McuMisc",
+        "prefix": "MCU_MISC_",
+        "doc": "MCU E907 register."
+    },
+    "mm_misc": {
+        "header": "mm_misc_reg.h",
+        "name": "MmMisc",
+        "prefix": "MM_MISC_",
+        "doc": "MM C906 register."
+    },
+    "mm_glb": {
+        "header": "mm_glb_reg.h",
+        "name": "MmGlb",
+        "prefix": "MM_GLB_",
+        "doc": "Multimedia global register."
+    },
+    "hbn": {
+        "header": "hbn_reg.h",
+        "name": "Hbn",
+        "prefix": "HBN_",
+        "doc": "Hibernate register."
+    },
+    "glb": {
+        "header": "glb_reg.h",
+        "name": "Glb",
+        "prefix": "GLB_",
+        "doc": "Global register, used for clock management."
+    },
+    "pds": {
+        "header": "pds_reg.h",
+        "name": "Pds",
+        "prefix": "PDS_",
+        "doc": "Power Down Sleep register."
+    },
+    "cci": {
+        "header": "cci_reg.h",
+        "name": "Cci",
+        "prefix": "CCI_",
+        "doc": ""
+    },
+    "sf_ctrl": {
+        "header": "sf_ctrl_reg.h",
+        "name": "SfCtrl",
+        "prefix": "SF_CTRL_",
+        "doc": "Serial Flash."
+    }
+}
+
+STRUCT_FIELDS = {
+    "Pds": [
+        {
+            "index": 0x130,
+            "name": "cpu_mtimer_rtc",
+            "type": "super::CpuRtc",
+            "doc": "Alias for `cpu_core_cfg8`."
+        },
+    ],
+    "MmMisc": [
+        {
+            "index": 0x018,
+            "name": "cpu_mtimer_rtc",
+            "type": "super::CpuRtc",
+            "doc": "Alias for `cpu_rtc`."
+        },
+    ],
+    "McuMisc": [
+        {
+            "index": 0x014,
+            "name": "cpu_mtimer_rtc",
+            "type": "super::CpuRtc",
+            "doc": "Alias for `mcu_e907_rtc`."
+        },
+    ],
+    "Glb": [
+        {
+            "index": 0x810,
+            "name": "wifi_pll_cfg0_",
+            "type": "super::PllCfg0",
+            "doc": "Alias for `wifi_pll_cfg0`."
+        },
+        {
+            "index": 0x814,
+            "name": "wifi_pll_cfg1_",
+            "type": "super::PllCfg1",
+            "doc": "Alias for `wifi_pll_cfg1`."
+        },
+        {
+            "index": 0x790,
+            "name": "mipi_pll_cfg0_",
+            "type": "super::PllCfg0",
+            "doc": "Alias for `mipi_pll_cfg0`."
+        },
+        {
+            "index": 0x794,
+            "name": "mipi_pll_cfg1_",
+            "type": "super::PllCfg1",
+            "doc": "Alias for `mipi_pll_cfg1`."
+        },
+        {
+            "index": 0x7D0,
+            "name": "uhs_pll_cfg0_",
+            "type": "super::PllCfg0",
+            "doc": "Alias for `uhs_pll_cfg0`."
+        },
+        {
+            "index": 0x7D4,
+            "name": "uhs_pll_cfg1_",
+            "type": "super::PllCfg1",
+            "doc": "Alias for `uhs_pll_cfg1`."
+        },
+    ],
+    "Cci": [
+        {
+            "index": 0x750,
+            "name": "audio_pll_cfg0_",
+            "type": "super::PllCfg0",
+            "doc": "Alias for `audio_pll_cfg0`."
+        },
+        {
+            "index": 0x754,
+            "name": "audio_pll_cfg1_",
+            "type": "super::PllCfg1",
+            "doc": "Alias for `audio_pll_cfg1`."
+        },
+        {
+            "index": 0x7D0,
+            "name": "cpu_pll_cfg0_",
+            "type": "super::PllCfg0",
+            "doc": "Alias for `cpu_pll_cfg0`."
+        },
+        {
+            "index": 0x7D4,
+            "name": "cpu_pll_cfg1_",
+            "type": "super::PllCfg1",
+            "doc": "Alias for `cpu_pll_cfg1`."
+        },
+    ]
+}
+
+REGISTER_FIELDS = {
+    "HbnGlb": [
+        {
+            "start": 0,
+            "end": 1,
+            "name": "xclk_sel",
+            "doc": "Alias for `root_clk_sel & 1`."
+        },
+        {
+            "start": 1,
+            "end": 2,
+            "name": "mcu_root_sel",
+            "doc": "Alias for `(root_clk_sel >> 1) & 1`."
+        },
+    ],
+    "HbnRsv3": [
+        {
+            "start": 0,
+            "end": 8,
+            "name": "xtal_type",
+            "doc": "Alias for `rsv3 & 0xFF`."
+        },
+        {
+            "start": 8,
+            "end": 16,
+            "name": "xtal_flag",
+            "doc": "Alias for `(rsv3 >> 8) & 0xFF`."
+        },
+    ],
+    "GlbHwRsv1": [
+        {
+            "start": 0,
+            "end": 31,
+            "name": "flash_id",
+            "doc": "Numeric identifier of the flash."
+        },
+        {
+            "start": 31,
+            "end": 32,
+            "name": "flash_id_valid",
+            "doc": "Indicate if the stored flash identifier is valid."
+        }
+    ]
+}
+
+
+if __name__ == "__main__":
+    
+    import sys
+
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <out_dir>")
+    else:
+        process_auto(sys.argv[1])

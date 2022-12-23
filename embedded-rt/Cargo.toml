@@ -1,0 +1,19 @@
+[package]
+name = "embedded-rt"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[lib]
+name = "emrt"
+
+[features]
+default = []
+bl808_d0 = []
+# bl808_m0 = []
+# bl808_lp = []
+__dev = []
