@@ -1,4 +1,4 @@
-//! Memory mapped module.
+//! Utility for defining memory mapped structures and registers.
 
 
 /// This macro can be used to generate MMIO structures. These structures are
@@ -190,6 +190,18 @@ macro_rules! mmio_reg {
                 self.0 |= (val & mask) << START;
             }
 
+            #[inline(always)]
+            fn fill<const START: u8, const END: u8>(&mut self) {
+                let mask = (1 << (END - START)) - 1;
+                self.0 |= mask << START;
+            }
+        
+            #[inline(always)]
+            fn clear<const START: u8, const END: u8>(&mut self) {
+                let mask = (1 << (END - START)) - 1;
+                self.0 &= !(mask << START);
+            }
+
         }
 
         $crate::mmio_reg! {
@@ -296,6 +308,18 @@ impl<'a, R: Reg, const START: u8, const END: u8> PtrField<'a, R, START, END> {
         self.0.set::<START, END>(val);
     }
 
+    /// Set all bits to 1.
+    #[inline(always)]
+    pub fn fill(self) {
+        self.0.fill::<START, END>();
+    }
+
+    /// Set all bits to 0.
+    #[inline(always)]
+    pub fn clear(self) {
+        self.0.clear::<START, END>();
+    }
+
 }
 
 /// Base trait implemented automatically by all defined registers.
@@ -310,5 +334,11 @@ pub trait Reg: Copy {
 
     /// Set the inner sub value in the given range with the given value.
     fn set<const START: u8, const END: u8>(&mut self, val: Self::Type);
+
+    /// Set all bits to 1.
+    fn fill<const START: u8, const END: u8>(&mut self);
+
+    /// Set all bits to 0.
+    fn clear<const START: u8, const END: u8>(&mut self);
 
 }

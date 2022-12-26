@@ -14,55 +14,44 @@
 //! - VRAM:     Multimedia RAM used by D0 or modules like H264/NPU
 
 pub mod addr;
-pub mod cpu;
+// pub mod cpu;
 pub mod mmio;
 pub mod clock;
-// pub mod flash;
+// pub mod timer;
+pub mod gpio;
 
 
-/// BL808 Chip.
-pub struct Chip {
-    /// The CPU identifier register.
-    pub cpu_id: *const u32,
+/// BL808 chip structure.
+pub struct Bl808;
+
+impl Bl808 {
+    /// The register that stores the CPU identifier.
+    pub const CPU_ID: *const u32 = addr::CORE_ID as _;
     /// The MCU misc registers.
-    pub mcu_misc: mmio::McuMisc,
+    pub const MCU_MISC: mmio::McuMisc = mmio::McuMisc(addr::MCU_MISC_BASE as _);
     /// The MM misc registers.
-    pub mm_misc: mmio::MmMisc,
+    pub const MM_MISC: mmio::MmMisc = mmio::MmMisc(addr::MM_MISC_BASE as _);
     /// The MM global registers.
-    pub mm_glb: mmio::MmGlb,
+    pub const MM_GLB: mmio::MmGlb = mmio::MmGlb(addr::MM_GLB_BASE as _);
     /// The global registers.
-    pub glb: mmio::Glb,
+    pub const GLB: mmio::Glb = mmio::Glb(addr::GLB_BASE as _);
     /// The Power Down Sleep registers.
-    pub pds: mmio::Pds,
+    pub const PDS: mmio::Pds = mmio::Pds(addr::PDS_BASE as _);
     /// The Hibernate registers.
-    pub hbn: mmio::Hbn,
+    pub const HBN: mmio::Hbn = mmio::Hbn(addr::HBN_BASE as _);
     /// The ??? registers.
-    pub cci: mmio::Cci,
+    pub const AON: mmio::Aon = mmio::Aon(addr::AON_BASE as _);
+    /// The ??? registers.
+    pub const CCI: mmio::Cci = mmio::Cci(addr::CCI_BASE as _);
     /// The Serial Flash Control registers.
-    pub sf_ctrl: mmio::SfCtrl,
+    pub const SF_CTRL: mmio::SfCtrl = mmio::SfCtrl(addr::SF_CTRL_BASE as _);
 }
 
-impl Chip {
-
-    /// Build a const chip structure (better to use as a constant)
-    /// with default addresses.
-    pub const fn new() -> Self {
-        Self { 
-            cpu_id: addr::CORE_ID as _,
-            mcu_misc: mmio::McuMisc(addr::MCU_MISC_BASE as _), 
-            mm_misc: mmio::MmMisc(addr::MM_MISC_BASE as _), 
-            mm_glb: mmio::MmGlb(addr::MM_GLB_BASE as _), 
-            glb: mmio::Glb(addr::GLB_BASE as _), 
-            pds: mmio::Pds(addr::PDS_BASE as _), 
-            hbn: mmio::Hbn(addr::HBN_BASE as _), 
-            cci: mmio::Cci(addr::CCI_BASE as _), 
-            sf_ctrl: mmio::SfCtrl(addr::SF_CTRL_BASE as _),
-        }
-    }
+impl Bl808 {
 
     /// Get the CPU id where the current program is running on.
-    pub fn get_cpu_id(&self) -> Result<CpuId, ()> {
-        Ok(match unsafe { self.cpu_id.read_volatile() } {
+    pub fn get_cpu_id() -> Result<CpuId, ()> {
+        Ok(match unsafe { Self::CPU_ID.read_volatile() } {
             0xE9070000 => CpuId::M0,
             0xDEAD5500 => CpuId::D0,
             0xDEADE902 => CpuId::LP,

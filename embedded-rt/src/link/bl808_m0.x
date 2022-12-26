@@ -1,4 +1,4 @@
-/* BL808 D0 */
+/* BL808 M0 */
 
 /* Configure the CPU type */
 OUTPUT_ARCH("riscv")
@@ -15,9 +15,9 @@ ENTRY(_start)
  */
 MEMORY {
     flash      (rx) : ORIGIN = 0x58000000, LENGTH = 32M
-    peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K
-    stack       (w) : ORIGIN = 0x3EFF0000, LENGTH = 4K
-    ram         (w) : ORIGIN = 0x3EFF1000, LENGTH = 64K + 32K - 4K
+    /* peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K */
+    stack       (w) : ORIGIN = 0x62020000, LENGTH = 4K
+    ram         (w) : ORIGIN = 0x62021000, LENGTH = 160K + 64K - 4K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 

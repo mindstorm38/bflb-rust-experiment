@@ -1,5 +1,5 @@
 [package]
-name = "bl-hal"
+name = "bflb-hal"
 version = "0.1.0"
 edition = "2021"
 

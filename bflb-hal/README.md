@@ -17,3 +17,4 @@ The Bouffalo Lab BL808 contains 3 RISC-V CPUs:
 - [RISC-V Asm Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)
 - [SiFive EmbedDev QuickRef](https://five-embeddev.com/quickref/)
 - [Linker scripts](https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html)
+- [BLDevCube tutorial](https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html)

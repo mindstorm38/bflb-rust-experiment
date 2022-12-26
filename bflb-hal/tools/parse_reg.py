@@ -30,6 +30,9 @@ def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc:
                 field_name = parts[1][:-7]
                 field_type = "".join(map(lambda s: f"{s[0].upper()}{s[1:].lower()}", field_name.split("_")))
                 
+                if field_type == struct_name:
+                    field_type = f"{field_type}0"
+
                 if field_name.startswith(prefix):
                     field_name = field_name[len(prefix):]
                 field_name = field_name.lower()
@@ -76,7 +79,7 @@ def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc:
 
     mmio_struct_fields.sort(key=lambda field: field["index"])
 
-    with open(out_file, "wt") as out_fp:
+    with open(out_file, "wt", newline="\n") as out_fp:
 
         out_fp.write(f"//! {doc}\n\n")
         
@@ -175,7 +178,13 @@ STRUCTS = {
         "name": "SfCtrl",
         "prefix": "SF_CTRL_",
         "doc": "Serial Flash."
-    }
+    },
+    "aon": {
+        "header": "aon_reg.h",
+        "name": "Aon",
+        "prefix": "AON_",
+        "doc": ""
+    },
 }
 
 STRUCT_FIELDS = {

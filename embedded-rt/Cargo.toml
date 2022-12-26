@@ -14,6 +14,5 @@ name = "emrt"
 [features]
 default = []
 bl808_d0 = []
-# bl808_m0 = []
-# bl808_lp = []
+bl808_m0 = []
 __dev = []

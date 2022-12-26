@@ -14,6 +14,9 @@
 //! the linker script and used for RAM initialization.
 
 
+#[cfg(rt_chip = "bl808_m0")]
+core::arch::global_asm!(include_str!("bl808_m0.asm"));
+
 #[cfg(rt_chip = "bl808_d0")]
 core::arch::global_asm!(include_str!("bl808_d0.asm"));
 
