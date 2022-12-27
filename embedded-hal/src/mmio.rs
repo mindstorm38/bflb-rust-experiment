@@ -148,7 +148,7 @@ macro_rules! mmio_reg {
     ) => {
 
         $(#[$struct_meta])*
-        #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+        #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
         #[repr(transparent)]
         $vis struct $name(pub $regtype);
         impl $name {
@@ -259,6 +259,17 @@ impl<T> PtrRw<T> {
     #[inline(always)]
     pub fn set(self, val: T) {
         unsafe { self.0.write_volatile(val) }
+    }
+
+    /// Set the value by modifying the default value using a function.
+    #[inline(always)]
+    pub fn set_with<F: FnOnce(&mut T)>(self, func: F)
+    where
+        T: Default
+    {
+        let mut val = T::default();
+        func(&mut val);
+        self.set(val);
     }
 
     /// Modify the value referenced by the pointer using a function.

@@ -4,7 +4,7 @@
 //! - https://github.com/bouffalolab/bl_mcu_sdk/blob/master/drivers/lhal/config/bl808/bl808_memorymap.h
 
 
-pub const CORE_ID: usize                = 0xF0000000;
+pub const CPU_ID_BASE: usize            = 0xF0000000;
 
 // WLSYS
 pub const GLB_BASE: usize               = 0x20000000;

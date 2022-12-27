@@ -1,9 +1,11 @@
 #![no_std]
 #![no_main]
 
-use bflb_hal::bl808::{Bl808, CpuId};
-use bflb_hal::bl808::clock::{Clocks, XtalType, Mux2, UartRefClock};
-use bflb_hal::bl808::gpio::{Gpio, GpioConfig};
+use bflb_hal::bl808::clock::{Clocks, XtalType, Mux2, UartSel};
+use bflb_hal::bl808::uart::{Uart, UartPort, UartConfig};
+use bflb_hal::bl808::gpio::{Pin, PinMode};
+use bflb_hal::bl808::{get_cpu_id, CpuId};
+use core::fmt::Write;
 
 
 emrt::entry! {
@@ -12,7 +14,6 @@ emrt::entry! {
 
 fn main() {
 
-    let gpio = Gpio::new();
     let clocks = Clocks::new();
 
     // CHIP.cpu().halt_d0();
@@ -23,7 +24,7 @@ fn main() {
     clocks.set_xtal_type(XtalType::Mhz40);
     clocks.enable_xtal().unwrap();
     
-    match Bl808::get_cpu_id().unwrap() {
+    match get_cpu_id().unwrap() {
         CpuId::M0 | CpuId::LP => {
             clocks.set_xclk_sel(Mux2::Sel0);    // RC32M
             clocks.set_m0_root_sel(Mux2::Sel0); // xclock
@@ -59,16 +60,39 @@ fn main() {
 
     // PERIPHERAL INIT
 
-    clocks.enable_uart0_clock();
-    clocks.set_uart_clock(true, UartRefClock::Xclock, 1);
-
+    clocks.set_uart_enable(false);
+    clocks.set_d0_cpu_div(1);
+    clocks.set_uart_sel(UartSel::Xclock);
+    clocks.set_uart_enable(true);
+    clocks.set_uart0_enable(true);
+    
     // CONSOLE INIT
 
-    gpio.init(18, &GpioConfig::with_toggle_output());
-    gpio.set_toggle(18);
+    let mut uart0 = Uart::new(UartPort::Port0);
+    let mut pin14 = Pin::new(14);
+    let mut pin15 = Pin::new(15);
+    uart0.attach_tx(&mut pin14);
+    uart0.attach_rx(&mut pin15);
+    uart0.init(&clocks, &UartConfig::new(115200));
 
+    let mut pin18 = Pin::with_mode(18, PinMode::Output);
+    let mut state = false;
     loop {
         
+        if state {
+            pin18.set_high();
+            state = false;
+        } else {
+            pin18.set_low();
+            state = true;
+        }
+
+        write!(uart0, "hello world from m0 in rust\r\n").unwrap();
+
+        for _ in 0..1_000_000 {
+            unsafe { core::arch::asm!("nop"); }
+        }
+
     }
     
     // let mut state = false;
