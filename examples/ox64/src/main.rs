@@ -2,19 +2,24 @@
 #![no_main]
 
 use bflb_hal::bl808::clock::{Clocks, XtalType, Mux2, UartSel};
+use bflb_hal::bl808::time::CoreTimer;
 use bflb_hal::bl808::uart::{Uart, UartPort, UartConfig};
-use bflb_hal::bl808::gpio::{Pin, PinMode};
-use bflb_hal::bl808::{get_cpu_id, CpuId};
+use bflb_hal::bl808::gpio::Pin;
+use bflb_hal::bl808::{get_core_id, CoreId, CoreM0};
+
 use core::fmt::Write;
+use core::time::Duration;
 
 
-emrt::entry! {
-    main();
-}
+bflb_rt::entry!(main);
+
 
 fn main() {
 
-    let clocks = Clocks::new();
+    let core_id = CoreM0;
+
+    let mut clocks = Clocks::new(core_id);
+    let coret = CoreTimer::new(core_id);
 
     // CHIP.cpu().halt_d0();
     // CHIP.cpu().halt_lp();
@@ -24,8 +29,8 @@ fn main() {
     clocks.set_xtal_type(XtalType::Mhz40);
     clocks.enable_xtal().unwrap();
     
-    match get_cpu_id().unwrap() {
-        CpuId::M0 | CpuId::LP => {
+    match get_core_id().unwrap() {
+        CoreId::M0 | CoreId::LP => {
             clocks.set_xclk_sel(Mux2::Sel0);    // RC32M
             clocks.set_m0_root_sel(Mux2::Sel0); // xclock
             clocks.set_m0_cpu_div(1);
@@ -37,7 +42,7 @@ fn main() {
             while !clocks.get_lp_cpu_prot_done() {}
             // timer.sleep_dummy_nop();
         }
-        CpuId::D0 => {
+        CoreId::D0 => {
             clocks.set_mm_xclk_sel(Mux2::Sel0); // RC32M
             clocks.set_d0_root_sel(Mux2::Sel0); // MM xclock
             clocks.set_d0_cpu_div(1);
@@ -49,14 +54,12 @@ fn main() {
 
     // Note that we don't activate any PLL.
 
-    // timer.sleep_arch(Duration::from_micros(75)).unwrap();
-
     clocks.set_xclk_sel(Mux2::Sel1);    // Xtal
     clocks.set_mm_xclk_sel(Mux2::Sel1); // Xtal
 
-    // timer.sleep_dummy_nop();
+    // SETUP CORE TIMER
 
-    clocks.enable_mtimer_clock((clocks.get_mtimer_source_freq().unwrap() / 1_000_000) as u16).unwrap();
+    coret.init(&mut clocks);
 
     // PERIPHERAL INIT
 
@@ -69,45 +72,22 @@ fn main() {
     // CONSOLE INIT
 
     let mut uart0 = Uart::new(UartPort::Port0);
-    let mut pin14 = Pin::new(14);
-    let mut pin15 = Pin::new(15);
-    uart0.attach_tx(&mut pin14);
-    uart0.attach_rx(&mut pin15);
-    uart0.init(&clocks, &UartConfig::new(115200));
+    uart0.attach_tx(Pin::new(14));
+    uart0.attach_rx(Pin::new(15));
+    uart0.init(&UartConfig::new(115200), &clocks);
+    uart0.start();
 
-    let mut pin18 = Pin::with_mode(18, PinMode::Output);
-    let mut state = false;
     loop {
-        
-        if state {
-            pin18.set_high();
-            state = false;
-        } else {
-            pin18.set_low();
-            state = true;
+
+        write!(uart0, "RTC time: {:?}\r\n", coret.time()).unwrap();
+
+        // Simple echo.
+        while let Some(byte) = uart0.read_byte() {
+            uart0.write_byte(byte);
         }
 
-        write!(uart0, "hello world from m0 in rust\r\n").unwrap();
-
-        for _ in 0..1_000_000 {
-            unsafe { core::arch::asm!("nop"); }
-        }
+        coret.sleep(Duration::from_secs(1));
 
     }
-    
-    // let mut state = false;
-
-    // loop {
-
-    //     gpio.set_normal(21, state);
-    //     state = !state;
-
-    //     timer.sleep_arch(Duration::from_millis(10));
-
-    //     for _ in 0..1_000_000_000 {
-    //         timer.sleep_dummy_nop();
-    //     }
-
-    // }
 
 }

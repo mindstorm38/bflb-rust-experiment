@@ -1,7 +1,8 @@
 [workspace]
 members = [
-	"embedded-rt", "embedded-hal",
-	"bflb-hal",
+	"embedded-hal",
+	"riscv-hal",
+	"bflb-hal", "bflb-rt", 
 	"examples/*",
 ]
 

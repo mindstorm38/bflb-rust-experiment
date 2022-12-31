@@ -1,1 +1,0 @@
-//! Defining chip specific registers.

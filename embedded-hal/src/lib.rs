@@ -3,4 +3,3 @@
 #![no_std]
 
 pub mod mmio;
-pub mod io;

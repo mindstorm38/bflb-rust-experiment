@@ -9,6 +9,7 @@
 .equ MSTATUS_FS_DIRTY,      3 << 13
 .equ MTVEC_DIRECT,          0
 .equ MTVEC_VECTORED,        1
+.equ MTVEC_CLIC,            3
 
 .attribute arch, "rv32imafc"
 
@@ -31,28 +32,11 @@ _start:
 .option pop
 
     # Disable interruptions for startup.
-    li t0, MSTATUS_MIE | MSTATUS_SIE
-    csrc mstatus, t0
-
-    # mapbaddr
-    # Clear PLIC ?
-    # csrr t1, 0xFC1
-    # li   t2, 0x00200004
-    # add  t2, t2, t1
-    # lw   t3, 0(t2)
-    # sw   t3, 0(t2)
-    # li   t4, 0x00201004
-    # add  t2, t4, t1
-    # lw   t3, 0(t2)
-    # sw   t3, 0(t2)
+    csrci mstatus, MSTATUS_MIE | MSTATUS_SIE
  
     # Disable all interrupts and clear pending ones.
     csrw mie, zero
     csrw mip, zero
-
-    # Reset cycles and retired instructions counters.
-    csrw mcycle, zero
-    csrw minstret, zero
 
     # Initialize floating point unit.
     li t0, MSTATUS_FS
@@ -61,22 +45,20 @@ _start:
     csrs mstatus, t0
 
     # Initialize the trap-vector base address.
-    # Use "direct" mode.
+    # Use CLIC mode.
     la t0, _mtrap_vector
-    ori t0, t0, MTVEC_DIRECT
+    ori t0, t0, MTVEC_CLIC
     csrw mtvec, t0
+
+    # Intentionnaly not using mtvt because we'll
+    # only allow unvectored interrupts.
+    csrwi 0x307, 0
 
     # Initialize stack pointer.
     la sp, _ld_stack_top
 
     # The first function will copy runtime variables to RAM.
     jal asm_ram_load
-
-    # Before entering main, we re-enable interrupts.
-    # We also enable machine timer/external interrupts.
-    csrsi mstatus, MSTATUS_MIE
-    li t0, (1 << 7) | (1 << 11)
-    csrs mie, t0
 
     # Enter the entry function.
     jal asm_entry
@@ -87,8 +69,8 @@ _start:
     j .exit
 
 
-# Aligned to 4 bytes because of 'mtvec'.
-.align 4
+# Aligned to 64 bytes because of 'mtvec' with CLIC mode.
+.align 6
 .global _mtrap_vector
 _mtrap_vector:
 

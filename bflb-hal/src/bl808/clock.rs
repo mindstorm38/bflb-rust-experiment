@@ -14,77 +14,79 @@
 use emhal::mmio::PtrRw;
 
 use super::mmio::{CpuRtc, MCU_MISC, MM_MISC, PDS, HBN, AON, GLB, MM_GLB, CCI};
-use super::{get_cpu_id, CpuId};
+use super::{CoreId, AsCoreId};
 
 
-/// Clocks management for BL808.
-pub struct Clocks {}
+/// Clocks controller for BL808.
+pub struct Clocks<C> {
+    core_id: C,
+}
 
-impl Clocks {
+impl<C: AsCoreId> Clocks<C> {
 
-    pub const fn new() -> Self {
-        Self {}
+    /// Create a new clocks controller given a CPU id.
+    pub fn new(core_id: C) -> Self {
+        Self {
+            core_id,
+        }
     }
 
 }
 
 
 /// High-level mtimer methods.
-impl Clocks {
+impl<C: AsCoreId> Clocks<C> {
 
     /// Get the machine timer RTC register for the current core.
-    pub fn get_mtimer_rtc_reg(&self) -> Result<PtrRw<CpuRtc>, ()> {
-        Ok(match get_cpu_id()? {
-            CpuId::M0 => MCU_MISC.cpu_mtimer_rtc(),
-            CpuId::D0 => MM_MISC.cpu_mtimer_rtc(),
-            CpuId::LP => PDS.cpu_mtimer_rtc(),
-        })
+    pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {
+        match self.core_id.as_core_id() {
+            CoreId::M0 => MCU_MISC.cpu_mtimer_rtc(),
+            CoreId::D0 => MM_MISC.cpu_mtimer_rtc(),
+            CoreId::LP => PDS.cpu_mtimer_rtc(),
+        }
     }
 
     /// Enable and configure the machine timer clock.
-    #[inline(never)]
-    pub fn enable_mtimer_clock(&self, div: u16) -> Result<(), ()> {
+    pub fn enable_mtimer_clock(&self, div: u32) {
         debug_assert_ne!(div, 0, "divider must be nonzero");
-        let rtc = self.get_mtimer_rtc_reg()?;
+        let rtc = self.get_mtimer_rtc_reg();
         rtc.modify(|reg| reg.enable().set(0));
-        rtc.modify(|reg| reg.divider().set(div as u32 - 1));
+        rtc.modify(|reg| reg.divider().set(div - 1));
         rtc.modify(|reg| reg.enable().set(1));
-        Ok(())
     }
 
     /// Disable the machine timer clock.
-    pub fn disable_mtimer_clock(&self) -> Result<(), ()> {
-        let rtc = self.get_mtimer_rtc_reg()?;
+    pub fn disable_mtimer_clock(&self) {
+        let rtc = self.get_mtimer_rtc_reg();
         rtc.modify(|reg| reg.enable().set(0));
-        Ok(())
+    }
+
+    /// Get machine timer divider.
+    pub fn get_mtimer_div(&self) -> u32 {
+        self.get_mtimer_rtc_reg().get().divider().get() + 1
     }
 
     /// Get the source frequency of the machine timer clock, 
     /// without RTC divider.
     /// To get the real frequency of the machine timer, use [`get_mtimer_freq`].
-    pub fn get_mtimer_source_freq(&self) -> Result<u32, ()> {
-        Ok(match get_cpu_id()? {
-            CpuId::M0 => self.get_m0_cpu_freq(),
-            CpuId::D0 => todo!(),
-            CpuId::LP => todo!(),
-        })
+    pub fn get_mtimer_source_freq(&self) -> u32 {
+        match self.core_id.as_core_id() {
+            CoreId::M0 => self.get_m0_cpu_freq(),
+            CoreId::D0 => todo!(),
+            CoreId::LP => todo!(),
+        }
     }
 
     /// Get the real frequency of the machine timer clock.
-    pub fn get_mtimer_freq(&self) -> Result<u32, ()> {
-        let (rtc, freq) = match get_cpu_id()? {
-            CpuId::M0 => (MCU_MISC.cpu_mtimer_rtc(), self.get_m0_cpu_freq()),
-            CpuId::D0 => todo!(),
-            CpuId::LP => todo!(),
-        };
-        Ok(freq / (rtc.get().divider().get() + 1))
+    pub fn get_mtimer_freq(&self) -> u32 {
+        self.get_mtimer_source_freq() / self.get_mtimer_div()
     }
 
 }
 
 
 /// Methods to configure the crystal clock (external clock).
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the soc crystal type.
     /// 
@@ -157,7 +159,7 @@ impl Clocks {
 
 
 /// Methods to configure `xclk`.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the selector for the main xclock freq.
     pub fn get_xclk_sel(&self) -> Mux2 {
@@ -183,7 +185,7 @@ impl Clocks {
 
 
 /// Methods for F32k clock.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the selector the F32k clock.
     pub fn get_f32k_sel(&self) -> Mux4 {
@@ -214,7 +216,7 @@ impl Clocks {
 
 
 /// Methods for M0 (part of MCU) clocks.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the selector for the PLL MCU freq.
     pub fn get_m0_pll_sel(&self) -> Mux4 {
@@ -298,7 +300,7 @@ impl Clocks {
 
 
 /// Methods for MM clocks.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the selector for MM xclock.
     pub fn get_mm_xclk_sel(&self) -> Mux2 {
@@ -377,7 +379,7 @@ impl Clocks {
 
 
 /// Methods for D0 (part of MM) clocks.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the selector for D0 PLL clock.
     pub fn get_d0_pll_sel(&self) -> Mux4 {
@@ -461,7 +463,7 @@ impl Clocks {
 
 
 /// Methods for LP clocks.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Get the divider for LP CPU clock.
     pub fn get_lp_cpu_div(&self) -> u32 {
@@ -495,7 +497,7 @@ impl Clocks {
 
 
 /// Methods for UART peripherals.
-impl Clocks {
+impl<C> Clocks<C> {
 
     pub fn set_uart0_enable(&self, enable: bool) {
         GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart0().set(enable as _));
@@ -570,7 +572,7 @@ impl Clocks {
 
 
 /// Methods for PLL sources.
-impl Clocks {
+impl<C> Clocks<C> {
 
     /// Set selector of the given PLL clock source.
     pub fn set_pll_sel(&self, typ: PllType, ref_clock: PllRefClock) {

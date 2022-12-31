@@ -1,5 +1,5 @@
 [package]
-name = "embedded-rt"
+name = "bflb-rt"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
@@ -8,11 +8,9 @@ build = "build.rs"
 
 [dependencies]
 
-[lib]
-name = "emrt"
-
 [features]
-default = []
+default = ["panic"]
+panic = []  # To implement a default panic handler.
 bl808_d0 = []
 bl808_m0 = []
 __dev = []

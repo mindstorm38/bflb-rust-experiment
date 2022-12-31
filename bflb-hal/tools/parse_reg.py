@@ -118,8 +118,7 @@ def process_auto(out_dir: str):
 
         print(f"Downloading and processing {struct_id}... ", end="", flush=True)
 
-        header_url = BASE_URL.format(struct_info["header"])
-        header_res = requests.get(header_url)
+        header_res = requests.get(struct_info["header"])
 
         out_file = path.join(out_dir, f"{struct_id}.rs")
 
@@ -128,63 +127,69 @@ def process_auto(out_dir: str):
         print("done")
 
 
-BASE_URL = "https://raw.githubusercontent.com/bouffalolab/bl_mcu_sdk/master/drivers/soc/bl808/std/include/hardware/{}"
+BASE_BFLB_URL = "https://raw.githubusercontent.com/bouffalolab/bl_mcu_sdk/master/drivers/soc/bl808/std/include/hardware/"
 
 STRUCTS = {
     "mcu_misc": {
-        "header": "mcu_misc_reg.h",
+        "header": f"{BASE_BFLB_URL}mcu_misc_reg.h",
         "name": "McuMisc",
         "prefix": "MCU_MISC_",
         "doc": "MCU E907 register."
     },
     "mm_misc": {
-        "header": "mm_misc_reg.h",
+        "header": f"{BASE_BFLB_URL}mm_misc_reg.h",
         "name": "MmMisc",
         "prefix": "MM_MISC_",
         "doc": "MM C906 register."
     },
     "mm_glb": {
-        "header": "mm_glb_reg.h",
+        "header": f"{BASE_BFLB_URL}mm_glb_reg.h",
         "name": "MmGlb",
         "prefix": "MM_GLB_",
         "doc": "Multimedia global register."
     },
     "hbn": {
-        "header": "hbn_reg.h",
+        "header": f"{BASE_BFLB_URL}hbn_reg.h",
         "name": "Hbn",
         "prefix": "HBN_",
         "doc": "Hibernate register."
     },
     "glb": {
-        "header": "glb_reg.h",
+        "header": f"{BASE_BFLB_URL}glb_reg.h",
         "name": "Glb",
         "prefix": "GLB_",
         "doc": "Global register, used for clock management."
     },
     "pds": {
-        "header": "pds_reg.h",
+        "header": f"{BASE_BFLB_URL}pds_reg.h",
         "name": "Pds",
         "prefix": "PDS_",
         "doc": "Power Down Sleep register."
     },
     "cci": {
-        "header": "cci_reg.h",
+        "header": f"{BASE_BFLB_URL}cci_reg.h",
         "name": "Cci",
         "prefix": "CCI_",
         "doc": ""
     },
     "sf_ctrl": {
-        "header": "sf_ctrl_reg.h",
+        "header": f"{BASE_BFLB_URL}sf_ctrl_reg.h",
         "name": "SfCtrl",
         "prefix": "SF_CTRL_",
         "doc": "Serial Flash."
     },
     "aon": {
-        "header": "aon_reg.h",
+        "header": f"{BASE_BFLB_URL}aon_reg.h",
         "name": "Aon",
         "prefix": "AON_",
         "doc": ""
     },
+    "vdo": {
+        "header": f"https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/bl_mm/mm_drv/mm_reg/vdo_reg.h",
+        "name": "Vdo",
+        "prefix": "VDO_",
+        "doc": "Video/H264 registers."
+    }
 }
 
 STRUCT_FIELDS = {

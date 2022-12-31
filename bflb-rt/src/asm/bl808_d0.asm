@@ -9,6 +9,7 @@
 .equ MSTATUS_FS_DIRTY,      3 << 13
 .equ MTVEC_DIRECT,          0
 .equ MTVEC_VECTORED,        1
+.equ MTVEC_CLIC,            3
 
 .attribute arch, "rv64imafcv"
 

@@ -6,6 +6,8 @@
 //! 
 //! Many modules are generated from C headers by 'tools/parse_reg.py'.
 
+
+// Automatically implemented (see tools/parse_reg.py).
 pub mod mcu_misc;
 pub mod mm_misc;
 pub mod mm_glb;
@@ -15,6 +17,7 @@ pub mod hbn;
 pub mod cci;
 pub mod sf_ctrl;
 pub mod aon;
+pub mod vdo;
 pub use mcu_misc::McuMisc;
 pub use mm_misc::MmMisc;
 pub use mm_glb::MmGlb;
@@ -24,17 +27,25 @@ pub use hbn::Hbn;
 pub use cci::Cci;
 pub use sf_ctrl::SfCtrl;
 pub use aon::Aon;
+pub use vdo::Vdo;
 
 // Manually implemented.
 pub mod uart;
 pub use uart::Uart;
+pub mod cam;
+pub use cam::{Cam, CamFront};
+pub mod mjpeg;
+pub use mjpeg::Mjpeg;
+
+// Externally implemented.
+use riscv_hal::clic::Clic;
 
 
 use super::addr;
 
 
 /// The register that stores the CPU identifier.
-pub const CPU_ID: CpuId     = CpuId(addr::CPU_ID_BASE as _);
+pub const CORE_ID: CoreId     = CoreId(addr::CPU_ID_BASE as _);
 /// The MCU misc registers.
 pub const MCU_MISC: McuMisc = McuMisc(addr::MCU_MISC_BASE as _);
 /// The MM misc registers.
@@ -58,13 +69,34 @@ pub const UART0: Uart       = Uart(addr::UART0_BASE as _);
 pub const UART1: Uart       = Uart(addr::UART1_BASE as _);
 pub const UART2: Uart       = Uart(addr::UART2_BASE as _);
 
+pub const CAM_FRONT: CamFront   = CamFront(addr::ISP_MISC_BASE as _);
+pub const CAM0: Cam             = Cam(addr::DVP0_BASE as _);
+pub const CAM1: Cam             = Cam(addr::DVP1_BASE as _);
+pub const CAM2: Cam             = Cam(addr::DVP2_BASE as _);
+pub const CAM3: Cam             = Cam(addr::DVP3_BASE as _);
+pub const CAM4: Cam             = Cam(addr::DVP4_BASE as _);
+pub const CAM5: Cam             = Cam(addr::DVP5_BASE as _);
+pub const CAM6: Cam             = Cam(addr::DVP6_BASE as _);
+pub const CAM7: Cam             = Cam(addr::DVP7_BASE as _);
+
+pub const MJPEG: Mjpeg          = Mjpeg(addr::MJPEG_DEC_BASE as _);
+pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _); 
+
+/// Core-Local Interrupt Controller registers.
+/// 
+/// Each core has particular CLIC configuration:
+/// - M0: 96 interrupts, 4 bits priority
+/// - D0: No CLIC (TODO: Check that)
+/// - LP: 32 interrupts
+pub const CLIC: Clic        = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
+
 
 emhal::mmio_struct! {
 
     /// The CPU identification structure, contains only one read-only
     /// field containing the numeric ID.
-    pub struct CpuId {
-        [0] r cpu_id: u32,
+    pub struct CoreId {
+        [0] r core_id: u32,
     }
 
 }

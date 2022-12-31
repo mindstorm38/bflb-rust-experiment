@@ -108,7 +108,7 @@ macro_rules! __mmio_struct_field {
             unsafe { $crate::mmio::PtrW(self.0.add($field_index) as _) }
         }
     };
-    (s, $field_index:literal, $field_name:ident, $field_type:ty, $($field_meta:meta),*) => {
+    (sub, $field_index:literal, $field_name:ident, $field_type:ty, $($field_meta:meta),*) => {
         $(#[$field_meta])*
         #[must_use]
         #[inline(always)]
@@ -159,10 +159,6 @@ macro_rules! mmio_reg {
             }
 
             $(
-                /// Get an "artificial" pointer to this register's field. Read the documentation
-                /// of [`PtrField`] to understand why this pointer is "artificial" and how to use
-                /// it.
-                /// 
                 $(#[$field_meta])*
                 #[must_use]
                 #[inline]

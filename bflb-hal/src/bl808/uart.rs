@@ -6,18 +6,20 @@ use super::clock::Clocks;
 use super::mmio::{self, GLB, UART0, UART1, UART2};
 use super::mmio::uart::UartBitPrd;
 
-use emhal::io::{Read, Write};
 use core::fmt;
 
 
 /// Definition of a UART port.
-pub struct Uart<'a> {
+/// 
+/// The UART port is stopped and pins are detached automatically
+/// when this object is dropped.
+pub struct Uart {
     port: UartPort,
-    tx_pin: Option<&'a mut Pin>,
-    rx_pin: Option<&'a mut Pin>,
+    tx_pin: Option<Pin>,
+    rx_pin: Option<Pin>,
 }
 
-impl<'a> Uart<'a> {
+impl Uart {
 
     /// Create an uninitialized UART port.
     /// 
@@ -31,8 +33,8 @@ impl<'a> Uart<'a> {
         }
     }
 
-    /// Internal function to initialize a pin to a specific UART function.
-    fn set_pin(&mut self, pin: &mut Pin, func: UartFunction) {
+    /// Internal function to attach a pin to a specific UART function.
+    fn attach_pin(&mut self, pin: &mut Pin, func: UartFunction) {
 
         debug_assert!(pin.number() < 12, "uart pin number must be between 0 and 11 included");
 
@@ -55,9 +57,24 @@ impl<'a> Uart<'a> {
         
     }
 
+    /// Internal fucntion to detach a pin from this UART.
+    fn detach_pin(&mut self, pin: &mut Pin) {
+        
+        let reg = pin.number() / 8;
+        let field = (pin.number() % 8) * 4;
+        
+        let mut cfg = GLB.uart_cfg1();
+        cfg.0 = unsafe { cfg.0.add(reg as usize) };
+
+        cfg.modify(|reg| {
+            reg.0 &= !(0xF << field);
+        });
+
+    }
+
     /// Attach a GPIO pin as UART TX on this port.
-    pub fn attach_tx(&mut self, pin: &'a mut Pin) {
-        self.set_pin(pin, match self.port {
+    pub fn attach_tx(&mut self, mut pin: Pin) {
+        self.attach_pin(&mut pin, match self.port {
             UartPort::Port0 => UartFunction::Uart0Tx,
             UartPort::Port1 => UartFunction::Uart1Tx,
             UartPort::Port2 => UartFunction::Uart2Tx,
@@ -66,13 +83,27 @@ impl<'a> Uart<'a> {
     }
 
     /// Attach a GPIO pin as UART RX on this port.
-    pub fn attach_rx(&mut self, pin: &'a mut Pin) {
-        self.set_pin(pin, match self.port {
+    pub fn attach_rx(&mut self, mut pin: Pin) {
+        self.attach_pin(&mut pin, match self.port {
             UartPort::Port0 => UartFunction::Uart0Rx,
             UartPort::Port1 => UartFunction::Uart1Rx,
             UartPort::Port2 => UartFunction::Uart2Rx,
         });
         self.rx_pin = Some(pin);
+    }
+
+    /// Detach the GPIO pin. Returning None if no pin was attached.
+    pub fn detach_tx(&mut self) -> Option<Pin> {
+        let mut pin = self.tx_pin.take()?;
+        self.detach_pin(&mut pin);
+        Some(pin)
+    }
+
+    /// Detach the GPIO pin. Returning None if no pin was attached.
+    pub fn detach_rx(&mut self) -> Option<Pin> {
+        let mut pin = self.rx_pin.take()?;
+        self.detach_pin(&mut pin);
+        Some(pin)
     }
 
     /// Internal method to get the right UART MMIO structure depending 
@@ -85,7 +116,14 @@ impl<'a> Uart<'a> {
         }
     }
 
-    pub fn init(&mut self, clocks: &Clocks, config: &UartConfig) {
+    /// Configure this UART port using the given configuration.
+    /// 
+    /// This can be called multiple time if the pin attachment is changed.
+    /// 
+    /// *Note that* you must give the clocks handle that will be used
+    /// to query the real UART frequency, in order to properly configure
+    /// the baudrate.
+    pub fn init<C>(&mut self, config: &UartConfig, clocks: &Clocks<C>) {
 
         // Calculate the baudrate divisor from UART frequency.
         let uart_freq = clocks.get_uart_freq();
@@ -169,6 +207,14 @@ impl<'a> Uart<'a> {
 
         mmio.int_mask().set(0xFFFFFFFF);
 
+    }
+
+    /// Start this UART port. It should have been previously configured
+    /// using [``].
+    pub fn start(&mut self) {
+        
+        let mmio = self.get_mmio();
+
         // Enable TX if a pin is attached.
         if self.tx_pin.is_some() {
             mmio.utx_cfg().modify(|reg| reg.en().fill());
@@ -179,6 +225,13 @@ impl<'a> Uart<'a> {
             mmio.urx_cfg().modify(|reg| reg.en().fill());
         }
 
+    }
+
+    /// Stop this UART port.
+    pub fn stop(&mut self) {
+        let mmio = self.get_mmio();
+        mmio.utx_cfg().modify(|reg| reg.en().clear());
+        mmio.urx_cfg().modify(|reg| reg.en().clear());
     }
 
     /// Simplest function to read a single byte, if available.
@@ -198,6 +251,14 @@ impl<'a> Uart<'a> {
         mmio.fifo_wdata().set(byte);
     }
 
+}
+
+impl Drop for Uart {
+    fn drop(&mut self) {
+        self.stop();
+        self.detach_tx();
+        self.detach_rx();
+    }
 }
 
 
@@ -297,37 +358,11 @@ enum UartFunction {
 }
 
 
-impl Read for Uart<'_> {
-
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
-        let mut len = 0;
-        for byte in buf {
-            if let Some(read_byte) = self.read_byte() {
-                *byte = read_byte;
-                len += 1;
-            } else {
-                break;
-            }
-        }
-        Ok(len)
-    }
-
-}
-
-impl Write for Uart<'_> {
-
-    fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
-        for &byte in buf {
+impl fmt::Write for Uart {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for &byte in s.as_bytes() {
             self.write_byte(byte);
         }
-        Ok(buf.len())
-    }
-
-}
-
-impl fmt::Write for Uart<'_> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let _ = self.write(s.as_bytes());
         Ok(())
     }
 }

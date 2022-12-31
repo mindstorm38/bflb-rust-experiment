@@ -96,21 +96,33 @@ pub const OSD_DRAW_HIGH_OFFSET: usize   = 0x504;
 pub const MIPI_BASE: usize              = 0x3001a000;
 pub const DBI_BASE: usize               = 0x3001b000;
 pub const DSI_BASE: usize               = 0x3001a100;
-pub const CSI_BASE: usize               = 0x3001a000;
 
 // CODEC_SUBSYS
 pub const CODEC_MISC_BASE: usize        = 0x30020000;
-pub const MJPEG_BASE: usize             = 0x30021000;
+pub const MJPEG_ENC_BASE: usize         = 0x30021000;
 pub const VIDEO_BASE: usize             = 0x30022000;
 pub const MJPEG_DEC_BASE: usize         = 0x30023000;
 pub const BL_CNN_BASE: usize            = 0x30024000;
+pub const CSI_BASE: usize               = 0x3001A000;
+pub const NPU_BASE: usize               = 0x30024000;
 
 pub const HBN_RAM_BASE: usize           = 0x20010000;
 
 pub const RF_BASE: usize                = 0x20001000;
+
 
 // FLASH
 pub const FLASH1_XIP_BASE: usize        = 0x58000000;
 pub const FLASH1_XIP_END: usize         = 0x5C000000;
 pub const FLASH2_XIP_BASE: usize        = 0x5C000000;
 pub const FLASH2_XIP_END: usize         = 0x60000000;
+
+// pSRAM
+pub const PSRAM_BASE: usize             = 0x54000000;
+
+// RISC-V T-HEAD
+pub const T_HEAD_RV32_CLIC_BASE: usize      = 0xE0800000;
+pub const T_HEAD_RV32_MTIMECMP_BASE: usize  = 0xE0004000;
+pub const T_HEAD_RV32_MTIME_BASE: usize     = 0xE000BFF8;
+
+pub const T_HEAD_PLIC_BASE: usize           = 0xE0000000;

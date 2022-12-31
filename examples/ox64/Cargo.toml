@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-embedded-rt = { path = "../../embedded-rt", version="0.1", features = ["bl808_m0"] }
+bflb-rt = { path = "../../bflb-rt", version="0.1", features = ["bl808_m0"] }
 bflb-hal = { path = "../../bflb-hal", version="0.1" }
