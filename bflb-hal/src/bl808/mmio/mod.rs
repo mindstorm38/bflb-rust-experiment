@@ -18,6 +18,7 @@ pub mod cci;
 pub mod sf_ctrl;
 pub mod aon;
 pub mod vdo;
+pub mod csi;
 pub use mcu_misc::McuMisc;
 pub use mm_misc::MmMisc;
 pub use mm_glb::MmGlb;
@@ -28,6 +29,7 @@ pub use cci::Cci;
 pub use sf_ctrl::SfCtrl;
 pub use aon::Aon;
 pub use vdo::Vdo;
+pub use csi::Csi;
 
 // Manually implemented.
 pub mod uart;
@@ -65,10 +67,12 @@ pub const CCI: Cci          = Cci(addr::CCI_BASE as _);
 /// The Serial Flash Control registers.
 pub const SF_CTRL: SfCtrl   = SfCtrl(addr::SF_CTRL_BASE as _);
 
+// UART
 pub const UART0: Uart       = Uart(addr::UART0_BASE as _);
 pub const UART1: Uart       = Uart(addr::UART1_BASE as _);
 pub const UART2: Uart       = Uart(addr::UART2_BASE as _);
 
+// CAMERA
 pub const CAM_FRONT: CamFront   = CamFront(addr::ISP_MISC_BASE as _);
 pub const CAM0: Cam             = Cam(addr::DVP0_BASE as _);
 pub const CAM1: Cam             = Cam(addr::DVP1_BASE as _);
@@ -79,6 +83,10 @@ pub const CAM5: Cam             = Cam(addr::DVP5_BASE as _);
 pub const CAM6: Cam             = Cam(addr::DVP6_BASE as _);
 pub const CAM7: Cam             = Cam(addr::DVP7_BASE as _);
 
+// MIPI
+pub const CSI: Csi              = Csi(addr::CSI_BASE as _);
+
+// VIDEO
 pub const MJPEG: Mjpeg          = Mjpeg(addr::MJPEG_DEC_BASE as _);
 pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _); 
 

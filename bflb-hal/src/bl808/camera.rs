@@ -1,6 +1,6 @@
 //! Camera management on BL808.
 
-use super::mmio::{self, Cam, CAM_FRONT};
+use super::mmio::{self, Cam, CAM_FRONT, CSI};
 use super::clock::Clocks;
 use super::AsCoreId;
 
@@ -423,4 +423,89 @@ pub enum OutputFormat {
     Rgb888ToRgb565,
     Rgb888ToBgr565,
     Rgb888ToRgba8888,
+}
+
+
+/// CSI controller to use for cameras.
+pub struct Csi {
+    /// Current configured lane count.
+    lane_count: Option<CsiLaneCount>,
+}
+
+impl Csi {
+
+    /// Create a new CSI controller.
+    /// 
+    /// **You must** ensure that only a single instance of this structure
+    /// exists at the same time.
+    pub fn new() -> Self {
+        Self {
+            lane_count: None,
+        }
+    }
+
+    /// Initialize and configure the MIPI CSI module.
+    pub fn init(&mut self, config: &CsiConfig) {
+
+        self.lane_count = Some(config.lane_count);
+
+        CSI.mipi_config().modify(|reg| {
+
+            reg.cr_vc_dvp0().set(config.dvp_vc_num);
+            reg.cr_vc_dvp1().set(1);
+
+            reg.cr_unpack_en().set(config.unpack_enable as _);
+            reg.cr_sync_sp_en().set(config.sync_sp_enable as _);
+            reg.cr_data_bit_inv().set(config.data_bit_inv_enable as _);
+
+            reg.cr_lane_num().set(match config.lane_count {
+                CsiLaneCount::Rx1Lane => 0,
+                CsiLaneCount::Rx2Lane => 1,
+            });
+
+        });
+
+    }
+
+    /// Enable CSI module.
+    pub fn enable(&mut self) {
+        CSI.mipi_config().modify(|reg| reg.cr_csi_en().fill());
+    }
+
+    /// Disable CSI module.
+    pub fn disable(&mut self) {
+        CSI.mipi_config().modify(|reg| reg.cr_csi_en().clear())
+    }
+
+    /// Enable CSI differencial pairs.
+    pub fn enable_dphy(&mut self) {
+        CSI.dphy_config_0().modify(|reg| {
+            
+        });
+    }
+
+}
+
+
+/// Configuration structure for CSI module, used when initializing it.
+#[derive(Debug, Clone)]
+pub struct CsiConfig {
+    /// Number of lanes to use for CSI.
+    pub lane_count: CsiLaneCount,
+    /// Number of the DVP ??.
+    pub dvp_vc_num: u32,
+    /// Enable CSI unpacking or not.
+    pub unpack_enable: bool,
+    /// Enable Sync ??.
+    pub sync_sp_enable: bool,
+    /// Enable inverted data bit ??.
+    pub data_bit_inv_enable: bool,
+}
+
+
+/// Restricted number of CSI lanes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CsiLaneCount {
+    Rx1Lane,
+    Rx2Lane,
 }

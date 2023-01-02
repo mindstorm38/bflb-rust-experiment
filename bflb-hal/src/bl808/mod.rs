@@ -21,7 +21,7 @@ pub mod irq;
 pub mod gpio;
 pub mod uart;
 pub mod time;
-pub mod cam;
+pub mod camera;
 pub mod mjpeg;
 
 

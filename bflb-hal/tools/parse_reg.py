@@ -185,10 +185,16 @@ STRUCTS = {
         "doc": ""
     },
     "vdo": {
-        "header": f"https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/bl_mm/mm_drv/mm_reg/vdo_reg.h",
+        "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/bl_mm/mm_drv/mm_reg/vdo_reg.h",
         "name": "Vdo",
         "prefix": "VDO_",
         "doc": "Video/H264 registers."
+    },
+    "csi": {
+        "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/platform/soc/bl808/bl808_std/BL808_BSP_Driver/dsp2_reg/csi_reg.h",
+        "name": "Csi",
+        "prefix": "CSI_",
+        "doc": "MIPI CSI registers."
     }
 }
 

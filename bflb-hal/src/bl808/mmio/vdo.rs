@@ -240,8 +240,6 @@ emhal::mmio_reg! {
         [21..22] cfg_s_bs_status_init,
         [22..23] cfg_src_line_clr,
         [23..24] cfg_s_src_line_clr,
-        /// - 0 - Auto
-        /// - 2 - Manual
         [24..26] cfg_ctrl_mode,
         [26..27] cfg_cref_en,
         [27..28] cfg_s_cref_en,

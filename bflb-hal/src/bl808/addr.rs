@@ -93,9 +93,11 @@ pub const OSD_BLEND2_OFFSET: usize      = 0x200;
 pub const OSD_BLEND3_OFFSET: usize      = 0x300;
 pub const OSD_DRAW_LOW_OFFSET: usize    = 0x400;
 pub const OSD_DRAW_HIGH_OFFSET: usize   = 0x504;
-pub const MIPI_BASE: usize              = 0x3001a000;
-pub const DBI_BASE: usize               = 0x3001b000;
-pub const DSI_BASE: usize               = 0x3001a100;
+
+// MIPI
+pub const CSI_BASE: usize               = 0x3001A000;
+pub const DBI_BASE: usize               = 0x3001B000;
+pub const DSI_BASE: usize               = 0x3001A100;
 
 // CODEC_SUBSYS
 pub const CODEC_MISC_BASE: usize        = 0x30020000;
@@ -103,7 +105,6 @@ pub const MJPEG_ENC_BASE: usize         = 0x30021000;
 pub const VIDEO_BASE: usize             = 0x30022000;
 pub const MJPEG_DEC_BASE: usize         = 0x30023000;
 pub const BL_CNN_BASE: usize            = 0x30024000;
-pub const CSI_BASE: usize               = 0x3001A000;
 pub const NPU_BASE: usize               = 0x30024000;
 
 pub const HBN_RAM_BASE: usize           = 0x20010000;

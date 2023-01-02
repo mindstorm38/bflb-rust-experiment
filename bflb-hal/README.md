@@ -10,6 +10,7 @@ The Bouffalo Lab BL808 contains 3 RISC-V CPUs:
 - [BL808 Reference Manual](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_1.1_en.pdf)
 - [BL808 Datasheet](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf)
 - [BL808 SDK](https://github.com/bouffalolab/bl_mcu_sdk)
+- [BL808 Sipeed SDK](https://github.com/sipeed/M1s_BL808_SDK)
 - [QSPI Flash W25Q128JW](https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW)
 - [T-head C906](https://github.com/T-head-Semi/openc906)
 - [Linker scripts](https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html)
