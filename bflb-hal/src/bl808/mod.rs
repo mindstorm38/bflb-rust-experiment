@@ -14,13 +14,17 @@
 //! - VRAM:     Multimedia RAM used by D0 or modules like H264/NPU
 
 pub mod mmio;
-
 pub mod addr;
-pub mod clock;
+
 pub mod irq;
+
+pub mod clock;
+pub mod time;
+
 pub mod gpio;
 pub mod uart;
-pub mod time;
+pub mod usb;
+
 pub mod camera;
 pub mod mjpeg;
 

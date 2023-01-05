@@ -428,8 +428,6 @@ pub enum OutputFormat {
 
 /// CSI controller to use for cameras.
 pub struct Csi {
-    /// Current configured lane count.
-    lane_count: Option<CsiLaneCount>,
 }
 
 impl Csi {
@@ -439,28 +437,29 @@ impl Csi {
     /// **You must** ensure that only a single instance of this structure
     /// exists at the same time.
     pub fn new() -> Self {
-        Self {
-            lane_count: None,
-        }
+        Self { }
     }
 
-    /// Initialize and configure the MIPI CSI module.
-    pub fn init(&mut self, config: &CsiConfig) {
-
-        self.lane_count = Some(config.lane_count);
+    /// Configure the MIPI CSI module.
+    /// 
+    /// *Note that* this method doesn't disable CSI and D-PHY prior to 
+    /// configuration, so you need to make sure that no weird behaviour
+    /// happens.
+    pub fn config(&mut self, config: &CsiConfig) {
 
         CSI.mipi_config().modify(|reg| {
 
-            reg.cr_vc_dvp0().set(config.dvp_vc_num);
+            reg.cr_vc_dvp0().set(config.dvp0_virtual_channel);
             reg.cr_vc_dvp1().set(1);
 
-            reg.cr_unpack_en().set(config.unpack_enable as _);
-            reg.cr_sync_sp_en().set(config.sync_sp_enable as _);
-            reg.cr_data_bit_inv().set(config.data_bit_inv_enable as _);
+            reg.cr_unpack_en().set(config.unpack as _);
+            reg.cr_sync_sp_en().set(config.sync_short_packet as _);
+            reg.cr_data_bit_inv().set(config.data_bit_inverted as _);
+            reg.cr_lane_inv().set(config.data_lane_inverted as _);
 
             reg.cr_lane_num().set(match config.lane_count {
-                CsiLaneCount::Rx1Lane => 0,
-                CsiLaneCount::Rx2Lane => 1,
+                LaneCount::Rx1Lane => 0,
+                LaneCount::Rx2Lane => 1,
             });
 
         });
@@ -474,38 +473,101 @@ impl Csi {
 
     /// Disable CSI module.
     pub fn disable(&mut self) {
-        CSI.mipi_config().modify(|reg| reg.cr_csi_en().clear())
+        CSI.mipi_config().modify(|reg| reg.cr_csi_en().clear());
     }
 
-    /// Enable CSI differencial pairs.
-    pub fn enable_dphy(&mut self) {
-        CSI.dphy_config_0().modify(|reg| {
-            
+    /// Configure the CSI D-PHY physical layer.
+    pub fn phy_config(&mut self, config: &PhyConfig) {
+
+        // These line are ported from https://github.com/sipeed/M1s_BL808_SDK/blob/0be6722d5b9e8222bb79628393205b040198cdf8/components/platform/soc/bl808/bl808_std/BL808_BSP_Driver/StdDriver/Src/bl808_csi.c#L557
+
+        let hs_term_en = (config.data_rate * 35) / 2000 + 1;
+        let hs_settle = (145 * config.data_rate) / 2000 - hs_term_en - 4;
+        let ck_term_en_max = 38;
+        let ck_term_en = (config.tx_clock_escape * ck_term_en_max) / 1000;
+        let ck_settle_max = 300;
+        let ck_settle = (ck_settle_max - ck_term_en * 1000 / config.tx_clock_escape) * 
+            config.tx_clock_escape / 1000 - 1;
+
+        CSI.dphy_config_1().modify(|reg| {
+            reg.time_ck_settle().set(ck_settle);
+            reg.time_ck_term_en().set(ck_term_en);
+            reg.time_hs_settle().set(hs_settle);
+            reg.time_hs_term_en().set(hs_term_en);
         });
+
+        CSI.dphy_config_2().modify(|reg| {
+            reg.ana_term_en().set(0x8);
+        });
+
+
+    }
+
+    /// Enable the CSI D-PHY physical layer.
+    pub fn phy_enable(&mut self, lane_count: LaneCount) {
+
+        CSI.dphy_config_0().modify(|reg| {
+            reg.cl_enable().fill();
+            reg.dl0_enable().fill();
+            reg.dl0_forcerxmode().fill();
+            if let LaneCount::Rx2Lane = lane_count {
+                reg.dl1_enable().fill();
+                reg.dl1_forcerxmode().fill();
+            }
+        });
+        
+    }
+
+    /// Disable CSI D-PHY physical layer.
+    pub fn phy_disable(&mut self) {
+        CSI.dphy_config_0().modify(|reg| {
+            reg.cl_enable().clear();
+            reg.dl0_enable().clear();
+            reg.dl0_forcerxmode().clear();
+            reg.dl1_enable().clear();
+            reg.dl1_forcerxmode().clear();
+        });
+    }
+
+    pub fn phy_reset(&mut self) {
+        CSI.dphy_config_0().modify(|reg| reg.reset_n().clear());
+        CSI.dphy_config_0().modify(|reg| reg.reset_n().fill());
     }
 
 }
 
 
-/// Configuration structure for CSI module, used when initializing it.
+/// Configuration structure for CSI module.
 #[derive(Debug, Clone)]
 pub struct CsiConfig {
     /// Number of lanes to use for CSI.
-    pub lane_count: CsiLaneCount,
-    /// Number of the DVP ??.
-    pub dvp_vc_num: u32,
-    /// Enable CSI unpacking or not.
-    pub unpack_enable: bool,
-    /// Enable Sync ??.
-    pub sync_sp_enable: bool,
-    /// Enable inverted data bit ??.
-    pub data_bit_inv_enable: bool,
+    pub lane_count: LaneCount,
+    /// Virtual channel number for DVP0.
+    pub dvp0_virtual_channel: u32,
+    /// Enable CSI unpacking or not:
+    /// - 0 - DVP output is 8-bit valid.
+    /// - 1 - DVP output format depends on packet data type (RAW 8/10/12/14).
+    pub unpack: bool,
+    /// Enable or disable sync short packets(FS/FE/LS/LE) to be received into generic packet buffer.
+    pub sync_short_packet: bool,
+    /// Enable or disable PPI I/F data byte bit inverse, which should be set to little-endian.
+    pub data_bit_inverted: bool,
+    /// Enable or disable lane 0 and lane 1 inverse.
+    pub data_lane_inverted: bool,
+}
+
+
+/// Configuration structure for CSI physical layer.
+#[derive(Debug, Clone)]
+pub struct PhyConfig {
+    pub tx_clock_escape: u32,
+    pub data_rate: u32,
 }
 
 
 /// Restricted number of CSI lanes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CsiLaneCount {
+pub enum LaneCount {
     Rx1Lane,
     Rx2Lane,
 }

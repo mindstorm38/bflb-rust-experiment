@@ -68,12 +68,17 @@ def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc:
                         elif field_name.startswith("REG2_"):
                             field_name = field_name[5:]
                         field_name = field_name.lower()
-                        
-                        mmio_reg_fields.append({
+
+                        field_data = {
                             "start": field_bstart,
                             "end": field_bend,
                             "name": field_name,
-                        })
+                        }
+
+                        if field_name in REGISTER_DOCS:
+                            field_data["doc"] = REGISTER_DOCS[field_name]
+
+                        mmio_reg_fields.append(field_data)
 
                         field_bstart = None
 
@@ -332,6 +337,15 @@ REGISTER_FIELDS = {
             "doc": "Indicate if the stored flash identifier is valid."
         }
     ]
+}
+
+REGISTER_DOCS = {
+    "dl0_enable": "Enable lane number 0.",
+    "dl1_enable": "Enable lane number 1.",
+    "cl_enable": "Enable clock lane.",
+    "time_ck_settle": "Time interval during which the HS receiver shall ignore any clock lane HS transitions.",
+    "time_ck_term_en": "Time for the clock lane receiver to enable the HS line termination.",
+    "time_hs_settle": "Time interval during which the HS receiver shall ignore any data lane HS transitions.",
 }
 
 

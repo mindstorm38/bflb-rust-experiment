@@ -3,6 +3,8 @@
 use core::marker::PhantomData;
 use core::time::Duration;
 
+use emhal::time::Timer;
+
 use super::{AsCoreId, CoreId};
 use super::clock::Clocks;
 use super::addr;
@@ -38,16 +40,12 @@ impl<C: AsCoreId> CoreTimer<C> {
         clocks.enable_mtimer_clock(divider);
     }
 
-    /// Get the current time. It's returned as a duration since startup
-    /// of the clock.
-    pub fn time(&self) -> Duration {
-        Duration::from_micros(unsafe { self.mtime.read_volatile() })
-    }
+}
 
-    /// Sleep for a specific duration.
-    pub fn sleep(&self, duration: Duration) {
-        let start = self.time();
-        while self.time() - start < duration {}
+impl<C: AsCoreId> Timer for CoreTimer<C> {
+
+    fn now(&self) -> Duration {
+        Duration::from_micros(unsafe { self.mtime.read_volatile() })
     }
 
 }

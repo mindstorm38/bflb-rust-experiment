@@ -7,6 +7,8 @@ use bflb_hal::bl808::uart::{Uart, UartPort, UartConfig};
 use bflb_hal::bl808::gpio::Pin;
 use bflb_hal::bl808::{get_core_id, CoreId, CoreM0};
 
+use emhal::time::Timer;
+
 use core::fmt::Write;
 use core::time::Duration;
 

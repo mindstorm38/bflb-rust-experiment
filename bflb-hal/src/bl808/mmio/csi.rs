@@ -68,8 +68,11 @@ emhal::mmio_reg! {
 
 emhal::mmio_reg! {
     pub struct CsiDphyConfig0: u32 {
+        /// Enable lane number 0.
         [0..1] dl0_enable,
+        /// Enable lane number 1.
         [1..2] dl1_enable,
+        /// Enable clock lane.
         [2..3] cl_enable,
         [4..5] dl0_stopstate,
         [5..6] dl1_stopstate,
@@ -87,8 +90,11 @@ emhal::mmio_reg! {
 
 emhal::mmio_reg! {
     pub struct CsiDphyConfig1: u32 {
+        /// Time interval during which the HS receiver shall ignore any clock lane HS transitions.
         [0..8] time_ck_settle,
+        /// Time for the clock lane receiver to enable the HS line termination.
         [8..16] time_ck_term_en,
+        /// Time interval during which the HS receiver shall ignore any data lane HS transitions.
         [16..24] time_hs_settle,
         [24..32] time_hs_term_en,
     }
