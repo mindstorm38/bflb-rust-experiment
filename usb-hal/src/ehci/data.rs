@@ -45,7 +45,20 @@ pub struct PeriodicFrameList<const LEN: usize> {
 /// this list only when it reaches the end of the periodic list, the periodic 
 /// list is disabled, or the periodic list is empty.
 pub struct AsyncListQueue {
-    
+    pub 
+}
+
+
+
+/// EHCI Isochronous (High-Speed) Transfer Descriptor.
+#[repr(C, align(32))]
+pub struct IsochronousTransferDescriptor {
+    /// Next link pointer.
+    pub next_lp: u32,
+    /// Transaction Status and Control list.
+    pub transaction_scl: [u32; 8],
+    /// Buffer Page Pointer List.
+    pub buffer_pl: [u32; 7],
 }
 
 
@@ -76,18 +89,6 @@ pub struct EhciQh {
     pub curr_qtd: u32,
     /// Transfer overlay.
     pub overlay: EhciQtd,
-}
-
-
-/// EHCI Isochronous (High-Speed) Transfer Descriptor.
-#[repr(C, align(32))]
-pub struct EhciItd {
-    /// Next link pointer.
-    pub next_lp: u32,
-    /// Transaction Status and Control list.
-    pub transaction_scl: [u32; 8],
-    /// Buffer Page Pointer List.
-    pub buffer_pl: [u32; 7],
 }
 
 
@@ -135,7 +136,7 @@ pub struct EhciQtdHw {
 }
 
 pub struct EhciItdHw {
-    pub hw: EhciItd,
+    pub hw: IsochronousTransferDescriptor,
     // pub iso_packet: ,
     pub start_frame: u32,
     // pub list: ,
