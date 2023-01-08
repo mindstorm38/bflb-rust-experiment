@@ -307,9 +307,6 @@ impl<'a, R: Reg, const START: u8, const END: u8> PtrField<'a, R, START, END> {
     }
 
     /// Set the value of this register's field.
-    /// 
-    /// *Note that the original register gets modified and a copy 
-    /// of it is also returned.*
     #[inline(always)]
     pub fn set(self, val: R::Type) {
         self.0.set::<START, END>(val);

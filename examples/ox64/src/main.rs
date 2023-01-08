@@ -6,10 +6,14 @@ use bflb_hal::bl808::time::CoreTimer;
 use bflb_hal::bl808::uart::{Uart, UartPort, UartConfig};
 use bflb_hal::bl808::gpio::Pin;
 use bflb_hal::bl808::{get_core_id, CoreId, CoreM0};
+use bflb_hal::bl808::mmio::CLIC;
 
 use emhal::time::Timer;
 
+use bflb_rt::IrqNum;
+
 use core::fmt::Write;
+use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 
 
@@ -79,9 +83,16 @@ fn main() {
     uart0.init(&UartConfig::new(115200), &clocks);
     uart0.start();
 
+    let interrupted = AtomicBool::new(false);
+    let handler = || {
+        interrupted.store(true, Ordering::Relaxed);
+    };
+
+    let _0 = bflb_rt::register_interrupt_handler(IrqNum::MachineTimer, &handler);
+
     loop {
 
-        write!(uart0, "RTC time: {:?}\r\n", coret.time()).unwrap();
+        write!(uart0, "RTC time: {:?}\r\n", coret.now()).unwrap();
 
         // Simple echo.
         while let Some(byte) = uart0.read_byte() {

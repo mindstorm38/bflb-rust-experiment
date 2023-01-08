@@ -1,6 +1,13 @@
 //! Interrupt management and numbers for BL808.
 
 
+/// Interrupt Request controller abstraction structure.
+/// 
+/// Use this structure to easily manage interrupts
+pub struct ClicIrq {
+    
+}
+
 
 pub mod m0_lp {
 
@@ -52,12 +59,4 @@ pub mod m0_lp {
 
 pub mod d0 {
     // TODO:
-}
-
-
-/// Interrupt Request controller abstraction structure.
-/// 
-/// Use this structure to easily manage interrupts
-pub struct ClicIrq {
-    
 }

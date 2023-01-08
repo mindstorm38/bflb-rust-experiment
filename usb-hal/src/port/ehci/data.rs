@@ -15,14 +15,6 @@ pub struct PeriodicFrameList<const LEN: usize> {
     pub list: [NextLink; LEN],
 }
 
-/// The Asynchronous Transfer List (based at the ASYNCLISTADDR register), is 
-/// where all the control and bulk transfers are managed. Host controllers use 
-/// this list only when it reaches the end of the periodic list, the periodic 
-/// list is disabled, or the periodic list is empty.
-pub struct AsyncListQueue {
-    
-}
-
 // COMMON //
 
 emhal::mmio_reg! {
@@ -44,6 +36,55 @@ emhal::mmio_reg! {
     }
 }
 
+impl NextLink {
+
+    pub fn set_invalid(&mut self) {
+        self.invalid().fill();
+    }
+
+    pub fn set_valid(&mut self, typ: NextLinkType) {
+
+        self.invalid().clear();
+
+        let (typ, ptr) = match typ {
+            NextLinkType::Itd(ptr) => (0, ptr as usize),
+            NextLinkType::Qh(ptr) => (1, ptr as usize),
+            NextLinkType::Sitd(ptr) => (2, ptr as usize),
+        };
+
+        self.typ().set(typ);
+        self.ptr().set(ptr as u32 >> 5);
+
+    }
+
+    pub fn is_valid(&mut self) -> bool {
+        self.invalid().get() == 0
+    }
+    
+    pub fn get_valid(&mut self) -> Option<NextLinkType> {
+        if self.is_valid() {
+            let ptr = (self.ptr().get() << 5) as usize;
+            Some(match self.typ().get() {
+                0 => NextLinkType::Itd(ptr as _),
+                1 => NextLinkType::Qh(ptr as _),
+                2 => NextLinkType::Sitd(ptr as _),
+                3 => todo!(),
+                _ => unreachable!()
+            })
+        } else {
+            None
+        }
+    }
+
+}
+
+#[derive(Debug, Clone)]
+pub enum NextLinkType {
+    Itd(*mut Itd),
+    Qh(*mut Qh),
+    Sitd(*mut Sitd),
+}
+
 // ISOCHRONOUS //
 
 /// Isochronous (High-Speed) Transfer Descriptor (iTD).
@@ -51,6 +92,7 @@ emhal::mmio_reg! {
 /// This structure is used only for high-speed isochronous endpoints. All other 
 /// transfer types should use queue structures. 
 #[repr(C, align(32))]
+#[derive(Default)]
 pub struct Itd {
     /// Next link pointer.
     pub next_link: NextLink,
@@ -188,6 +230,7 @@ emhal::mmio_reg! {
 /// managed using the siTD data structure. This data structure satisfies the 
 /// operational requirements for managing the split transaction protocol.
 #[repr(C, align(32))]
+#[derive(Default)]
 pub struct Sitd {
     /// Next link pointer.
     pub next_link: NextLink,
@@ -341,6 +384,19 @@ emhal::mmio_reg! {
 
 }
 
+impl SitdBackLink {
+
+    pub fn set_invalid(&mut self) {
+        self.invalid().fill();
+    }
+
+    pub fn set_valid(&mut self, ptr: *const Sitd) {
+        self.invalid().clear();
+        self.ptr().set(ptr as usize as u32 >> 5);
+    }
+
+}
+
 // QUEUE TRANSFER DESCRIPTOR //
 
 /// Queue Element Transfer Descriptor (qTD)
@@ -358,18 +414,23 @@ emhal::mmio_reg! {
 /// used for each physical page in the buffer, regardless of whether the buffer is 
 /// physically contiguous.
 #[repr(C)]
+#[derive(Default)]
 pub struct Qtd {
     /// Link to the next qTD pointer.
-    next_link: QtdNextLink,
+    pub next_link: QtdNextLink,
     /// Used to support hardware-only advance of the data stream to the next client 
     /// buffer on short packet. To be more explicit the host controller will always 
     /// use this pointer when the current qTD is retired due to short packet.
-    atl_next_link: QtdNextLink,
-    page_buffer_0: QtdPageBuffer0,
-    page_buffer_1: QtdPageBuffer,
-    page_buffer_2: QtdPageBuffer,
-    page_buffer_3: QtdPageBuffer,
-    page_buffer_4: QtdPageBuffer,
+    pub atl_next_link: QtdNextLink,
+    /// Contains most of the information the host controller requires to execute a 
+    /// USB transaction (the remaining endpoint-addressing information is specified
+    /// in the queue head).
+    pub token: QtdToken,
+    pub page_buffer_0: QtdPageBuffer0,
+    pub page_buffer_1: QtdPageBuffer,
+    pub page_buffer_2: QtdPageBuffer,
+    pub page_buffer_3: QtdPageBuffer,
+    pub page_buffer_4: QtdPageBuffer,
 }
 
 emhal::mmio_reg! {
@@ -377,9 +438,11 @@ emhal::mmio_reg! {
     pub struct QtdNextLink: u32 {
         /// This descriptor will only be considered if invalid != 1.
         [00..01] invalid,
-        /// The 32-bit pointer to the referenced object. The lower 5 bits 
-        /// should be discarded (so shifting right by 5 the address), this
-        /// implies an alignment of 32 bytes.
+        /// This field contains the physical memory address of the next qTD to be 
+        /// processed. 
+        /// 
+        /// The lower 5 bits should be discarded (so shifting right by  5 the address), 
+        /// this implies an alignment of 32 bytes.
         [05..32] ptr,
     }
 
@@ -489,18 +552,40 @@ emhal::mmio_reg! {
 
 }
 
+impl QtdNextLink {
+
+    pub fn set_invalid(&mut self) {
+        self.invalid().fill();
+    }
+
+    pub fn set_valid(&mut self, ptr: *const Qtd) {
+        self.invalid().clear();
+        self.ptr().set(ptr as usize as u32 >> 5);
+    }
+
+}
+
 
 /// Queue Head
 #[repr(C)]
+#[derive(Default)]
 pub struct Qh {
     /// link pointer to the next data object to be processed after any required 
     /// processing in this queue has been completed, as well as the control bits 
     /// defined below.
-    next_link: NextLink,
-    endpoint_characteristics: QhEndpointCharacteristics,
-    endpoint_capabilities: QhEndpointCapabilities,
-    current_qtd_link: QhQtdLink,
-    overlay: Qtd, // TODO: Add overlay bits to this
+    pub horizontal_link: NextLink,
+    /// These are the USB endpoint characteristics including addressing, maximum
+    /// packet size, and endpoint speed.
+    pub endpoint_characteristics: QhEndpointCharacteristics,
+    /// These are adjustable parameters of the endpoint. They effect how the 
+    /// endpoint data stream is managed by the host controller. 
+    pub endpoint_capabilities: QhEndpointCapabilities,
+    /// contains a pointer to the source qTD currently associated with the overlay.
+    /// The host controller uses this pointer to write back the overlay area into
+    /// the source qTD after the transfer is complete.
+    pub current_qtd_link: QhCurrentQtdLink,
+    /// Transfer overlay.
+    pub overlay: Qtd,
 }
 
 emhal::mmio_reg! {
@@ -580,7 +665,7 @@ emhal::mmio_reg! {
         [30..32] high_bandwidth_pipe_mult,
     }
 
-    pub struct QhQtdLink: u32 {
+    pub struct QhCurrentQtdLink: u32 {
         /// The 32-bit pointer to the referenced object. The lower 5 bits 
         /// should be discarded (so shifting right by 5 the address), this
         /// implies an alignment of 32 bytes.

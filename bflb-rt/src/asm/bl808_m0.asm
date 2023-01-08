@@ -46,22 +46,26 @@ _start:
 
     # Initialize the trap-vector base address.
     # Use CLIC mode.
-    la t0, _mtrap_vector
+    la t0, _mtrap_generic_handler
     ori t0, t0, MTVEC_CLIC
     csrw mtvec, t0
 
     # Intentionnaly not using mtvt because we'll
     # only allow unvectored interrupts.
-    csrwi 0x307, 0
+    la t0, _rust_mtrap_tvt
+    csrw 0x307, t0
 
     # Initialize stack pointer.
     la sp, _ld_stack_top
 
     # The first function will copy runtime variables to RAM.
-    jal asm_ram_load
+    jal _rust_ram_load
+    
+    # Init before entry point.
+    jal _rust_init
 
     # Enter the entry function.
-    jal asm_entry
+    jal _rust_entry
 
     # The processor ends here if the main function returns.
 .exit:
@@ -71,8 +75,8 @@ _start:
 
 # Aligned to 64 bytes because of 'mtvec' with CLIC mode.
 .align 6
-.global _mtrap_vector
-_mtrap_vector:
+.global _mtrap_generic_handler
+_mtrap_generic_handler:
 
 .gp_save:
 
@@ -185,7 +189,7 @@ _mtrap_vector:
 
     # Intentionnaly use a register because we are unsure about how far
     # this function can be placed.
-    la t0, asm_mtrap_handler
+    la t0, _rust_mtrap_handler
     jalr t0
 
 .fp_restore:

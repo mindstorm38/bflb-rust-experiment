@@ -7,7 +7,7 @@ The Bouffalo Lab BL808 contains 3 RISC-V CPUs:
 - LP: 32-bit RISC-V RV32EMC
 
 ## Documents
-- [BL808 Reference Manual](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_1.1_en.pdf)
+- [BL808 Reference Manual](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_en_1.2.pdf)
 - [BL808 Datasheet](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf)
 - [BL808 SDK](https://github.com/bouffalolab/bl_mcu_sdk)
 - [BL808 Sipeed SDK](https://github.com/sipeed/M1s_BL808_SDK)

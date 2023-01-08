@@ -77,6 +77,7 @@ emhal::mmio_reg! {
         /// Actual number of interrupts supported by the implementation.
         [0..13] num_interrupt,
         [13..21] version,
+        /// Number of bits used to encode the interrupt level.
         [21..25] control_bits,
         [25..31] num_trigger,
     }
@@ -88,7 +89,7 @@ emhal::mmio_reg! {
         /// 
         /// *Note that* this bit is only available if `nvbits` is set to 1
         /// in [`ClicCfg`].
-        [0..1] shv,
+        [0..1] vectored,
         /// - When 0, level-triggered.
         /// - When 1, edge-triggered.
         [1..2] edge_triggered,

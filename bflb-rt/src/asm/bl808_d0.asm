@@ -63,7 +63,7 @@ _start:
 
     # Initialize the trap-vector base address.
     # Use "direct" mode.
-    la t0, _mtrap_vector
+    la t0, _mtrap_generic_handler
     ori t0, t0, MTVEC_DIRECT
     csrw mtvec, t0
 
@@ -71,7 +71,10 @@ _start:
     la sp, _ld_stack_top
 
     # The first function will copy runtime variables to RAM.
-    jal asm_ram_load
+    jal _rust_ram_load
+
+    # Init before entry point.
+    jal _rust_init
 
     # Before entering main, we re-enable interrupts.
     # We also enable machine timer/external interrupts.
@@ -80,7 +83,7 @@ _start:
     csrs mie, t0
 
     # Enter the entry function.
-    jal asm_entry
+    jal _rust_entry
 
     # The processor ends here if the main function returns.
 exit:
@@ -90,8 +93,8 @@ exit:
 
 # Aligned to 4 bytes because of 'mtvec'.
 .align 4
-.global _mtrap_vector
-_mtrap_vector:
+.global _mtrap_generic_handler
+_mtrap_generic_handler:
 
 gp_save:
 
@@ -204,7 +207,7 @@ handler:
 
     # Intentionnaly use a register because we are unsure about how far
     # this function can be placed.
-    la t0, asm_mtrap_handler
+    la t0, _rust_mtrap_handler
     jalr t0
 
 fp_restore:

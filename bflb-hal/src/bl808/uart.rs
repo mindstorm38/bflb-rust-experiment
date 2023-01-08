@@ -235,7 +235,7 @@ impl Uart {
     }
 
     /// Simplest function to read a single byte, if available.
-    pub fn read_byte(&mut self) -> Option<u8> {
+    pub fn read_byte(&self) -> Option<u8> {
         let mmio = self.get_mmio();
         if mmio.fifo_cfg1().get().rx_fifo_count().get() != 0 {
             Some(mmio.fifo_rdata().get())

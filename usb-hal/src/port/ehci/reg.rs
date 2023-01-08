@@ -1,5 +1,16 @@
 //! USB EHCI Memory-Mapped registers.
 
+use emhal::mmio::PtrRw;
+
+
+/// A structure containing the two EHCI registers: capability and operationnal.
+pub struct Ehci {
+    /// EHCI Host Controller Capability Registers.
+    pub hccr: EhciHccr,
+    /// EHCI Host Controller Operational Registers.
+    pub hcor: EhciHcor,
+}
+
 
 emhal::mmio_struct! {
 
@@ -113,8 +124,22 @@ emhal::mmio_struct! {
         [0x18] rw async_list_addr: u32,
         /// Configured flag register.
         [0x40] rw config_flag: EhciConfigFlag,
-        /// Port status/control.
-        [0x44] rw port_status_control: [u32; 15],
+    }
+
+}
+
+impl EhciHcor {
+
+    /// Get a read/write pointer to a [`EhciPortStatusControl`] for a given port.
+    /// 
+    /// A host controller must implement one or more port registers. The number of 
+    /// port registers implemented by a particular instantiation of a host controller 
+    /// is documented in the HCSPARAMs register. Software uses this information as an 
+    /// input parameter to determine how many ports need to be serviced. All ports have 
+    /// the structure defined below.
+    #[inline(always)]
+    pub fn port_status_control(&self, port: usize) -> PtrRw<EhciPortStatusControl> {
+        PtrRw((0x44 + port * 4) as *mut _)
     }
 
 }
@@ -462,6 +487,11 @@ emhal::mmio_reg! {
         /// The interrupt is acknowledged by software clearing the Host System Error 
         /// bit.
         [04..05] host_system_error_enable,
+        /// When this bit is a one, and the Interrupt on Async Advance bit in the 
+        /// USBSTS register is a one, the host controller will issue an interrupt 
+        /// at the next interrupt threshold. The interrupt is acknowledged by software
+        /// clearing the Interrupt on Async Advance bit.
+        [05..06] async_advance_int_enable,
     }
 
     /// Frame Index Register.
@@ -475,9 +505,9 @@ emhal::mmio_reg! {
 
     pub struct EhciConfigFlag: u32 {
         /// Default 0. Host software sets this bit as the last action in its 
-        /// process of configuring the Host Controller (see Section 4.1). This 
-        /// bit controls the default port-routing control logic. Bit values and 
-        /// side-effects are listed below.
+        /// process of configuring the Host Controller. This bit controls the 
+        /// default port-routing control logic. Bit values and side-effects 
+        /// are listed below:
         /// - 0 - Port routing control logic default-routes each port to an 
         ///   implementation dependent classic host controller.
         /// - 1 - Port routing control logic default-routes all ports to this 
@@ -485,6 +515,221 @@ emhal::mmio_reg! {
         /// 
         /// Read/Write.
         [0..1] configure_flag,
+    }
+
+    pub struct EhciPortStatusControl: u32 {
+        /// Default 0. 1=Device is present on port. 0=No device is present.
+        /// 
+        /// This value reflects the current state of the port, and may not 
+        /// correspond directly to the event that caused the Connect Status 
+        /// Change bit (Bit 1) to be set.
+        /// 
+        /// Read only.
+        [00..01] current_connect_status,
+        /// Default 0. 1=Change in Current Connect Status. 0=No change.
+        /// 
+        /// Indicates a change has occurred in the port’s Current Connect 
+        /// Status. The host controller sets this bit for all changes to 
+        /// the port device connect status, even if system software has not 
+        /// cleared an existing connect status change. For example, the
+        /// insertion status changes twice before system software has 
+        /// cleared the changed condition, hub hardware will be “setting” an 
+        /// already-set bit (i.e., the bit will remain set).
+        /// 
+        /// Software sets this bit to 0 by writing a 1 to it.
+        [01..02] connect_status_change,
+        /// Default 0. 1=Enable. 0=Disable.
+        /// 
+        /// Ports can only be enabled by the host controller as a part of the 
+        /// reset and enable. Software cannot enable a port by writing a one 
+        /// to this field. The host controller will only set this bit to a one 
+        /// when the reset sequence determines that the attached device is a 
+        /// high-speed device.
+        /// 
+        /// Ports can be disabled by either a fault condition (disconnect event 
+        /// or other fault condition) or by host software. Note that the bit 
+        /// status does not change until the port state actually changes. There 
+        /// may be a delay in disabling or enabling a port due to other host 
+        /// controller and bus events.
+        /// 
+        /// When the port is disabled (0b) downstream propagation of data is 
+        /// blocked on this port, except for reset. 
+        /// 
+        /// This field is zero if Port Power is zero.
+        /// 
+        /// Read/Write
+        [02..03] enabled,
+        /// Default 0. 1=Port enabled/disabled status has changed. 0=No change.
+        /// 
+        /// For the root hub, this bit gets set to a one only when a port is 
+        /// disabled due to the appropriate conditions existing at the EOF2 
+        /// point. Software clears this bit by writing a 1 to it.
+        /// 
+        /// This field is zero if Port Power is zero.
+        [03..04] enabled_change,
+        /// Default 0. 1=This port currently has an over-current condition. 
+        /// 0=This port does not have an over-current condition.
+        /// 
+        /// This bit will automatically transition from a one to a zero when 
+        /// the over current condition is removed.
+        /// 
+        /// Read only.
+        [04..05] overcurrent_active,
+        /// Default 0. 1=This bit gets set to a one when there is a change to 
+        /// Over-current Active. 
+        /// 
+        /// Software clears this bit by writing a one to this bit position.
+        [05..06] overcurrent_change,
+        /// Default 0. 1= Resume detected/driven on port. 0=No resume (K-state) 
+        /// detected/driven on port.
+        /// 
+        /// This functionality defined for manipulating this bit depends on the 
+        /// value of the Suspend bit. For example, if the port is not suspended 
+        /// (*Suspend* and *Enabled* bits are a one) and software transitions 
+        /// this bit to a one, then the effects on the bus are undefined.
+        ///
+        /// Software sets this bit to a 1 to drive resume signaling. The Host 
+        /// Controller sets this bit to a 1 if a J-to-K transition is detected 
+        /// while the port is in the Suspend state. When this bit transitions 
+        /// to a one because a J-to-K transition is detected, the *Port Change 
+        /// Detect* bit in the USBSTS register is also set to a one. If software 
+        /// sets this bit to a one, the host controller must not set the *Port 
+        /// Change Detect* bit.
+        /// 
+        /// Read/Write
+        [06..07] force_port_resume,
+        /// Default 0. 1=Port in suspend state. 0=Port not in suspend state.
+        /// 
+        /// Port Enabled Bit and Suspend bit of this register define the port
+        /// states as follows:
+        /// - enabled=0, suspend=? - Disable
+        /// - enabled=1, suspend=0 - Enable
+        /// - enabled=1, suspend=1 - Suspend
+        /// 
+        /// When in suspend state, downstream propagation of data is blocked on
+        ///  this port, except for port reset. The blocking occurs at the end of 
+        /// the current transaction, if a transaction was in progress when this 
+        /// bit was written to 1. In the suspend state, the port is sensitive
+        /// to resume detection. Note that the bit status does not change until 
+        /// the port is suspended and that there may be a delay in suspending a 
+        /// port if there is a transaction currently in progress on the USB.
+        /// 
+        /// Read/Write
+        [07..08] suspend,
+        /// Default 0. 1=Port is in Reset. 0=Port is not in Reset.
+        /// 
+        /// When software writes a one to this bit (from a zero), the bus reset 
+        /// sequence as defined in the USB Specification Revision 2.0 is started. 
+        /// Software writes a zero to this bit to terminate the bus reset sequence. 
+        /// Software must keep this bit at a one long enough to ensure the reset 
+        /// sequence, as specified in the USB Specification Revision 2.0, completes. 
+        /// 
+        /// Note: when software writes this bit to a one, it must also write a zero 
+        /// to the Port Enable bit.
+        /// 
+        /// Read/Write
+        [08..09] reset,
+        /// These bits reflect the current logical levels of the D+ (bit 11) and D- 
+        /// (bit 10) signal lines. These bits are used for detection of low-speed 
+        /// USB devices prior to the port reset and enable sequence. This field is 
+        /// valid only when the port enable bit is zero and the current connect 
+        /// status bit is set to a one.
+        /// 
+        /// The encoding of the bits are:
+        /// - 0 - SE0 - Not Low-speed device, perform EHCI reset
+        /// - 1 - J-state - Not Low-speed device, perform EHCI reset
+        /// - 2 - K-state - Low-speed device, release ownership of port
+        /// - 3 - Undefined - Not Low-speed device, perform EHCI reset.
+        /// 
+        /// This value of this field is undefined if Port Power is zero.
+        /// 
+        /// Read only.
+        [10..12] line_status,
+        /// The function of this bit depends on the value of the Port Power Control 
+        /// (PPC) field in the HCSPARAMS register. The behavior is as follows:
+        /// - ppc=0, pp=1 - Read-only, Host controller does not have port power 
+        ///   control switches. Each port is hard-wired to power
+        /// - ppc=1, pp=? - Read/Write, Host controller has port power control 
+        ///   switches. This bit represents the current setting of the switch 
+        ///   (0 = off, 1 = on). When power is not available on a port (i.e. PP 
+        ///   equals a 0), the port is non-functional and will not report attaches, 
+        ///   detaches, etc.
+        /// 
+        /// When an over-current condition is detected on a powered port and PPC is 
+        /// a one, the PP bit in each affected port may be transitioned by the host 
+        /// controller from a 1 to 0 (removing power from the port).
+        /// 
+        /// Read/Write (conditionnaly).
+        [12..13] port_power,
+        /// Default 1.
+        /// 
+        /// This bit unconditionally goes to a 0b when the Configured bit in the 
+        /// CONFIGFLAG register makes a 0b to 1b transition. This bit unconditionally 
+        /// goes to 1b whenever the Configured bit is zero.
+        /// 
+        /// System software uses this field to release ownership of the port to a 
+        /// selected host controller (in the event that the attached device is not 
+        /// a high-speed device). Software writes a one to this bit when the attached 
+        /// device is not a high-speed device. A one in this bit means that a companion
+        /// host controller owns and controls the port. 
+        /// 
+        /// Read/Write.
+        [13..14] port_owner,
+        /// Default 0.
+        /// 
+        /// Writing to these bits has no effect if the P_INDICATOR bit in the HCSPARAMS 
+        /// register is a zero. If P_INDICATOR bit is a one, then the bit encodings are:
+        /// - 0 - Port indicators are off
+        /// - 1 - Amber
+        /// - 2 - Green
+        /// 
+        /// Refer to the USB Specification Revision 2.0 for a description on how these 
+        /// bits are to be used.
+        /// 
+        /// This field is zero if Port Power is zero.
+        [14..16] port_indicator_control,
+        /// Default 0.
+        /// 
+        /// When this field is zero, the port is NOT operating in a test mode. A non-zero 
+        /// value indicates that it is operating in test mode and the specific test mode 
+        /// is indicated by the specific value. The encoding of the test mode bits are 
+        /// (0110b - 1111b are reserved):
+        /// - 0000b - Test mode not enabled
+        /// - 0001b - Test J-state
+        /// - 0010b - Test K-state
+        /// - 0011b - Test SE0 state
+        /// - 0100b - Test packet
+        /// - 0101b - Test force enable
+        /// 
+        /// Read/Write.
+        [16..20] port_test_control,
+        /// Default 0.
+        /// 
+        /// Writing this bit to a one enables the port to be sensitive to device connects 
+        /// as wake-up events.
+        /// 
+        /// This field is zero if Port Power is zero.
+        /// 
+        /// Read/Write
+        [20..21] wake_on_connect_enable,
+        /// Default 0.
+        /// 
+        /// Writing this bit to a one enables the port to be sensitive to device disconnects 
+        /// as wake-up events. 
+        /// 
+        /// This field is zero if Port Power is zero.
+        /// 
+        /// Read/Write
+        [21..22] wake_on_disconnect_enable,
+        /// Default 0.
+        /// 
+        /// Writing this bit to a one enables the port to be sensitive to over-current 
+        /// conditions as wake-up events.
+        /// 
+        /// This field is zero if Port Power is zero.
+        /// 
+        /// Read/Write
+        [22..23] wake_on_overcurrent_enable,
     }
 
 }
