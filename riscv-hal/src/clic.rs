@@ -31,6 +31,10 @@ emhal::mmio_struct! {
     pub struct ClicInt {
         /// Interrupt set pending (0 or 1).
         /// 
+        /// **Read-only** when the interrupt is configured to be level-sensitive.
+        /// 
+        /// **Read/Write** when the interrupt is configured to be edge-sensitive.
+        /// 
         /// This correspond to `clicintip[i]` in spec.
         [0x0] rw pending: u8,
         /// Interrupt set enable (0 or 1).
@@ -41,7 +45,17 @@ emhal::mmio_struct! {
         /// 
         /// This correspond to `clicintattr[i]` in spec.
         [0x2] rw attr: ClicIntAttr,
-        /// Interrupt control.
+        /// Interrupt control bits for level and priority.
+        /// 
+        /// This field is split between level and priority, and the actual number
+        /// of bits that can be configured is implementation-specific.
+        /// 
+        /// ```text
+        /// |<-ClicCfg.nlbits->|              
+        /// |       level      |   priority   |
+        /// 
+        /// |<-ClicInfo.control_bits->|<- 1 ->|
+        /// ```
         /// 
         /// This correspond to `clicintctl[i]` in spec.
         [0x3] rw control: u8,
@@ -69,7 +83,7 @@ emhal::mmio_reg! {
         /// This field indicates how many upper bits in `clicintctl[i]` are assigned 
         /// to encode the interrupt level.
         [1..5] nlbits,
-        /// Specifies how many bits are physically implemented in [`ClicIntAttr`].
+        /// Specifies how many bits are physically implemented for `mode` in [`ClicIntAttr`].
         [5..7] nmbits,
     }
 
@@ -117,4 +131,41 @@ emhal::mmio_reg! {
         [6..8] mode,
     }
 
+}
+
+
+#[inline(always)]
+pub fn set_mintthresh(threshold: u8) {
+    unsafe { core::arch::asm!("csrw 0x347, {}", in(reg) threshold) }
+}
+
+#[inline(always)]
+pub fn get_mintthresh() -> u8 {
+    let threshold;
+    unsafe { core::arch::asm!("csrr {}, 0x347", out(reg) threshold) };
+    threshold
+}
+
+#[inline(always)]
+pub fn set_sintthresh(threshold: u8) {
+    unsafe { core::arch::asm!("csrw 0x147, {}", in(reg) threshold) }
+}
+
+#[inline(always)]
+pub fn get_sintthresh() -> u8 {
+    let threshold;
+    unsafe { core::arch::asm!("csrr {}, 0x147", out(reg) threshold) };
+    threshold
+}
+
+#[inline(always)]
+pub fn set_uintthresh(threshold: u8) {
+    unsafe { core::arch::asm!("csrw 0x047, {}", in(reg) threshold) }
+}
+
+#[inline(always)]
+pub unsafe fn get_uintthresh() -> u8 {
+    let threshold;
+    unsafe { core::arch::asm!("csrr {}, 0x047", out(reg) threshold) };
+    threshold
 }

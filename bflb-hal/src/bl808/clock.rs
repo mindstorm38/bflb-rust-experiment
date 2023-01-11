@@ -25,7 +25,7 @@ pub struct Clocks<C> {
 impl<C: AsCoreId> Clocks<C> {
 
     /// Create a new clocks controller given a CPU id.
-    pub fn new(core_id: C) -> Self {
+    pub const fn new(core_id: C) -> Self {
         Self {
             core_id,
         }

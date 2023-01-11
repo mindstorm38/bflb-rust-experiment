@@ -6,101 +6,100 @@ use bflb_hal::bl808::time::CoreTimer;
 use bflb_hal::bl808::uart::{Uart, UartPort, UartConfig};
 use bflb_hal::bl808::gpio::Pin;
 use bflb_hal::bl808::{get_core_id, CoreId, CoreM0};
-use bflb_hal::bl808::mmio::CLIC;
 
 use emhal::time::Timer;
 
 use bflb_rt::IrqNum;
 
-use core::fmt::Write;
 use core::sync::atomic::{AtomicBool, Ordering};
-use core::time::Duration;
+use core::fmt::Write;
+
+
+static CLOCKS: Clocks<CoreM0> = Clocks::new(CoreM0);
+static CORET: CoreTimer<CoreM0> = CoreTimer::new(CoreM0);
 
 
 bflb_rt::entry!(main);
 
-
 fn main() {
-
-    let core_id = CoreM0;
-
-    let mut clocks = Clocks::new(core_id);
-    let coret = CoreTimer::new(core_id);
 
     // CHIP.cpu().halt_d0();
     // CHIP.cpu().halt_lp();
 
     // CLOCK INIT
 
-    clocks.set_xtal_type(XtalType::Mhz40);
-    clocks.enable_xtal().unwrap();
+    CLOCKS.set_xtal_type(XtalType::Mhz40);
+    CLOCKS.enable_xtal().unwrap();
     
     match get_core_id().unwrap() {
         CoreId::M0 | CoreId::LP => {
-            clocks.set_xclk_sel(Mux2::Sel0);    // RC32M
-            clocks.set_m0_root_sel(Mux2::Sel0); // xclock
-            clocks.set_m0_cpu_div(1);
-            clocks.set_m0_secondary_div(1);
-            clocks.set_m0_secondary_div_act_pulse(true);
-            while !clocks.get_m0_secondary_prot_done() {}
-            clocks.set_lp_cpu_div(1);
-            clocks.set_lp_cpu_div_act_pulse(true);
-            while !clocks.get_lp_cpu_prot_done() {}
+            CLOCKS.set_xclk_sel(Mux2::Sel0);    // RC32M
+            CLOCKS.set_m0_root_sel(Mux2::Sel0); // xclock
+            CLOCKS.set_m0_cpu_div(1);
+            CLOCKS.set_m0_secondary_div(1);
+            CLOCKS.set_m0_secondary_div_act_pulse(true);
+            while !CLOCKS.get_m0_secondary_prot_done() {}
+            CLOCKS.set_lp_cpu_div(1);
+            CLOCKS.set_lp_cpu_div_act_pulse(true);
+            while !CLOCKS.get_lp_cpu_prot_done() {}
             // timer.sleep_dummy_nop();
         }
         CoreId::D0 => {
-            clocks.set_mm_xclk_sel(Mux2::Sel0); // RC32M
-            clocks.set_d0_root_sel(Mux2::Sel0); // MM xclock
-            clocks.set_d0_cpu_div(1);
-            clocks.set_d0_secondary_div(1);
-            clocks.set_d0_secondary_div_act_pulse(true);
-            while !clocks.get_d0_secondary_prot_done() {}
+            CLOCKS.set_mm_xclk_sel(Mux2::Sel0); // RC32M
+            CLOCKS.set_d0_root_sel(Mux2::Sel0); // MM xclock
+            CLOCKS.set_d0_cpu_div(1);
+            CLOCKS.set_d0_secondary_div(1);
+            CLOCKS.set_d0_secondary_div_act_pulse(true);
+            while !CLOCKS.get_d0_secondary_prot_done() {}
         }
     }
 
     // Note that we don't activate any PLL.
 
-    clocks.set_xclk_sel(Mux2::Sel1);    // Xtal
-    clocks.set_mm_xclk_sel(Mux2::Sel1); // Xtal
+    CLOCKS.set_xclk_sel(Mux2::Sel1);    // Xtal
+    CLOCKS.set_mm_xclk_sel(Mux2::Sel1); // Xtal
 
     // SETUP CORE TIMER
 
-    coret.init(&mut clocks);
+    CORET.init(&CLOCKS);
 
     // PERIPHERAL INIT
 
-    clocks.set_uart_enable(false);
-    clocks.set_d0_cpu_div(1);
-    clocks.set_uart_sel(UartSel::Xclock);
-    clocks.set_uart_enable(true);
-    clocks.set_uart0_enable(true);
+    CLOCKS.set_uart_enable(false);
+    CLOCKS.set_d0_cpu_div(1);
+    CLOCKS.set_uart_sel(UartSel::Xclock);
+    CLOCKS.set_uart_enable(true);
+    CLOCKS.set_uart0_enable(true);
     
     // CONSOLE INIT
 
     let mut uart0 = Uart::new(UartPort::Port0);
     uart0.attach_tx(Pin::new(14));
     uart0.attach_rx(Pin::new(15));
-    uart0.init(&UartConfig::new(115200), &clocks);
+    uart0.init(&UartConfig::new(115200), &CLOCKS);
     uart0.start();
 
-    let interrupted = AtomicBool::new(false);
-    let handler = || {
-        interrupted.store(true, Ordering::Relaxed);
-    };
+    let mtimer_int = bflb_rt::get_interrupt(IrqNum::MachineTimer);
+    mtimer_int.set_handler(mtimer_handler);
+    mtimer_int.set_enable(true);
+    mtimer_int.set_level(255);
 
-    let _0 = bflb_rt::register_interrupt_handler(IrqNum::MachineTimer, &handler);
+    CORET.set_time(0);
+    CORET.set_time_cmp(1_000_000);
 
     loop {
-
-        write!(uart0, "RTC time: {:?}\r\n", coret.now()).unwrap();
-
-        // Simple echo.
-        while let Some(byte) = uart0.read_byte() {
-            uart0.write_byte(byte);
+        
+        if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+            write!(uart0, "Interrupted! RTC time: {:?}, timecmp: {}\r\n", CORET.now(), CORET.get_time_cmp()).unwrap();
         }
-
-        coret.sleep(Duration::from_secs(1));
 
     }
 
+}
+
+
+static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+fn mtimer_handler(_code: usize) {
+    INTERRUPTED.store(true, Ordering::Relaxed);
+    CORET.set_time_cmp(CORET.get_time_cmp() + 1_000_000);
 }

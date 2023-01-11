@@ -203,7 +203,6 @@ handler:
 
     # Call the trap handler in Rust code.
     csrr a0, mcause
-    csrr a1, mtval
 
     # Intentionnaly use a register because we are unsure about how far
     # this function can be placed.

@@ -126,4 +126,10 @@ pub const T_HEAD_RV32_CLIC_BASE: usize      = 0xE0800000;
 pub const T_HEAD_RV32_MTIMECMP_BASE: usize  = 0xE0004000;
 pub const T_HEAD_RV32_MTIME_BASE: usize     = 0xE000BFF8;
 
+pub const T_HEAD_RV64_CORET_BASE: usize     = 0xE4000000;
+pub const T_HEAD_RV64_MTIMECMP0_BASE: usize = 0xE4004000;
+pub const T_HEAD_RV64_MTIMECMP1_BASE: usize = 0xE4004008;
+pub const T_HEAD_RV64_MTIMECMP2_BASE: usize = 0xE4004010;
+pub const T_HEAD_RV64_MTIMECMP3_BASE: usize = 0xE4004018;
+
 pub const T_HEAD_PLIC_BASE: usize           = 0xE0000000;

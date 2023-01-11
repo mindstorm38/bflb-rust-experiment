@@ -1,4 +1,4 @@
-//! Common internal code for CLIC.
+//! Common internal code for CLIC-based chips.
 
 
 /// Low-level Trap Vector Handler referenced by the Trap Vector Table.

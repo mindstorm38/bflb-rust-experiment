@@ -34,10 +34,6 @@ _start:
     # Disable interruptions for startup.
     csrci mstatus, MSTATUS_MIE | MSTATUS_SIE
  
-    # Disable all interrupts and clear pending ones.
-    csrw mie, zero
-    csrw mip, zero
-
     # Initialize floating point unit.
     li t0, MSTATUS_FS
     csrc mstatus, t0
@@ -63,6 +59,9 @@ _start:
     
     # Init before entry point.
     jal _rust_init
+
+    # Re-enable interrupts after startup.
+    csrsi mstatus, MSTATUS_MIE | MSTATUS_SIE
 
     # Enter the entry function.
     jal _rust_entry
@@ -185,7 +184,6 @@ _mtrap_generic_handler:
 
     # Call the trap handler in Rust code.
     csrr a0, mcause
-    csrr a1, mtval
 
     # Intentionnaly use a register because we are unsure about how far
     # this function can be placed.

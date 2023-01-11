@@ -148,7 +148,7 @@ macro_rules! mmio_reg {
     ) => {
 
         $(#[$struct_meta])*
-        #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
+        #[derive(Clone, Copy, Eq, PartialEq, Default)]
         #[repr(transparent)]
         $vis struct $name(pub $regtype);
         impl $name {
@@ -167,6 +167,16 @@ macro_rules! mmio_reg {
                 }
             )*
 
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!($name))
+                    $( 
+                    .field(stringify!($field_name), &$crate::mmio::Reg::get::<$field_start, $field_end>(self)) 
+                    )*
+                    .finish()
+            }
         }
 
         impl $crate::mmio::Reg for $name {
