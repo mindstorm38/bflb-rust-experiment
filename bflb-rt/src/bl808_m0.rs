@@ -34,7 +34,7 @@ pub fn init() {
         let int = CLIC.int(irq_num);
         int.enable().set(0);
         int.pending().set(0);
-        int.attr().modify(|reg| reg.vectored().fill());
+        int.attr().modify(|reg| reg.vectored().clear());
         int.control().set(255);
     }
 

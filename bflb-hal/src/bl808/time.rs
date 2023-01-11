@@ -96,6 +96,10 @@ impl<C: AsCoreId> CoreTimer<C> {
 
     /// Set the time compare in microseconds. A machine timer interrupt will
     /// be triggered whenever the time is greater or equal to this value.
+    /// 
+    /// *Note that you might need to update this value in order to reset the
+    /// interrupt pending bit. Only resetting the time will not clear this
+    /// bit.*
     pub fn set_time_cmp(&self, cmp: u64) {
         unsafe {
             if self.is_rv64() {
