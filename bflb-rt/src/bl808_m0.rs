@@ -21,6 +21,7 @@ const CLIC: Clic = Clic(0xE0800000u32 as _);
 
 /// Machine Trap Vector Table.
 #[no_mangle]
+#[link_section = ".text.vector"]
 static mut _rust_mtrap_tvt: ClicVectorTable<IRQ_COUNT> = ClicVectorTable::new(crate::sym::_mtrap_generic_handler);
 
 
@@ -33,7 +34,7 @@ pub fn init() {
         let int = CLIC.int(irq_num);
         int.enable().set(0);
         int.pending().set(0);
-        int.attr().modify(|reg| reg.vectored().clear());
+        int.attr().modify(|reg| reg.vectored().fill());
         int.control().set(255);
     }
 

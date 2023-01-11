@@ -39,6 +39,7 @@ SECTIONS {
         _ld_text_start = .;
 
         *(.text.init)
+        *(.text.vector)
         *(.text .text.*)
 
         . = ALIGN(4);
