@@ -9,9 +9,11 @@ use super::clock::Clocks;
 use super::addr;
 
 
-/// Basic CoreTimer register controller.
+/// Providing access to the core's internal RTC timer. This timer is configured 
+/// to have a *microsecond* resolution. 
 /// 
-/// It is configured to have a microsecond resolution.
+/// **Note that** you have to be careful not  to create this structure multiple
+/// time, even if this is not inherently unsafe.
 pub struct CoreTimer<C> {
     /// The core id.
     core_id: C,
