@@ -47,25 +47,25 @@ use riscv_hal::clic::Clic;
 
 
 /// The register that stores the CPU identifier.
-pub const CORE_ID: CoreId     = CoreId(addr::CPU_ID_BASE as _);
+pub const CORE_ID: CoreId       = CoreId(addr::CPU_ID_BASE as _);
 /// The MCU misc registers.
-pub const MCU_MISC: McuMisc = McuMisc(addr::MCU_MISC_BASE as _);
+pub const MCU_MISC: McuMisc     = McuMisc(addr::MCU_MISC_BASE as _);
 /// The MM misc registers.
-pub const MM_MISC: MmMisc   = MmMisc(addr::MM_MISC_BASE as _);
+pub const MM_MISC: MmMisc       = MmMisc(addr::MM_MISC_BASE as _);
 /// The MM global registers.
-pub const MM_GLB: MmGlb     = MmGlb(addr::MM_GLB_BASE as _);
+pub const MM_GLB: MmGlb         = MmGlb(addr::MM_GLB_BASE as _);
 /// The global registers.
-pub const GLB: Glb          = Glb(addr::GLB_BASE as _);
+pub const GLB: Glb              = Glb(addr::GLB_BASE as _);
 /// The Power Down Sleep registers.
-pub const PDS: Pds          = Pds(addr::PDS_BASE as _);
+pub const PDS: Pds              = Pds(addr::PDS_BASE as _);
 /// The Hibernate registers.
-pub const HBN: Hbn          = Hbn(addr::HBN_BASE as _);
+pub const HBN: Hbn              = Hbn(addr::HBN_BASE as _);
 /// The ??? registers.
-pub const AON: Aon          = Aon(addr::AON_BASE as _);
+pub const AON: Aon              = Aon(addr::AON_BASE as _);
 /// The ??? registers.
-pub const CCI: Cci          = Cci(addr::CCI_BASE as _);
+pub const CCI: Cci              = Cci(addr::CCI_BASE as _);
 /// The Serial Flash Control registers.
-pub const SF_CTRL: SfCtrl   = SfCtrl(addr::SF_CTRL_BASE as _);
+pub const SF_CTRL: SfCtrl       = SfCtrl(addr::SF_CTRL_BASE as _);
 
 // UART
 pub const UART0: Uart           = Uart(addr::UART0_BASE as _);
@@ -96,7 +96,7 @@ pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _);
 /// - M0: 96 interrupts, 4 bits priority
 /// - D0: No CLIC (TODO: Check that)
 /// - LP: 32 interrupts
-pub const CLIC: Clic        = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
+pub const CLIC: Clic            = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
 
 
 emhal::mmio_struct! {

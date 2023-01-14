@@ -1,9 +1,9 @@
 //! HAL/PAC for BL808
 //! 
 //! This chip contains three CPUs:
-//! - M0: Main CPU (32 bits)
-//! - D0: Multimedia-oriented CPU (64 bits)
-//! - LP: Low power CPU (32 bits embedded)
+//! - M0: Main CPU (T-head E907, 32-bit, RV32IMAFCP)
+//! - D0: Multimedia-oriented CPU (T-head C906, 64-bit, RV64IMAFCV)
+//! - LP: Low power CPU (T-head E902, 32-bit, RV32EMC)
 //! 
 //! This chip has many different types of memories:
 //! - Flash:    Application address space

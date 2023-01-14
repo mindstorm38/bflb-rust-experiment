@@ -1,6 +1,5 @@
 # HAL for RISC-V architecture
-This crate provides HAL structures for managing some RISC-V features such as CLIC
-(Core-Local Interrupt Controller) or vendor specific extensions.
+This crate provides HAL structures for managing some RISC-V features such as CLIC and PLIC or vendor specific extensions.
 
 ## Documents
 - [RISC-V Specifications](https://riscv.org/technical/specifications/)
