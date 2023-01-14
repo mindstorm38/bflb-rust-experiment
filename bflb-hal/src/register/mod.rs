@@ -7,6 +7,9 @@
 //! Many modules are generated from C headers by 'tools/parse_reg.py'.
 
 
+// Providing register addresses.
+pub mod addr;
+
 // Automatically implemented (see tools/parse_reg.py).
 pub mod mcu_misc;
 pub mod mm_misc;
@@ -43,9 +46,6 @@ pub use mjpeg::Mjpeg;
 use riscv_hal::clic::Clic;
 
 
-use super::addr;
-
-
 /// The register that stores the CPU identifier.
 pub const CORE_ID: CoreId     = CoreId(addr::CPU_ID_BASE as _);
 /// The MCU misc registers.
@@ -68,9 +68,9 @@ pub const CCI: Cci          = Cci(addr::CCI_BASE as _);
 pub const SF_CTRL: SfCtrl   = SfCtrl(addr::SF_CTRL_BASE as _);
 
 // UART
-pub const UART0: Uart       = Uart(addr::UART0_BASE as _);
-pub const UART1: Uart       = Uart(addr::UART1_BASE as _);
-pub const UART2: Uart       = Uart(addr::UART2_BASE as _);
+pub const UART0: Uart           = Uart(addr::UART0_BASE as _);
+pub const UART1: Uart           = Uart(addr::UART1_BASE as _);
+pub const UART2: Uart           = Uart(addr::UART2_BASE as _);
 
 // CAMERA
 pub const CAM_FRONT: CamFront   = CamFront(addr::ISP_MISC_BASE as _);

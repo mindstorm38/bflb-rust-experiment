@@ -13,41 +13,30 @@
 
 use emhal::mmio::PtrRw;
 
-use super::mmio::{CpuRtc, MCU_MISC, MM_MISC, PDS, HBN, AON, GLB, MM_GLB, CCI};
-use super::{CoreId, AsCoreId};
+use embedded_util::peripheral;
+
+use crate::register::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
 
 
 /// Clocks controller for BL808.
-pub struct Clocks<C> {
-    core_id: C,
-}
-
-impl<C: AsCoreId> Clocks<C> {
-
-    /// Create a new clocks controller given a CPU id.
-    pub const fn new(core_id: C) -> Self {
-        Self {
-            core_id,
-        }
-    }
-
-}
-
+pub struct Clocks {}
+peripheral!(Clocks);
 
 /// High-level mtimer methods.
-impl<C: AsCoreId> Clocks<C> {
+impl Clocks {
 
     /// Get the machine timer RTC register for the current core.
     pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {
-        match self.core_id.as_core_id() {
-            CoreId::M0 => MCU_MISC.cpu_mtimer_rtc(),
-            CoreId::D0 => MM_MISC.cpu_mtimer_rtc(),
-            CoreId::LP => PDS.cpu_mtimer_rtc(),
-        }
+        #[cfg(feature = "bl808_m0")]
+        { register::MCU_MISC.cpu_mtimer_rtc() }
+        #[cfg(feature = "bl808_d0")]
+        { register::MM_MISC.cpu_mtimer_rtc() }
+        #[cfg(feature = "bl808_lp")]
+        { register::PDS.cpu_mtimer_rtc() }
     }
 
     /// Enable and configure the machine timer clock.
-    pub fn enable_mtimer_clock(&self, div: u32) {
+    pub fn enable_mtimer_clock(&mut self, div: u32) {
         debug_assert_ne!(div, 0, "divider must be nonzero");
         let rtc = self.get_mtimer_rtc_reg();
         rtc.modify(|reg| reg.enable().set(0));
@@ -56,7 +45,7 @@ impl<C: AsCoreId> Clocks<C> {
     }
 
     /// Disable the machine timer clock.
-    pub fn disable_mtimer_clock(&self) {
+    pub fn disable_mtimer_clock(&mut self) {
         let rtc = self.get_mtimer_rtc_reg();
         rtc.modify(|reg| reg.enable().set(0));
     }
@@ -70,11 +59,12 @@ impl<C: AsCoreId> Clocks<C> {
     /// without RTC divider.
     /// To get the real frequency of the machine timer, use [`get_mtimer_freq`].
     pub fn get_mtimer_source_freq(&self) -> u32 {
-        match self.core_id.as_core_id() {
-            CoreId::M0 => self.get_m0_cpu_freq(),
-            CoreId::D0 => todo!(),
-            CoreId::LP => todo!(),
-        }
+        #[cfg(feature = "bl808_m0")]
+        { self.get_m0_cpu_freq() }
+        #[cfg(feature = "bl808_d0")]
+        { todo!() }
+        #[cfg(feature = "bl808_lp")]
+        { todo!() }
     }
 
     /// Get the real frequency of the machine timer clock.
@@ -86,7 +76,7 @@ impl<C: AsCoreId> Clocks<C> {
 
 
 /// Methods to configure the crystal clock (external clock).
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the soc crystal type.
     /// 
@@ -107,7 +97,7 @@ impl<C> Clocks<C> {
     /// 
     /// *Note that this is only informational, and not used by hardware,
     /// because the crystal clock is physically selected outside chip.*
-    pub fn set_xtal_type(&self, typ: XtalType) {
+    pub fn set_xtal_type(&mut self, typ: XtalType) {
         HBN.rsv3().modify(|reg| {
             reg.xtal_flag().set(0x58);
             reg.xtal_type().set(typ as _);
@@ -127,7 +117,7 @@ impl<C> Clocks<C> {
     }
 
     /// Power on crystal clock and wait for it being enabled.
-    pub fn enable_xtal(&self) -> Result<(), ()> {
+    pub fn enable_xtal(&mut self) -> Result<(), ()> {
         
         AON.rf_top_aon().modify(|reg| {
             reg.pu_xtal_aon().set(1);
@@ -159,7 +149,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods to configure `xclk`.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the selector for the main xclock freq.
     pub fn get_xclk_sel(&self) -> Mux2 {
@@ -169,7 +159,7 @@ impl<C> Clocks<C> {
     /// Set the selector for the main xclock freq.
     /// - 0 - RC 32MHz
     /// - 1 - Crystal
-    pub fn set_xclk_sel(&self, sel: Mux2) {
+    pub fn set_xclk_sel(&mut self, sel: Mux2) {
         HBN.glb().modify(|reg| reg.xclk_sel().set(sel as _));
     }
 
@@ -185,7 +175,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods for F32k clock.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the selector the F32k clock.
     pub fn get_f32k_sel(&self) -> Mux4 {
@@ -196,7 +186,7 @@ impl<C> Clocks<C> {
     /// - 0 - RC 32 kHz
     /// - 1 - Crystal 32 kHz
     /// - 2/3 - Crystal divided
-    pub fn set_f32k_sel(&self, sel: Mux4) {
+    pub fn set_f32k_sel(&mut self, sel: Mux4) {
         HBN.glb().modify(|reg| reg.f32k_sel().set(sel as _));
     }
 
@@ -216,7 +206,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods for M0 (part of MCU) clocks.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the selector for the PLL MCU freq.
     pub fn get_m0_pll_sel(&self) -> Mux4 {
@@ -241,7 +231,7 @@ impl<C> Clocks<C> {
     /// Set the selector for the main MCU freq.
     /// - 0 - Xclock
     /// - 1 - M0 PLL
-    pub fn set_m0_root_sel(&self, sel: Mux2) {
+    pub fn set_m0_root_sel(&mut self, sel: Mux2) {
         HBN.glb().modify(|reg| reg.mcu_root_sel().set(sel as _));
     }
 
@@ -259,7 +249,7 @@ impl<C> Clocks<C> {
     }
 
     /// Set the divider for M0 CPU clock.
-    pub fn set_m0_cpu_div(&self, div: u32) {
+    pub fn set_m0_cpu_div(&mut self, div: u32) {
         GLB.sys_cfg0().modify(|reg| reg.hclk_div().set(div - 1));
     }
 
@@ -275,11 +265,11 @@ impl<C> Clocks<C> {
     }
 
     /// Get the divider for M0 secondary clock.
-    pub fn set_m0_secondary_div(&self, div: u32) {
+    pub fn set_m0_secondary_div(&mut self, div: u32) {
         GLB.sys_cfg0().modify(|reg| reg.bclk_div().set(div - 1));
     }
 
-    pub fn set_m0_secondary_div_act_pulse(&self, act: bool) {
+    pub fn set_m0_secondary_div_act_pulse(&mut self, act: bool) {
         GLB.sys_cfg1().modify(|reg| reg.bclk_div_act_pulse().set(act as _));
     }
 
@@ -292,7 +282,7 @@ impl<C> Clocks<C> {
     }
 
     /// Disable the M0 clock.
-    pub fn disable_m0_clock(&self) {
+    pub fn disable_m0_clock(&mut self) {
         PDS.cpu_core_cfg1().modify(|reg| reg.mcu1_clk_en().set(0));
     }
 
@@ -300,7 +290,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods for MM clocks.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the selector for MM xclock.
     pub fn get_mm_xclk_sel(&self) -> Mux2 {
@@ -310,7 +300,7 @@ impl<C> Clocks<C> {
     /// Set the selector for MM xclock.
     /// - 0 - RC 32 MHz
     /// - 1 - Crystal
-    pub fn set_mm_xclk_sel(&self, sel: Mux2) {
+    pub fn set_mm_xclk_sel(&mut self, sel: Mux2) {
         MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.xclk_clk_sel().set(sel as _));
     }
 
@@ -379,7 +369,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods for D0 (part of MM) clocks.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the selector for D0 PLL clock.
     pub fn get_d0_pll_sel(&self) -> Mux4 {
@@ -403,7 +393,7 @@ impl<C> Clocks<C> {
     /// Set the selector for D0 root clock.
     /// - 0 - MM xclock
     /// - 1 - D0 PLL
-    pub fn set_d0_root_sel(&self, sel: Mux2) {
+    pub fn set_d0_root_sel(&mut self, sel: Mux2) {
         MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.cpu_root_clk_sel().set(sel as _));
     }
 
@@ -421,7 +411,7 @@ impl<C> Clocks<C> {
     }
 
     /// Set the divider applied to the frequency for D0 CPU frequency.
-    pub fn set_d0_cpu_div(&self, div: u32) {
+    pub fn set_d0_cpu_div(&mut self, div: u32) {
         MM_GLB.mm_clk_cpu().modify(|reg| reg.cpu_clk_div().set(div - 1));
     }
 
@@ -437,11 +427,11 @@ impl<C> Clocks<C> {
     }
 
     /// Get the divider applied to the frequency for D0 secondary frequency.
-    pub fn set_d0_secondary_div(&self, div: u32) {
+    pub fn set_d0_secondary_div(&mut self, div: u32) {
         MM_GLB.mm_clk_cpu().modify(|reg| reg.bclk2x_div().set(div - 1));
     }
 
-    pub fn set_d0_secondary_div_act_pulse(&self, act: bool) {
+    pub fn set_d0_secondary_div_act_pulse(&mut self, act: bool) {
         MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.bclk2x_div_act_pulse().set(act as _));
     }
 
@@ -455,7 +445,7 @@ impl<C> Clocks<C> {
     }
 
     /// Disable the D0 clock.
-    pub fn disable_d0_clock(&self) {
+    pub fn disable_d0_clock(&mut self) {
         MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.mmcpu0_clk_en().set(0));
     }
 
@@ -463,7 +453,7 @@ impl<C> Clocks<C> {
 
 
 /// Methods for LP clocks.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Get the divider for LP CPU clock.
     pub fn get_lp_cpu_div(&self) -> u32 {
@@ -471,11 +461,11 @@ impl<C> Clocks<C> {
     }
 
     /// Set the divider for LP CPU clock.
-    pub fn set_lp_cpu_div(&self, div: u32) {
+    pub fn set_lp_cpu_div(&mut self, div: u32) {
         PDS.cpu_core_cfg7().modify(|reg| reg.pico_div().set(div));
     }
 
-    pub fn set_lp_cpu_div_act_pulse(&self, act: bool) {
+    pub fn set_lp_cpu_div_act_pulse(&mut self, act: bool) {
         GLB.sys_cfg1().modify(|reg| reg.pico_clk_div_act_pulse().set(act as _));
     }
 
@@ -489,7 +479,7 @@ impl<C> Clocks<C> {
     }
 
     /// Disable the LP clock.
-    pub fn disable_lp_clock(&self) {
+    pub fn disable_lp_clock(&mut self) {
         PDS.cpu_core_cfg0().modify(|reg| reg.pico_clk_en().set(0));
     }
 
@@ -497,18 +487,18 @@ impl<C> Clocks<C> {
 
 
 /// Methods for UART peripherals.
-impl<C> Clocks<C> {
+impl Clocks {
 
-    pub fn set_uart0_enable(&self, enable: bool) {
+    pub fn set_uart0_enable(&mut self, enable: bool) {
         GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart0().set(enable as _));
     }
 
-    pub fn set_uart1_enable(&self, enable: bool) {
+    pub fn set_uart1_enable(&mut self, enable: bool) {
         GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart1().set(enable as _));
     }
 
     /// Enable global UART clock.
-    pub fn set_uart_enable(&self, enable: bool) {
+    pub fn set_uart_enable(&mut self, enable: bool) {
         GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(enable as _));
     }
 
@@ -525,7 +515,7 @@ impl<C> Clocks<C> {
     }
 
     /// Set the UART clock selector.
-    pub fn set_uart_sel(&self, ref_clock: UartSel) {
+    pub fn set_uart_sel(&mut self, ref_clock: UartSel) {
         HBN.glb().modify(|reg| {
             let val = ref_clock as u32;
             reg.uart_clk_sel2().set((val >> 1) & 1);
@@ -539,7 +529,7 @@ impl<C> Clocks<C> {
     }
 
     /// Set the divisor for UART clock.
-    pub fn set_uart_div(&self, div: u32) {
+    pub fn set_uart_div(&mut self, div: u32) {
         GLB.uart_cfg0().modify(|reg| reg.uart_clk_div().set(div - 1));
     }
 
@@ -572,10 +562,10 @@ impl<C> Clocks<C> {
 
 
 /// Methods for PLL sources.
-impl<C> Clocks<C> {
+impl Clocks {
 
     /// Set selector of the given PLL clock source.
-    pub fn set_pll_sel(&self, typ: PllType, ref_clock: PllRefClock) {
+    pub fn set_pll_sel(&mut self, typ: PllType, ref_clock: PllRefClock) {
 
         let cfg1 = match typ {
             PllType::Wifi => GLB.wifi_pll_cfg1_(),
@@ -598,7 +588,7 @@ impl<C> Clocks<C> {
     }
 
     /// Disable the given PLL source clock.
-    pub fn disable_pll(&self, typ: PllType) {
+    pub fn disable_pll(&mut self, typ: PllType) {
 
         let cfg0 = match typ {
             PllType::Wifi => GLB.wifi_pll_cfg0_(),
@@ -616,7 +606,7 @@ impl<C> Clocks<C> {
     }
 
     /// Enable the Wifi PLL with a specific configuration.
-    pub fn enable_wifi_pll(&self, config: &PllWacConfig) {
+    pub fn enable_wifi_pll(&mut self, config: &PllWacConfig) {
 
         GLB.wifi_pll_cfg1().modify(|reg| {
             reg.wifipll_refdiv_ratio().set(config.basic.refdiv_ratio as _);
@@ -685,7 +675,7 @@ impl<C> Clocks<C> {
     }
 
     /// Enable the Audio PLL with a specific configuration.
-    pub fn enable_audio_pll(&self, config: &PllWacConfig) {
+    pub fn enable_audio_pll(&mut self, config: &PllWacConfig) {
 
         CCI.audio_pll_cfg1().modify(|reg| {
             reg.aupll_refdiv_ratio().set(config.basic.refdiv_ratio as _);

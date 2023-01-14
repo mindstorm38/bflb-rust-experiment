@@ -1,6 +1,7 @@
 [workspace]
 members = [
 	"embedded-hal",
+	"embedded-util",
 	"riscv-hal",
 	"usb-hal",
 	"bflb-hal", "bflb-rt", 

@@ -7,4 +7,10 @@ edition = "2021"
 
 [dependencies]
 embedded-hal = { path = "../embedded-hal", version = "0.1" }
+embedded-util = { path = "../embedded-util", version = "0.1" }
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
+
+[features]
+bl808_m0 = []
+bl808_d0 = []
+bl808_lp = []

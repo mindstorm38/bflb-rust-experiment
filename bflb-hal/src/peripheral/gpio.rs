@@ -1,56 +1,25 @@
 //! GPIO management on BL808.
 
+use embedded_util::peripheral;
 use emhal::mmio::PtrRw;
 
-use super::mmio::GLB;
-use super::mmio::glb::GlbGpioCfg0;
+use crate::register::GLB;
+use crate::register::glb::GlbGpioCfg0;
 
 
 /// Represent a configurable GPIO pin. You must ensure that
 /// no other instance of this structure exists with the same
 /// pin number for the lifetime of this structure.
-pub struct Pin {
-    pin: u8,
-}
+pub struct Pin<const NUM: u8> {}
+peripheral!(Pin<NUM>, NUM: u8[0..46]);
 
-impl Pin {
-
-    /// Create a new pin structure.
-    /// 
-    /// **You must** ensure that no other instance of this
-    /// structure exists with the same pin number for the
-    /// lifetime of this instance.
-    #[inline]
-    pub fn new(pin: u8) -> Self {
-        Self {
-            pin
-        }
-    }
-
-    /// Create a new pin structure and directly set a
-    /// particular mode.
-    /// 
-    /// **You must** ensure that no other instance of this
-    /// structure exists with the same pin number for the
-    /// lifetime of this instance.
-    #[inline]
-    pub fn with_mode(pin: u8, mode: PinMode) -> Self {
-        let mut pin = Self::new(pin);
-        pin.set_mode(mode);
-        pin
-    }
-
-    /// Get the pin number.
-    #[inline]
-    pub fn number(&self) -> u8 {
-        self.pin
-    }
+impl<const NUM: u8> Pin<NUM> {
 
     /// Get the pointer to the GPIO configuration for the current pin.
     #[inline]
     fn get_cfg(&self) -> PtrRw<GlbGpioCfg0> {
         let mut gpio_cfg = GLB.gpio_cfg0();
-        gpio_cfg.0 = unsafe { gpio_cfg.0.add(self.pin as usize) };
+        gpio_cfg.0 = unsafe { gpio_cfg.0.add(NUM as usize) };
         gpio_cfg
     }
 
@@ -129,8 +98,8 @@ impl Pin {
     #[inline]
     pub fn set_high(&mut self) {
 
-        let reg = self.pin / 32;
-        let bit = self.pin % 32;
+        let reg = NUM / 32;
+        let bit = NUM % 32;
         
         let mut cfg = GLB.gpio_cfg138();
         cfg.0 = unsafe { cfg.0.add(reg as usize) };
@@ -143,8 +112,8 @@ impl Pin {
     #[inline]
     pub fn set_low(&mut self) {
 
-        let reg = self.pin / 32;
-        let bit = self.pin % 32;
+        let reg = NUM / 32;
+        let bit = NUM % 32;
 
         let mut cfg = GLB.gpio_cfg140();
         cfg.0 = unsafe { cfg.0.add(reg as usize) };
