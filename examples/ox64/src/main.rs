@@ -4,7 +4,7 @@
 use bflb_hal::peripheral::clock::{XtalType, Mux2, UartSel};
 use bflb_hal::peripheral::uart::UartConfig;
 
-use bflb_hal::{CoreTimer, Clocks, Pin, Uart};
+use bflb_hal::{CoreTimer, Clocks, PinPort, UartPort};
 
 use embedded_util::Peripheral;
 
@@ -61,10 +61,10 @@ fn main() {
     
     // CONSOLE INIT
 
-    let uart_tx = Pin::<14>::take();
-    let uart_rx = Pin::<15>::take();
-    let mut uart = Uart::<0>::take()
-        .duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
+    let uart_tx = PinPort::<14>::take();
+    let uart_rx = PinPort::<15>::take();
+    let mut uart = UartPort::<0>::take()
+        .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
     let mtimer_int = bflb_rt::get_interrupt(IrqNum::MachineTimer);
     mtimer_int.set_handler(mtimer_handler);

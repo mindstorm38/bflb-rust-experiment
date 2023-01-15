@@ -5,7 +5,7 @@ use embedded_util::peripheral;
 use crate::register::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::register::uart::UartBitPrd;
 
-use super::gpio::{Pin, PinMode, PinFunction, PinPull, PinDrive};
+use super::gpio::{PinPort, PinPull, PinDrive, Uart as UartFunc};
 use super::clock::Clocks;
 
 use core::marker::PhantomData;
@@ -13,72 +13,77 @@ use core::fmt;
 
 
 /// Definition of a UART port. This port need to be configured in
-/// order to obtain a [`UartIo`] structure that is actually usable
+/// order to obtain a [`Uart`] structure that is actually usable
 /// for TX and/or RX communications.
-pub struct Uart<const PORT: u8> {}
-peripheral!(Uart<PORT>, PORT: u8[0..3]);
+pub struct UartPort<const PORT: u8> {}
+peripheral!(UartPort<PORT>, PORT: u8[0..3]);
 
-impl<const PORT: u8> Uart<PORT> {
+impl<const PORT: u8> UartPort<PORT> {
+
+    /// Generic types erasing, this transfer checks to the runtime.
+    pub fn erase(self) -> ! {
+        todo!()
+    }
 
     /// Configure this UART port for duplex communications.
-    pub fn duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
-        mut tx: Pin<TX_PIN>,
-        mut rx: Pin<RX_PIN>,
+    pub fn into_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
+        tx: PinPort<TX_PIN>,
+        rx: PinPort<RX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> UartIo<PORT, Pin<TX_PIN>, Pin<RX_PIN>> {
+    ) -> Uart<PORT, PinPort<TX_PIN>, PinPort<RX_PIN>> {
 
-        attach_pin(&mut tx, match PORT {
+        attach_pin(tx, match PORT {
             0 => UartFunction::Uart0Tx,
             1 => UartFunction::Uart1Tx,
             2 => UartFunction::Uart2Tx,
             _ => unreachable!()
         });
 
-        attach_pin(&mut rx, match PORT {
+        attach_pin(rx, match PORT {
             0 => UartFunction::Uart0Rx,
             1 => UartFunction::Uart1Rx,
             2 => UartFunction::Uart2Rx,
             _ => unreachable!()
         });
 
-        UartIo::init(config, clocks)
+        Uart::init(config, clocks)
 
     }
 
     /// Configure this UART port for TX-only communications.
-    pub fn tx<const TX_PIN: u8>(self, 
-        mut tx: Pin<TX_PIN>,
+    pub fn into_tx<const TX_PIN: u8>(self, 
+        tx: PinPort<TX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> UartIo<PORT, Pin<TX_PIN>, Detached> {
+    ) -> Uart<PORT, PinPort<TX_PIN>, Detached> {
 
-        attach_pin(&mut tx, match PORT {
+        attach_pin(tx, match PORT {
             0 => UartFunction::Uart0Tx,
             1 => UartFunction::Uart1Tx,
             2 => UartFunction::Uart2Tx,
             _ => unreachable!()
         });
 
-        UartIo::init(config, clocks)
+        Uart::init(config, clocks)
 
     }
 
     /// Configure this UART port for RX-only communications.
-    pub fn rx<const RX_PIN: u8>(self, 
-        mut rx: Pin<RX_PIN>,
+    pub fn into_rx<const RX_PIN: u8>(self, 
+        rx: PinPort<RX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> UartIo<PORT, Detached, Pin<RX_PIN>> {
+    ) -> Uart<PORT, Detached, PinPort<RX_PIN>> {
 
-        attach_pin(&mut rx, match PORT {
+        attach_pin(rx, match PORT {
             0 => UartFunction::Uart0Rx,
             1 => UartFunction::Uart1Rx,
             2 => UartFunction::Uart2Rx,
             _ => unreachable!()
         });
 
-        UartIo::init(config, clocks)
+        Uart::init(config, clocks)
 
     }
 
@@ -86,8 +91,8 @@ impl<const PORT: u8> Uart<PORT> {
 
 
 /// An I/O capable structure that can be obtained by configuring a
-/// [`Uart`] peripheral.
-pub struct UartIo<const PORT: u8, Tx: Attachment, Rx: Attachment> {
+/// [`UartPort`] peripheral.
+pub struct Uart<const PORT: u8, Tx: Attachment, Rx: Attachment> {
     _tx: PhantomData<Tx>,
     _rx: PhantomData<Rx>,
 }
@@ -96,8 +101,15 @@ pub struct UartIo<const PORT: u8, Tx: Attachment, Rx: Attachment> {
 pub struct Detached;
 
 
-impl<const PORT: u8, Tx: Attachment, Rx: Attachment> UartIo<PORT, Tx, Rx> {
+impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
     
+    /// Get back the port associated bith this configured UART.
+    /// This can be used to free the peripheral.
+    pub fn into_port(self) -> UartPort<PORT> {
+        // Note that here the object is dropped, and therefore TX/RX lanes are stopped.
+        UartPort {}
+    }
+
     /// Internal function used to initialize the I/O given a configuration and clocks.
     fn init(config: &UartConfig, clocks: &Clocks) -> Self {
 
@@ -214,7 +226,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> UartIo<PORT, Tx, Rx> {
 }
 
 
-impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> UartIo<PORT, Pin<TX_PIN>, Rx> {
+impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinPort<TX_PIN>, Rx> {
 
     /// Simplest function to write a single byte of data to the UART TX.
     pub fn write_byte(&mut self, byte: u8) {
@@ -225,7 +237,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> UartIo<PORT, Pin<TX_PIN>,
     
 }
 
-impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for UartIo<PORT, Pin<TX_PIN>, Rx> {
+impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT, PinPort<TX_PIN>, Rx> {
 
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for &byte in s.as_bytes() {
@@ -237,7 +249,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for UartIo<POR
 }
 
 
-impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> UartIo<PORT, Tx, Pin<RX_PIN>> {
+impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> Uart<PORT, Tx, PinPort<RX_PIN>> {
 
     /// Simplest function to read a single byte, if available.
     pub fn read_byte(&mut self) -> Option<u8> {
@@ -252,7 +264,8 @@ impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> UartIo<PORT, Tx, Pin<RX_P
 }
 
 
-impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Drop for UartIo<PORT, Tx, Rx> {
+// Drop implementation that automatically disable lanes.
+impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Drop for Uart<PORT, Tx, Rx> {
 
     fn drop(&mut self) {
 
@@ -274,7 +287,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Drop for UartIo<PORT, Tx, R
 
 
 /// Internal function to attach a pin to a specific UART function.
-fn attach_pin<const NUM: u8>(pin: &mut Pin<NUM>, func: UartFunction) {
+fn attach_pin<const NUM: u8>(pin: PinPort<NUM>, func: UartFunction) {
 
     debug_assert!(NUM < 12, "uart pin number must be between 0 and 11 included");
 
@@ -290,7 +303,7 @@ fn attach_pin<const NUM: u8>(pin: &mut Pin<NUM>, func: UartFunction) {
         reg.0 |= (func as u32) << field;
     });
 
-    pin.set_mode(PinMode::Alternate(PinFunction::Uart));
+    let mut pin = pin.into_alternate::<UartFunc>();
     pin.set_pull(PinPull::Up);
     pin.set_drive(PinDrive::Drive1);
     pin.set_smt(true);
@@ -313,13 +326,11 @@ fn detach_pin(num: u8) {
 }
 
 
-/// Trait used internally to statically know if a Tx/Rx generic
-/// parameter is set to a [`Pin`], or to [`Detached`].
 pub trait Attachment {
     fn get_attachment() -> Option<u8>;
 }
 
-impl<const NUM: u8> Attachment for Pin<NUM> {
+impl<const NUM: u8> Attachment for PinPort<NUM> {
     #[inline(always)]
     fn get_attachment() -> Option<u8> {
         Some(NUM)
