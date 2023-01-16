@@ -127,7 +127,8 @@ pub trait Peripheral: Sized {
 
     /// Borrom the ownership of this peripheral. Read the documentation of [`take`].
     /// The term borrow hasn't the same meaning has in the language itself, because
-    /// here you get full ownership of the peripheral, but 
+    /// here you get full ownership of the peripheral, but when the its lifetime 
+    /// ends, it is automatically freed.
     fn borrow() -> PeripheralGuard<Self> {
         PeripheralGuard(Self::take())
     }
@@ -140,16 +141,9 @@ pub trait Peripheral: Sized {
         // to give back ownership. This *obviously* requires that only one
         // instance of the structure exists.
         let _ = peripheral;
-        unsafe { Self::force_free() }
-    }
-
-    /// Force this peripheral to be internally considered as available for
-    /// use by [`take`] and [`borrow`].
-    /// 
-    /// **This method is designed to be used internally, you should avoid
-    /// using it.**
-    unsafe fn force_free() {
-        Self::taken().store(false, core::sync::atomic::Ordering::Release);
+        unsafe {
+            Self::taken().store(false, core::sync::atomic::Ordering::Release);
+        }
     }
 
 }
@@ -159,7 +153,9 @@ pub struct PeripheralGuard<P: Peripheral>(pub P);
 
 impl<P: Peripheral> Drop for PeripheralGuard<P> {
     fn drop(&mut self) {
-        unsafe { P::force_free() }
+        unsafe {
+            P::taken().store(false, core::sync::atomic::Ordering::Release);
+        }
     }
 }
 
