@@ -88,7 +88,7 @@ def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc:
 
         out_fp.write(f"//! {doc}\n\n")
         
-        out_fp.write("emhal::mmio_struct! {\n")
+        out_fp.write("embedded_util::mmio! {\n")
         out_fp.write(f"    pub struct {struct_name} {{\n")
         for field in mmio_struct_fields:
             if "doc" in field:
@@ -97,12 +97,12 @@ def process(header_text: str, out_file: str, struct_name: str, prefix: str, doc:
         out_fp.write("    }\n}\n")
 
         for reg_name, reg_fields in mmio_regs.items():
-            out_fp.write("\nemhal::mmio_reg! {\n")
+            out_fp.write("\nembedded_util::reg! {\n")
             out_fp.write(f"    pub struct {reg_name}: u32 {{\n")
             for reg_field in reg_fields:
                 if "doc" in reg_field:
                     out_fp.write(f"        /// {reg_field['doc']}\n")
-                out_fp.write(f"        [{reg_field['start']}..{reg_field['end']}] {reg_field['name']},\n")
+                out_fp.write(f"        [{reg_field['start']:02}..{reg_field['end']:02}] {reg_field['name']},\n")
             out_fp.write("    }\n}\n")
 
 

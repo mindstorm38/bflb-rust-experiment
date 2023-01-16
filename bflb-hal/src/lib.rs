@@ -2,11 +2,12 @@
 
 #![no_std]
 
-pub mod peripheral;
-pub mod register;
+#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+pub mod bl808;
 
-
-#[cfg(feature = "bl808_m0")]
-mod bl808_m0;
-#[cfg(feature = "bl808_m0")]
-pub use bl808_m0::*;
+// Currently, only BL808 chip is implemented so we simplify feature gates by 
+// putting them here.
+#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+mod peripheral;
+#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+pub use peripheral::*;

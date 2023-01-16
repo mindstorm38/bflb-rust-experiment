@@ -2,11 +2,10 @@
 
 use core::marker::PhantomData;
 
-use embedded_util::peripheral;
-use emhal::mmio::PtrRw;
+use embedded_util::{peripheral, PtrRw};
 
-use crate::register::GLB;
-use crate::register::glb::GlbGpioCfg0;
+use crate::bl808::GLB;
+use crate::bl808::glb::GlbGpioCfg0;
 
 
 /// Represent an unconfigured GPIO pin peripheral

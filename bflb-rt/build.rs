@@ -5,8 +5,8 @@ use std::{env, fs};
 fn main() {
 
     let chips = [
-        (env::var("CARGO_FEATURE_BL808_D0").is_ok(), "bl808_d0"),
         (env::var("CARGO_FEATURE_BL808_M0").is_ok(), "bl808_m0"),
+        (env::var("CARGO_FEATURE_BL808_D0").is_ok(), "bl808_d0"),
         (env::var("CARGO_FEATURE_BL808_LP").is_ok(), "bl808_lp"),
     ];
 
@@ -17,7 +17,8 @@ fn main() {
             if chip_selected.is_none() {
                 chip_selected = Some(chip);
             } else {
-                println!("cargo:warning=chip feature {chip} will be ignored because a multiple ones are enabled")
+                eprintln!("Chip feature {chip} will be ignored because a multiple ones are enabled.");
+                std::process::exit(1);
             }
         }
     }

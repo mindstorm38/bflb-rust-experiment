@@ -1,8 +1,19 @@
-//! Memory Mapped I/O structures definitions.
+//! Memory Mapped I/O structures definitions for BL808.
 //! 
-//! The goal is to provides good APIs to manipulate both memory mapped 
-//! structures with read or/and write fields and registers field by 
-//! field.
+//! HAL/PAC for BL808
+//! 
+//! This chip contains three CPUs:
+//! - M0: Main CPU (T-head E907, 32-bit, RV32IMAFCP)
+//! - D0: Multimedia-oriented CPU (T-head C906, 64-bit, RV64IMAFCV)
+//! - LP: Low power CPU (T-head E902, 32-bit, RV32EMC)
+//! 
+//! This chip has many different types of memories:
+//! - Flash:    Application address space
+//! - OCRAM:    Mainly for M0
+//! - WRAM:     Mainly for wireless network data
+//! - XRAM:     Shared RAM for communication between cores.
+//! - DRAM:     Multimedia RAM used by D0 or modules like H264/NPU
+//! - VRAM:     Multimedia RAM used by D0 or modules like H264/NPU
 //! 
 //! Many modules are generated from C headers by 'tools/parse_reg.py'.
 
@@ -99,22 +110,22 @@ pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _);
 pub const CLIC: Clic            = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
 
     /// The CPU identification structure, contains only one read-only
     /// field containing the numeric ID.
     pub struct CoreId {
-        [0] r core_id: u32,
+        [0] ro core_id: u32,
     }
 
 }
 
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     
     /// Common RTC register, used to have a common structure for all RTC configurations.
     pub struct CpuRtc: u32 {
-        [0..10] divider,
+        [00..10] divider,
         [30..31] reset,
         [31..32] enable,
     }
@@ -124,25 +135,25 @@ emhal::mmio_reg! {
     /// Note that some fields are reserved for Wifi, Audio, CPU (WAC).
     pub struct PllCfg0: u32 {
         /// Common to all PLLs.
-        [0..1] pll_sdm_rstb,
+        [00..01] pll_sdm_rstb,
         /// **Reserved to WAC PLLs.**
-        [1..2] pll_postdiv_rstb,
+        [01..02] pll_postdiv_rstb,
         /// Common to all PLLs.
-        [2..3] pll_fbdv_rstb,
+        [02..03] pll_fbdv_rstb,
         /// **Reserved to WAC PLLs.**
-        [3..4] pll_refdiv_rstb,
+        [03..04] pll_refdiv_rstb,
         /// **Reserved to WAC PLLs.**
-        [4..5] pu_pll_postdiv,
+        [04..05] pu_pll_postdiv,
         /// Common to all PLLs.
-        [5..6] pu_pll_fbdv,
+        [05..06] pu_pll_fbdv,
         /// **Reserved to WAC PLLs.**
-        [6..7] pu_pll_clamp_op,
+        [06..07] pu_pll_clamp_op,
         /// **Reserved to WAC PLLs.**
-        [7..8] pu_pll_pfd,
+        [07..08] pu_pll_pfd,
         /// Common to all PLLs.
-        [8..9] pu_pll_cp,
+        [08..09] pu_pll_cp,
         /// Common to all PLLs.
-        [9..10] pu_pll_sfreg,
+        [09..10] pu_pll_sfreg,
         /// Common to all PLLs.
         [10..11] pu_pll,
         /// **Reserved to WAC PLLs.**
@@ -155,13 +166,13 @@ emhal::mmio_reg! {
     /// MIPI, UHS (MU).
     pub struct PllCfg1: u32 {
         /// **Reserved to MU PLLs.**
-        [0..7] pll_even_div_ratio,
+        [00..07] pll_even_div_ratio,
         /// **Reserved to MU PLLs.**
-        [7..8] pll_even_div_en,
+        [07..08] pll_even_div_en,
         /// **Reserved to WAC PLLs.**
-        [0..7] pll_postdiv,
+        [00..07] pll_postdiv,
         /// Common to all PLLs.
-        [8..12] pll_refdiv_ratio,
+        [08..12] pll_refdiv_ratio,
         /// Common to all PLLs.
         [16..18] pll_refclk_sel,
         /// Common to all PLLs.

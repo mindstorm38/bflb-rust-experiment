@@ -11,11 +11,9 @@
 //! - https://github.com/bouffalolab/bl_mcu_sdk/blob/master/drivers/soc/bl808/std/src/bl808_clock.c
 //! - Clock diagram in the Datasheet
 
-use emhal::mmio::PtrRw;
+use embedded_util::{peripheral, PtrRw};
 
-use embedded_util::peripheral;
-
-use crate::register::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
+use crate::bl808::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
 
 
 /// Clocks controller for BL808.
@@ -28,11 +26,11 @@ impl Clocks {
     /// Get the machine timer RTC register for the current core.
     pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {
         #[cfg(feature = "bl808_m0")]
-        { register::MCU_MISC.cpu_mtimer_rtc() }
+        { bl808::MCU_MISC.cpu_mtimer_rtc() }
         #[cfg(feature = "bl808_d0")]
-        { register::MM_MISC.cpu_mtimer_rtc() }
+        { bl808::MM_MISC.cpu_mtimer_rtc() }
         #[cfg(feature = "bl808_lp")]
-        { register::PDS.cpu_mtimer_rtc() }
+        { bl808::PDS.cpu_mtimer_rtc() }
     }
 
     /// Enable and configure the machine timer clock.

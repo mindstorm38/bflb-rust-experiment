@@ -3,10 +3,10 @@
 //! Sources:
 //! - https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc5.pdf
 
-use emhal::mmio::PtrRw;
+use embedded_util::PtrRw;
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     
     /// Platform-Level Interrupt Controller memory registers.
     pub struct Plic {}

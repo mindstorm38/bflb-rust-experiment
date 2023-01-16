@@ -1,6 +1,6 @@
 //! USB EHCI Memory-Mapped registers.
 
-use emhal::mmio::PtrRw;
+use embedded_util::PtrRw;
 
 
 /// A structure containing the two EHCI registers: capability and operationnal.
@@ -12,7 +12,7 @@ pub struct Ehci {
 }
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
 
     /// EHCI Host Controller Capability Registers.
     pub struct EhciHccr {
@@ -145,7 +145,7 @@ impl EhciHcor {
 }
 
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     /// Host Controller Structural Parameters.
     pub struct EhciHcsParams: u32 {

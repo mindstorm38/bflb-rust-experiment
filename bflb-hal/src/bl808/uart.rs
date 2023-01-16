@@ -2,7 +2,8 @@
 //! 
 //! This module is sourced from the Reference Manual.
 
-emhal::mmio_struct! {
+
+embedded_util::mmio! {
     pub struct Uart {
         [0x00] rw utx_cfg: UartUtxCfg,
         [0x04] rw urx_cfg: UartUrxCfg,
@@ -32,7 +33,7 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartUtxCfg: u32 {
         /// Enable UART TX.
         [0..1] en,
@@ -61,7 +62,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartUrxCfg: u32 {
         /// Enable UART RX.
         [0..1] en,
@@ -88,7 +89,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     /// Bit period register.
     pub struct UartBitPrd: u32 {
         /// Period of each UART TX bit, related to baudrate.
@@ -98,7 +99,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartDataCfg: u32 {
         /// - 0 - Each byte is sent out LSB-first.
         /// - 1 - Each byte is sent out MSB-first.
@@ -106,7 +107,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartSwMode: u32 {
         [0..1] utx_txd_sw_mode,
         [1..2] utx_txd_sw_val,
@@ -115,7 +116,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartFifoCfg0: u32 {
         /// Enable dma_tx_req/ack interface
         [0..1] dma_tx_en,
@@ -136,7 +137,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct UartFifoCfg1: u32 {
         /// TX FIFO available count.
         [0..6] tx_fifo_count,

@@ -2,7 +2,7 @@
 
 use embedded_util::peripheral;
 
-use crate::register::addr;
+use crate::bl808::addr;
 use super::clock::Clocks;
 
 

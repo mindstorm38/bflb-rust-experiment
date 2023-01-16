@@ -8,3 +8,6 @@ pub use register::*;
 
 mod peripheral;
 pub use peripheral::*;
+
+mod mmio;
+pub use mmio::*;

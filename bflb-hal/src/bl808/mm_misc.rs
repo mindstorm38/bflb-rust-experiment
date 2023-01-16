@@ -1,6 +1,6 @@
 //! MM C906 register.
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct MmMisc {
         [0x000] rw cpu0_boot: MmMiscCpu0Boot,
         [0x008] rw cpu_cfg: MmMiscCpuCfg,
@@ -35,23 +35,23 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscCpu0Boot: u32 {
-        [0..32] cpu0_rvba,
+        [00..32] cpu0_rvba,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscCpuCfg: u32 {
-        [0..13] cpu0_apb_base,
+        [00..13] cpu0_apb_base,
         [28..29] cpu0_ndm_rstn_en,
         [29..30] cpu0_hart_rstn_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscCpuSts1: u32 {
-        [4..6] cpu0_lpmd_b,
+        [04..06] cpu0_lpmd_b,
         [16..24] cpu0_retire_pc_39_32,
         [24..25] cpu0_retire,
         [25..26] cpu0_pad_halted,
@@ -60,42 +60,42 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscCpuSts2: u32 {
-        [0..32] cpu0_retire_pc_31_0,
+        [00..32] cpu0_retire_pc_31_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscCpuRtc: u32 {
-        [0..10] c906_rtc_div,
+        [00..10] c906_rtc_div,
         [30..31] c906_rtc_rst,
         [31..32] c906_rtc_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscTzcMmsysMisc: u32 {
-        [0..1] tzc_mm_cpu0_lock,
-        [2..3] tzc_mm_sram_lock,
+        [00..01] tzc_mm_cpu0_lock,
+        [02..03] tzc_mm_sram_lock,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscPeriApbCtrl: u32 {
-        [0..1] mminfra_berr_int_en,
-        [1..2] berr_int_en,
-        [2..3] codec_berr_int_en,
-        [3..4] mmcpu_berr_int_en,
-        [8..9] mm_x2hs_sp_bypass,
+        [00..01] mminfra_berr_int_en,
+        [01..02] berr_int_en,
+        [02..03] codec_berr_int_en,
+        [03..04] mmcpu_berr_int_en,
+        [08..09] mm_x2hs_sp_bypass,
         [16..32] rg_pclk_force_on,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmInfraQosCtrl: u32 {
-        [2..3] mmcpu0_awqos,
-        [3..4] mmcpu0_arqos,
+        [02..03] mmcpu0_awqos,
+        [03..04] mmcpu0_arqos,
         [16..18] h_wthre_mm2conn,
         [18..20] h_wthre_conn2mm,
         [20..22] x_wthre_mmhw2pa,
@@ -104,32 +104,32 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscDmaClkCtrl: u32 {
-        [0..8] dma_clk_en,
+        [00..08] dma_clk_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscVramCtrl: u32 {
-        [0..1] sysram_set,
-        [1..3] h2pf_sram_rel,
-        [4..5] vram_sram_rel,
-        [6..7] sub_sram_rel,
-        [7..8] blai_sram_rel,
-        [8..11] h2pf_sram_sel,
+        [00..01] sysram_set,
+        [01..03] h2pf_sram_rel,
+        [04..05] vram_sram_rel,
+        [06..07] sub_sram_rel,
+        [07..08] blai_sram_rel,
+        [08..11] h2pf_sram_sel,
         [12..13] vram_sram_sel,
         [14..15] sub_sram_sel,
         [15..16] blai_sram_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscSramParm: u32 {
-        [0..4] sram_cpu_ram_dvs,
-        [4..5] sram_cpu_ram_dvse,
-        [5..6] sram_cpu_ram_nap,
-        [8..12] sram_l2ram_dvs,
+        [00..04] sram_cpu_ram_dvs,
+        [04..05] sram_cpu_ram_dvse,
+        [05..06] sram_cpu_ram_nap,
+        [08..12] sram_l2ram_dvs,
         [12..13] sram_l2ram_dvse,
         [13..14] sram_l2ram_nap,
         [16..20] sram_cdc_ram_dvs,
@@ -141,81 +141,81 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntSta0: u32 {
-        [0..32] mm_int_sta0,
+        [00..32] mm_int_sta0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntMask0: u32 {
-        [0..32] mm_int_mask0,
+        [00..32] mm_int_mask0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntClr0: u32 {
-        [0..32] mm_int_clr0,
+        [00..32] mm_int_clr0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntSta1: u32 {
-        [0..32] mm_int_sta1,
+        [00..32] mm_int_sta1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntMask1: u32 {
-        [0..32] mm_int_mask1,
+        [00..32] mm_int_mask1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmIntClr1: u32 {
-        [0..32] mm_int_clr1,
+        [00..32] mm_int_clr1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmsysDebugSel: u32 {
-        [0..4] mmsys_debug_sel,
+        [00..04] mmsys_debug_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmsysMiscDummy: u32 {
-        [0..1] pir_ctrl_o,
-        [1..2] light_sensor_ctrl_o,
-        [2..3] ir_cut_ctrl_o,
-        [3..4] dvp_sensor_pwdn,
-        [4..32] dummy_reg,
+        [00..01] pir_ctrl_o,
+        [01..02] light_sensor_ctrl_o,
+        [02..03] ir_cut_ctrl_o,
+        [03..04] dvp_sensor_pwdn,
+        [04..32] dummy_reg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscDdrDebug: u32 {
-        [0..1] ddr_calib_done,
+        [00..01] ddr_calib_done,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg0: u32 {
-        [0..3] berr_en,
-        [8..11] codec_berr_en,
+        [00..03] berr_en,
+        [08..11] codec_berr_en,
         [16..17] mmcpu_berr_en,
         [24..29] mminfra_berr_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg1: u32 {
-        [0..1] berr_clr,
-        [1..2] codec_berr_clr,
-        [2..3] mmcpu_berr_clr,
-        [3..4] mminfra_berr_clr,
-        [8..9] berr_last,
-        [9..10] codec_berr_last,
+        [00..01] berr_clr,
+        [01..02] codec_berr_clr,
+        [02..03] mmcpu_berr_clr,
+        [03..04] mminfra_berr_clr,
+        [08..09] berr_last,
+        [09..10] codec_berr_last,
         [10..11] mmcpu_berr_last,
         [11..12] mminfra_berr_last,
         [16..17] sts_berr,
@@ -229,44 +229,44 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg2: u32 {
-        [0..3] sts_berr_src,
-        [8..12] sts_berr_id,
+        [00..03] sts_berr_src,
+        [08..12] sts_berr_id,
         [16..19] sts_codec_berr_src,
         [24..25] sts_codec_berr_id,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg3: u32 {
-        [0..1] sts_mmcpu_berr_src,
-        [8..12] sts_mmcpu_berr_id,
+        [00..01] sts_mmcpu_berr_src,
+        [08..12] sts_mmcpu_berr_id,
         [16..21] sts_mminfra_berr_src,
         [24..30] sts_mminfra_berr_id,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg4: u32 {
-        [0..32] sts_berr_addr,
+        [00..32] sts_berr_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg5: u32 {
-        [0..32] sts_codec_berr_addr,
+        [00..32] sts_codec_berr_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg6: u32 {
-        [0..32] sts_mmcpu_berr_addr,
+        [00..32] sts_mmcpu_berr_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct MmMiscMmBerrCfg7: u32 {
-        [0..32] sts_mminfra_berr_addr,
+        [00..32] sts_mminfra_berr_addr,
     }
 }

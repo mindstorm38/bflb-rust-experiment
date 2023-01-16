@@ -1,6 +1,6 @@
 //! Serial Flash.
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct SfCtrl {
         [0x000] rw _0: SfCtrl0,
         [0x000] rw if_sahb_0: SfCtrlIfSahb0,
@@ -127,12 +127,12 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrl0: u32 {
-        [2..3] sf_clk_sf_rx_inv_sel,
-        [3..4] sf_clk_out_gate_en,
-        [4..5] sf_clk_out_inv_sel,
-        [8..11] sf_if_read_dly_n,
+        [02..03] sf_clk_sf_rx_inv_sel,
+        [03..04] sf_clk_out_gate_en,
+        [04..05] sf_clk_out_inv_sel,
+        [08..11] sf_if_read_dly_n,
         [11..12] sf_if_read_dly_en,
         [16..17] sf_if_int,
         [17..18] sf_if_int_clr,
@@ -146,10 +146,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrl1: u32 {
-        [0..8] sf_if_sr_pat_mask,
-        [8..16] sf_if_sr_pat,
+        [00..08] sf_if_sr_pat_mask,
+        [08..16] sf_if_sr_pat,
         [16..17] sf_if_sr_int,
         [17..18] sf_if_sr_int_en,
         [18..19] sf_if_sr_int_set,
@@ -166,11 +166,11 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfSahb0: u32 {
-        [0..1] sf_if_busy,
-        [1..2] sf_if_0_trig,
-        [2..12] sf_if_0_dat_byte,
+        [00..01] sf_if_busy,
+        [01..02] sf_if_0_trig,
+        [02..12] sf_if_0_dat_byte,
         [12..17] sf_if_0_dmy_byte,
         [17..20] sf_if_0_adr_byte,
         [20..23] sf_if_0_cmd_byte,
@@ -184,19 +184,19 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfSahb1: u32 {
-        [0..32] sf_if_0_cmd_buf_0,
+        [00..32] sf_if_0_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfSahb2: u32 {
-        [0..32] sf_if_0_cmd_buf_1,
+        [00..32] sf_if_0_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb0: u32 {
         [12..17] sf_if_1_dmy_byte,
         [17..20] sf_if_1_adr_byte,
@@ -211,189 +211,189 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb1: u32 {
-        [0..32] sf_if_1_cmd_buf_0,
+        [00..32] sf_if_1_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb2: u32 {
-        [0..32] sf_if_1_cmd_buf_1,
+        [00..32] sf_if_1_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfStatus0: u32 {
-        [0..32] sf_if_status_0,
+        [00..32] sf_if_status_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfStatus1: u32 {
-        [0..32] sf_if_status_1,
+        [00..32] sf_if_status_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAes: u32 {
-        [0..1] sf_aes_en,
-        [1..3] sf_aes_mode,
-        [3..4] sf_aes_blk_mode,
-        [4..5] sf_aes_xts_key_opt,
-        [5..32] sf_aes_status,
+        [00..01] sf_aes_en,
+        [01..03] sf_aes_mode,
+        [03..04] sf_aes_blk_mode,
+        [04..05] sf_aes_xts_key_opt,
+        [05..32] sf_aes_status,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAhb2sifStatus: u32 {
-        [0..32] sf_ahb2sif_status,
+        [00..32] sf_ahb2sif_status,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIoDly0: u32 {
-        [0..2] sf_cs_dly_sel,
-        [2..4] sf_cs2_dly_sel,
-        [8..10] sf_clk_out_dly_sel,
+        [00..02] sf_cs_dly_sel,
+        [02..04] sf_cs2_dly_sel,
+        [08..10] sf_clk_out_dly_sel,
         [26..28] sf_dqs_oe_dly_sel,
         [28..30] sf_dqs_di_dly_sel,
         [30..32] sf_dqs_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIoDly1: u32 {
-        [0..2] sf_io_0_oe_dly_sel,
-        [8..10] sf_io_0_di_dly_sel,
+        [00..02] sf_io_0_oe_dly_sel,
+        [08..10] sf_io_0_di_dly_sel,
         [16..18] sf_io_0_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIoDly2: u32 {
-        [0..2] sf_io_1_oe_dly_sel,
-        [8..10] sf_io_1_di_dly_sel,
+        [00..02] sf_io_1_oe_dly_sel,
+        [08..10] sf_io_1_di_dly_sel,
         [16..18] sf_io_1_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIoDly3: u32 {
-        [0..2] sf_io_2_oe_dly_sel,
-        [8..10] sf_io_2_di_dly_sel,
+        [00..02] sf_io_2_oe_dly_sel,
+        [08..10] sf_io_2_di_dly_sel,
         [16..18] sf_io_2_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIoDly4: u32 {
-        [0..2] sf_io_3_oe_dly_sel,
-        [8..10] sf_io_3_di_dly_sel,
+        [00..02] sf_io_3_oe_dly_sel,
+        [08..10] sf_io_3_di_dly_sel,
         [16..18] sf_io_3_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfReserved: u32 {
-        [0..32] sf_reserved,
+        [00..32] sf_reserved,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf2IfIoDly0: u32 {
-        [0..2] sf2_cs_dly_sel,
-        [2..4] sf2_cs2_dly_sel,
-        [8..10] sf2_clk_out_dly_sel,
+        [00..02] sf2_cs_dly_sel,
+        [02..04] sf2_cs2_dly_sel,
+        [08..10] sf2_clk_out_dly_sel,
         [26..28] sf2_dqs_oe_dly_sel,
         [28..30] sf2_dqs_di_dly_sel,
         [30..32] sf2_dqs_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf2IfIoDly1: u32 {
-        [0..2] sf2_io_0_oe_dly_sel,
-        [8..10] sf2_io_0_di_dly_sel,
+        [00..02] sf2_io_0_oe_dly_sel,
+        [08..10] sf2_io_0_di_dly_sel,
         [16..18] sf2_io_0_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf2IfIoDly2: u32 {
-        [0..2] sf2_io_1_oe_dly_sel,
-        [8..10] sf2_io_1_di_dly_sel,
+        [00..02] sf2_io_1_oe_dly_sel,
+        [08..10] sf2_io_1_di_dly_sel,
         [16..18] sf2_io_1_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf2IfIoDly3: u32 {
-        [0..2] sf2_io_2_oe_dly_sel,
-        [8..10] sf2_io_2_di_dly_sel,
+        [00..02] sf2_io_2_oe_dly_sel,
+        [08..10] sf2_io_2_di_dly_sel,
         [16..18] sf2_io_2_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf2IfIoDly4: u32 {
-        [0..2] sf2_io_3_oe_dly_sel,
-        [8..10] sf2_io_3_di_dly_sel,
+        [00..02] sf2_io_3_oe_dly_sel,
+        [08..10] sf2_io_3_di_dly_sel,
         [16..18] sf2_io_3_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf3IfIoDly0: u32 {
-        [0..2] sf3_cs_dly_sel,
-        [2..4] sf3_cs2_dly_sel,
-        [8..10] sf3_clk_out_dly_sel,
+        [00..02] sf3_cs_dly_sel,
+        [02..04] sf3_cs2_dly_sel,
+        [08..10] sf3_clk_out_dly_sel,
         [26..28] sf3_dqs_oe_dly_sel,
         [28..30] sf3_dqs_di_dly_sel,
         [30..32] sf3_dqs_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf3IfIoDly1: u32 {
-        [0..2] sf3_io_0_oe_dly_sel,
-        [8..10] sf3_io_0_di_dly_sel,
+        [00..02] sf3_io_0_oe_dly_sel,
+        [08..10] sf3_io_0_di_dly_sel,
         [16..18] sf3_io_0_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf3IfIoDly2: u32 {
-        [0..2] sf3_io_1_oe_dly_sel,
-        [8..10] sf3_io_1_di_dly_sel,
+        [00..02] sf3_io_1_oe_dly_sel,
+        [08..10] sf3_io_1_di_dly_sel,
         [16..18] sf3_io_1_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf3IfIoDly3: u32 {
-        [0..2] sf3_io_2_oe_dly_sel,
-        [8..10] sf3_io_2_di_dly_sel,
+        [00..02] sf3_io_2_oe_dly_sel,
+        [08..10] sf3_io_2_di_dly_sel,
         [16..18] sf3_io_2_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSf3IfIoDly4: u32 {
-        [0..2] sf3_io_3_oe_dly_sel,
-        [8..10] sf3_io_3_di_dly_sel,
+        [00..02] sf3_io_3_oe_dly_sel,
+        [08..10] sf3_io_3_di_dly_sel,
         [16..18] sf3_io_3_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrl2: u32 {
-        [0..2] sf_if_pad_sel,
-        [3..4] sf_if_pad_sel_lock,
-        [4..5] sf_if_dtr_en,
-        [5..6] sf_if_dqs_en,
-        [6..7] sf_if_trig_wr_prot,
-        [7..8] sf_id_offset_lock,
+        [00..02] sf_if_pad_sel,
+        [03..04] sf_if_pad_sel_lock,
+        [04..05] sf_if_dtr_en,
+        [05..06] sf_if_dqs_en,
+        [06..07] sf_if_trig_wr_prot,
+        [07..08] sf_id_offset_lock,
         [25..26] sf_ahb2sif_remap_lock,
         [26..28] sf_ahb2sif_remap,
         [28..29] sf_if_bk_swap,
@@ -403,13 +403,13 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrl3: u32 {
-        [0..4] sf_cmds_2_wrap_len,
-        [4..5] sf_cmds_2_en,
-        [5..8] sf_cmds_2_bt_dly,
-        [8..9] sf_cmds_2_bt_en,
-        [9..10] sf_cmds_2_wrap_q_ini,
+        [00..04] sf_cmds_2_wrap_len,
+        [04..05] sf_cmds_2_en,
+        [05..08] sf_cmds_2_bt_dly,
+        [08..09] sf_cmds_2_bt_en,
+        [09..10] sf_cmds_2_wrap_q_ini,
         [10..12] sf_cmds_2_wrap_mode,
         [12..13] sf_cmds_2_wrap_q,
         [13..17] sf_cmds_1_wrap_len,
@@ -420,7 +420,7 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb3: u32 {
         [12..17] sf_if_2_dmy_byte,
         [17..20] sf_if_2_adr_byte,
@@ -435,19 +435,19 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb4: u32 {
-        [0..32] sf_if_2_cmd_buf_0,
+        [00..32] sf_if_2_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb5: u32 {
-        [0..32] sf_if_2_cmd_buf_1,
+        [00..32] sf_if_2_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb6: u32 {
         [17..20] sf_if_3_adr_byte,
         [20..23] sf_if_3_cmd_byte,
@@ -458,19 +458,19 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb7: u32 {
-        [0..32] sf_if_3_cmd_buf_0,
+        [00..32] sf_if_3_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb8: u32 {
-        [0..32] sf_if_3_cmd_buf_1,
+        [00..32] sf_if_3_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb9: u32 {
         [12..17] sf_if_4_dmy_byte,
         [17..20] sf_if_4_adr_byte,
@@ -485,65 +485,65 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb10: u32 {
-        [0..32] sf_if_4_cmd_buf_0,
+        [00..32] sf_if_4_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb11: u32 {
-        [0..32] sf_if_4_cmd_buf_1,
+        [00..32] sf_if_4_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIfIahb12: u32 {
-        [2..3] sf2_clk_sf_rx_inv_sel,
-        [3..4] sf2_clk_sf_rx_inv_src,
-        [4..5] sf2_clk_out_inv_sel,
-        [5..6] sf3_clk_out_inv_sel,
-        [8..11] sf2_if_read_dly_n,
+        [02..03] sf2_clk_sf_rx_inv_sel,
+        [03..04] sf2_clk_sf_rx_inv_src,
+        [04..05] sf2_clk_out_inv_sel,
+        [05..06] sf3_clk_out_inv_sel,
+        [08..11] sf2_if_read_dly_n,
         [11..12] sf2_if_read_dly_en,
         [12..13] sf2_if_read_dly_src,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfId0Offset: u32 {
-        [0..28] sf_id0_offset,
+        [00..28] sf_id0_offset,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfId1Offset: u32 {
-        [0..28] sf_id1_offset,
+        [00..28] sf_id1_offset,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfBk2Id0Offset: u32 {
-        [0..28] sf_bk2_id0_offset,
+        [00..28] sf_bk2_id0_offset,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfBk2Id1Offset: u32 {
-        [0..28] sf_bk2_id1_offset,
+        [00..28] sf_bk2_id1_offset,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfDbg: u32 {
-        [0..5] sf_autoload_st,
-        [5..6] sf_autoload_st_done,
+        [00..05] sf_autoload_st,
+        [05..06] sf_autoload_st_done,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIf2Ctrl0: u32 {
-        [2..3] sf_clk_sf_if2_rx_inv_sel,
-        [8..11] sf_if2_read_dly_n,
+        [02..03] sf_clk_sf_if2_rx_inv_sel,
+        [08..11] sf_if2_read_dly_n,
         [11..12] sf_if2_read_dly_en,
         [16..17] sf_if2_int,
         [17..18] sf_if2_int_clr,
@@ -559,10 +559,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIf2Ctrl1: u32 {
-        [0..8] sf_if2_sr_pat_mask,
-        [8..16] sf_if2_sr_pat,
+        [00..08] sf_if2_sr_pat_mask,
+        [08..16] sf_if2_sr_pat,
         [16..17] sf_if2_sr_int,
         [17..18] sf_if2_sr_int_en,
         [18..19] sf_if2_sr_int_set,
@@ -574,11 +574,11 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIf2Sahb0: u32 {
-        [0..1] sf_if2_busy,
-        [1..2] sf_if2_0_trig,
-        [2..12] sf_if2_0_dat_byte,
+        [00..01] sf_if2_busy,
+        [01..02] sf_if2_0_trig,
+        [02..12] sf_if2_0_dat_byte,
         [12..17] sf_if2_0_dmy_byte,
         [17..20] sf_if2_0_adr_byte,
         [20..23] sf_if2_0_cmd_byte,
@@ -592,22 +592,22 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIf2Sahb1: u32 {
-        [0..32] sf_if2_0_cmd_buf_0,
+        [00..32] sf_if2_0_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfIf2Sahb2: u32 {
-        [0..32] sf_if2_0_cmd_buf_1,
+        [00..32] sf_if2_0_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlProtEnRd: u32 {
-        [1..2] id0_en_rd,
-        [2..3] id1_en_rd,
+        [01..02] id0_en_rd,
+        [02..03] id1_en_rd,
         [28..29] sf_sec_tzsid_lock,
         [29..30] sf_if2_0_trig_wr_lock,
         [30..31] sf_if_0_trig_wr_lock,
@@ -615,279 +615,279 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlProtEn: u32 {
-        [1..2] id0_en,
-        [2..3] id1_en,
+        [01..02] id0_en,
+        [02..03] id1_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR00: u32 {
-        [0..32] sf_aes_key_r0_0,
+        [00..32] sf_aes_key_r0_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR01: u32 {
-        [0..32] sf_aes_key_r0_1,
+        [00..32] sf_aes_key_r0_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR02: u32 {
-        [0..32] sf_aes_key_r0_2,
+        [00..32] sf_aes_key_r0_2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR03: u32 {
-        [0..32] sf_aes_key_r0_3,
+        [00..32] sf_aes_key_r0_3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR04: u32 {
-        [0..32] sf_aes_key_r0_4,
+        [00..32] sf_aes_key_r0_4,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR05: u32 {
-        [0..32] sf_aes_key_r0_5,
+        [00..32] sf_aes_key_r0_5,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR06: u32 {
-        [0..32] sf_aes_key_r0_6,
+        [00..32] sf_aes_key_r0_6,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR07: u32 {
-        [0..32] sf_aes_key_r0_7,
+        [00..32] sf_aes_key_r0_7,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR0W0: u32 {
-        [0..32] sf_aes_iv_r0_w0,
+        [00..32] sf_aes_iv_r0_w0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR0W1: u32 {
-        [0..32] sf_aes_iv_r0_w1,
+        [00..32] sf_aes_iv_r0_w1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR0W2: u32 {
-        [0..32] sf_aes_iv_r0_w2,
+        [00..32] sf_aes_iv_r0_w2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR0W3: u32 {
-        [0..32] sf_aes_iv_r0_w3,
+        [00..32] sf_aes_iv_r0_w3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR0Start: u32 {
-        [0..19] sf_aes_region_r0_start,
+        [00..19] sf_aes_region_r0_start,
         [29..30] sf_aes_region_r0_hw_key_en,
         [30..31] sf_aes_region_r0_en,
         [31..32] sf_aes_region_r0_lock,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR0End: u32 {
-        [0..19] sf_aes_region_r0_end,
+        [00..19] sf_aes_region_r0_end,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR10: u32 {
-        [0..32] sf_aes_key_r1_0,
+        [00..32] sf_aes_key_r1_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR11: u32 {
-        [0..32] sf_aes_key_r1_1,
+        [00..32] sf_aes_key_r1_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR12: u32 {
-        [0..32] sf_aes_key_r1_2,
+        [00..32] sf_aes_key_r1_2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR13: u32 {
-        [0..32] sf_aes_key_r1_3,
+        [00..32] sf_aes_key_r1_3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR14: u32 {
-        [0..32] sf_aes_key_r1_4,
+        [00..32] sf_aes_key_r1_4,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR15: u32 {
-        [0..32] sf_aes_key_r1_5,
+        [00..32] sf_aes_key_r1_5,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR16: u32 {
-        [0..32] sf_aes_key_r1_6,
+        [00..32] sf_aes_key_r1_6,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR17: u32 {
-        [0..32] sf_aes_key_r1_7,
+        [00..32] sf_aes_key_r1_7,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR1W0: u32 {
-        [0..32] sf_aes_iv_r1_w0,
+        [00..32] sf_aes_iv_r1_w0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR1W1: u32 {
-        [0..32] sf_aes_iv_r1_w1,
+        [00..32] sf_aes_iv_r1_w1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR1W2: u32 {
-        [0..32] sf_aes_iv_r1_w2,
+        [00..32] sf_aes_iv_r1_w2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR1W3: u32 {
-        [0..32] sf_aes_iv_r1_w3,
+        [00..32] sf_aes_iv_r1_w3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR1Start: u32 {
-        [0..19] sf_aes_r1_start,
+        [00..19] sf_aes_r1_start,
         [29..30] sf_aes_r1_hw_key_en,
         [30..31] sf_aes_r1_en,
         [31..32] sf_aes_r1_lock,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR1End: u32 {
-        [0..19] sf_aes_r1_end,
+        [00..19] sf_aes_r1_end,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR20: u32 {
-        [0..32] sf_aes_key_r2_0,
+        [00..32] sf_aes_key_r2_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR21: u32 {
-        [0..32] sf_aes_key_r2_1,
+        [00..32] sf_aes_key_r2_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR22: u32 {
-        [0..32] sf_aes_key_r2_2,
+        [00..32] sf_aes_key_r2_2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR23: u32 {
-        [0..32] sf_aes_key_r2_3,
+        [00..32] sf_aes_key_r2_3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR24: u32 {
-        [0..32] sf_aes_key_r2_4,
+        [00..32] sf_aes_key_r2_4,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR25: u32 {
-        [0..32] sf_aes_key_r2_5,
+        [00..32] sf_aes_key_r2_5,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR26: u32 {
-        [0..32] sf_aes_key_r2_6,
+        [00..32] sf_aes_key_r2_6,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKeyR27: u32 {
-        [0..32] sf_aes_key_r2_7,
+        [00..32] sf_aes_key_r2_7,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR2W0: u32 {
-        [0..32] sf_aes_iv_r2_w0,
+        [00..32] sf_aes_iv_r2_w0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR2W1: u32 {
-        [0..32] sf_aes_iv_r2_w1,
+        [00..32] sf_aes_iv_r2_w1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR2W2: u32 {
-        [0..32] sf_aes_iv_r2_w2,
+        [00..32] sf_aes_iv_r2_w2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvR2W3: u32 {
-        [0..32] sf_aes_iv_r2_w3,
+        [00..32] sf_aes_iv_r2_w3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR2Start: u32 {
-        [0..19] sf_aes_r2_start,
+        [00..19] sf_aes_r2_start,
         [29..30] sf_aes_r2_hw_key_en,
         [30..31] sf_aes_r2_en,
         [31..32] sf_aes_r2_lock,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesR2End: u32 {
-        [0..19] sf_aes_r2_end,
+        [00..19] sf_aes_r2_end,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfSahb0: u32 {
-        [0..1] if_busy,
-        [1..2] if_0_trig,
-        [2..12] if_0_dat_byte,
+        [00..01] if_busy,
+        [01..02] if_0_trig,
+        [02..12] if_0_dat_byte,
         [12..17] if_0_dmy_byte,
         [17..20] if_0_adr_byte,
         [20..23] if_0_cmd_byte,
@@ -901,174 +901,174 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfSahb1: u32 {
-        [0..32] if_0_cmd_buf_0,
+        [00..32] if_0_cmd_buf_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfSahb2: u32 {
-        [0..32] if_0_cmd_buf_1,
+        [00..32] if_0_cmd_buf_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIf1Sahb: u32 {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIf2Sahb: u32 {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIoDly0: u32 {
-        [0..2] cs_dly_sel,
-        [2..4] cs2_dly_sel,
-        [8..10] clk_out_dly_sel,
+        [00..02] cs_dly_sel,
+        [02..04] cs2_dly_sel,
+        [08..10] clk_out_dly_sel,
         [26..28] dqs_oe_dly_sel,
         [28..30] dqs_di_dly_sel,
         [30..32] dqs_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIoDly1: u32 {
-        [0..2] io_0_oe_dly_sel,
-        [8..10] io_0_di_dly_sel,
+        [00..02] io_0_oe_dly_sel,
+        [08..10] io_0_di_dly_sel,
         [16..18] io_0_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIoDly2: u32 {
-        [0..2] io_1_oe_dly_sel,
-        [8..10] io_1_di_dly_sel,
+        [00..02] io_1_oe_dly_sel,
+        [08..10] io_1_di_dly_sel,
         [16..18] io_1_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIoDly3: u32 {
-        [0..2] io_2_oe_dly_sel,
-        [8..10] io_2_di_dly_sel,
+        [00..02] io_2_oe_dly_sel,
+        [08..10] io_2_di_dly_sel,
         [16..18] io_2_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIoDly4: u32 {
-        [0..2] io_3_oe_dly_sel,
-        [8..10] io_3_di_dly_sel,
+        [00..02] io_3_oe_dly_sel,
+        [08..10] io_3_di_dly_sel,
         [16..18] io_3_do_dly_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfIoDly1: u32 {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfIoDly2: u32 {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlIfIoDly3: u32 {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey0: u32 {
-        [0..32] sf_aes_key_0,
+        [00..32] sf_aes_key_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey1: u32 {
-        [0..32] sf_aes_key_1,
+        [00..32] sf_aes_key_1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey2: u32 {
-        [0..32] sf_aes_key_2,
+        [00..32] sf_aes_key_2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey3: u32 {
-        [0..32] sf_aes_key_3,
+        [00..32] sf_aes_key_3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey4: u32 {
-        [0..32] sf_aes_key_4,
+        [00..32] sf_aes_key_4,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey5: u32 {
-        [0..32] sf_aes_key_5,
+        [00..32] sf_aes_key_5,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey6: u32 {
-        [0..32] sf_aes_key_6,
+        [00..32] sf_aes_key_6,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesKey7: u32 {
-        [0..32] sf_aes_key_7,
+        [00..32] sf_aes_key_7,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvW0: u32 {
-        [0..32] sf_aes_iv_w0,
+        [00..32] sf_aes_iv_w0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvW1: u32 {
-        [0..32] sf_aes_iv_w1,
+        [00..32] sf_aes_iv_w1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvW2: u32 {
-        [0..32] sf_aes_iv_w2,
+        [00..32] sf_aes_iv_w2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesIvW3: u32 {
-        [0..32] sf_aes_iv_w3,
+        [00..32] sf_aes_iv_w3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesStart: u32 {
-        [0..19] sf_aes_region_start,
+        [00..19] sf_aes_region_start,
         [29..30] sf_aes_region_hw_key_en,
         [30..31] sf_aes_region_en,
         [31..32] sf_aes_region_lock,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlSfAesEnd: u32 {
-        [0..19] sf_aes_region_end,
+        [00..19] sf_aes_region_end,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct SfCtrlAesRegion: u32 {
     }
 }

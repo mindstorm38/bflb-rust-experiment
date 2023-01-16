@@ -75,6 +75,10 @@ pub mod sym {
 
 }
 
+
+// Re-export HAL.
+pub use bflb_hal as hal;
+
 // These modules are intentionnaly internal.
 mod clic;
 mod trap;

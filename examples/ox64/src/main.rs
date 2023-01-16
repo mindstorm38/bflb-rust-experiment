@@ -1,14 +1,13 @@
 #![no_std]
 #![no_main]
 
-use bflb_hal::peripheral::clock::{XtalType, Mux2, UartSel};
-use bflb_hal::peripheral::uart::UartConfig;
-
-use bflb_hal::{CoreTimer, Clocks, PinPort, UartPort};
+use bflb_hal::clock::{Clocks, XtalType, Mux2, UartSel};
+use bflb_hal::uart::{UartPort, UartConfig};
+use bflb_hal::time::CoreTimer;
+use bflb_hal::gpio::PinPort;
+use bflb_rt::IrqNum;
 
 use embedded_util::Peripheral;
-
-use bflb_rt::IrqNum;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::fmt::Write;

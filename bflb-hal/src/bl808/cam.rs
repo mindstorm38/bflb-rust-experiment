@@ -5,7 +5,7 @@
 //! - cam_reg.h
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
 
     pub struct Cam {
         /// Global module configuration.
@@ -66,7 +66,7 @@ emhal::mmio_struct! {
 }
 
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct CamDvp2AxiCfg: u32 {
         /// Module enable.
@@ -228,7 +228,7 @@ emhal::mmio_reg! {
 }
 
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct CamFrontCfg: u32 {
         [0..1] dvpas_enable,

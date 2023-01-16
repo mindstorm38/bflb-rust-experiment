@@ -44,8 +44,8 @@ macro_rules! reg {
                 $(#[$field_meta])*
                 #[must_use]
                 #[inline]
-                pub fn $field_name(&mut self) -> $crate::mmio::PtrField<'_, Self, $field_start, $field_end> {
-                    $crate::mmio::PtrField(self)
+                pub fn $field_name(&mut self) -> $crate::RegPtr<'_, Self, $field_start, $field_end> {
+                    $crate::RegPtr(self)
                 }
             )*
 
@@ -55,13 +55,13 @@ macro_rules! reg {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct(stringify!($name))
                     $( 
-                    .field(stringify!($field_name), &$crate::mmio::Reg::get::<$field_start, $field_end>(self)) 
+                    .field(stringify!($field_name), &$crate::Reg::get::<$field_start, $field_end>(self)) 
                     )*
                     .finish()
             }
         }
 
-        impl $crate::mmio::Reg for $name {
+        impl $crate::Reg for $name {
 
             type Type = $regtype;
 
@@ -92,7 +92,7 @@ macro_rules! reg {
 
         }
 
-        $crate::mmio_reg! {
+        $crate::reg! {
             $($t)*
         }
 

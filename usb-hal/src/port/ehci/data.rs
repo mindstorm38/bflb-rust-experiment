@@ -17,7 +17,7 @@ pub struct PeriodicFrameList<const LEN: usize> {
 
 // COMMON //
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     /// A link to a descriptor.
     pub struct NextLink: u32 {
         /// This descriptor will only be considered if invalid != 1.
@@ -107,7 +107,7 @@ pub struct Itd {
     pub page_buffer_6: ItdPageBuffer,
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     
     /// The host controller uses the information in each transaction description 
     /// plus the endpoint information contained in the first three dwords of the 
@@ -242,7 +242,7 @@ pub struct Sitd {
     pub back_link: SitdBackLink,
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     /// Specify static information about the full-speed endpoint, the addressing of 
     /// the parent transaction translator and micro-frame scheduling control.
@@ -433,7 +433,7 @@ pub struct Qtd {
     pub page_buffer_4: QtdPageBuffer,
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct QtdNextLink: u32 {
         /// This descriptor will only be considered if invalid != 1.
@@ -588,7 +588,7 @@ pub struct Qh {
     pub overlay: Qtd,
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct QhEndpointCharacteristics: u32 {
         /// This field selects the specific device serving as the data source or sink.

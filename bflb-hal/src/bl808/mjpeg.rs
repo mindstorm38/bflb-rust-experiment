@@ -4,7 +4,7 @@
 //! - mjpeg_reg.h
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
 
     pub struct Mjpeg {
         [0x000] rw mjpeg_control_1: MjpegControl1,
@@ -49,7 +49,7 @@ emhal::mmio_struct! {
 }
 
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct MjpegControl1: u32 {
         [00..01] mjpeg_enable,

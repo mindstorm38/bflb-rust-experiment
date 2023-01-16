@@ -1,6 +1,6 @@
 //! Hibernate register.
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct Hbn {
         [0x000] rw ctl: HbnCtl,
         [0x004] rw time_l: HbnTimeL,
@@ -29,14 +29,14 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnCtl: u32 {
-        [0..4] rtc_ctl,
-        [4..5] rtc_dly_option,
-        [5..6] pu_ldo18io_aon,
-        [7..8] mode,
-        [8..9] trap_mode,
-        [9..10] pwrdn_hbn_core,
+        [00..04] rtc_ctl,
+        [04..05] rtc_dly_option,
+        [05..06] pu_ldo18io_aon,
+        [07..08] mode,
+        [08..09] trap_mode,
+        [09..10] pwrdn_hbn_core,
         [12..13] sw_rst,
         [13..14] dis_pwr_off_ldo11,
         [14..15] dis_pwr_off_ldo11_rt,
@@ -51,35 +51,35 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnTimeL: u32 {
-        [0..32] time_l,
+        [00..32] time_l,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnTimeH: u32 {
-        [0..8] time_h,
+        [00..08] time_h,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRtcTimeL: u32 {
-        [0..32] rtc_time_latch_l,
+        [00..32] rtc_time_latch_l,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRtcTimeH: u32 {
-        [0..8] rtc_time_latch_h,
+        [00..08] rtc_time_latch_h,
         [31..32] rtc_time_latch,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnIrqMode: u32 {
-        [0..4] pin_wakeup_mode,
-        [4..13] pin_wakeup_mask,
+        [00..04] pin_wakeup_mode,
+        [04..13] pin_wakeup_mask,
         [16..17] en_hw_pu_pd,
         [18..19] irq_bor_en,
         [20..22] irq_acomp0_en,
@@ -89,59 +89,59 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnIrqStat: u32 {
-        [0..32] irq_stat,
+        [00..32] irq_stat,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnIrqClr: u32 {
-        [0..32] irq_clr,
+        [00..32] irq_clr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnPirCfg: u32 {
-        [0..2] pir_hpf_sel,
-        [2..3] pir_lpf_sel,
-        [4..6] pir_dis,
-        [7..8] pir_en,
-        [8..9] gpadc_cs,
+        [00..02] pir_hpf_sel,
+        [02..03] pir_lpf_sel,
+        [04..06] pir_dis,
+        [07..08] pir_en,
+        [08..09] gpadc_cs,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnPirVth: u32 {
-        [0..14] pir_vth,
+        [00..14] pir_vth,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnPirInterval: u32 {
-        [0..12] pir_interval,
+        [00..12] pir_interval,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnBorCfg: u32 {
-        [0..1] bod_sel,
-        [1..4] bod_vth,
-        [4..5] pu_bod,
-        [5..6] r_bod_out,
+        [00..01] bod_sel,
+        [01..04] bod_vth,
+        [04..05] pu_bod,
+        [05..06] r_bod_out,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnGlb: u32 {
         /// Alias for `root_clk_sel & 1`.
-        [0..1] xclk_sel,
+        [00..01] xclk_sel,
         /// Alias for `(root_clk_sel >> 1) & 1`.
-        [1..2] mcu_root_sel,
-        [0..2] root_clk_sel,
-        [2..3] uart_clk_sel,
-        [3..5] f32k_sel,
-        [7..13] reset_event,
+        [01..02] mcu_root_sel,
+        [00..02] root_clk_sel,
+        [02..03] uart_clk_sel,
+        [03..05] f32k_sel,
+        [07..13] reset_event,
         [13..14] clr_reset_event,
         [15..16] uart_clk_sel2,
         [16..20] sw_ldo11soc_vout_sel_aon,
@@ -150,66 +150,66 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnSram: u32 {
-        [6..7] retram_ret,
-        [7..8] retram_slp,
+        [06..07] retram_ret,
+        [07..08] retram_slp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnPadCtrl0: u32 {
-        [0..9] aon_pad_ie_smt,
+        [00..09] aon_pad_ie_smt,
         [10..19] aon_led_sel,
         [20..29] en_aon_ctrl_gpio,
         [31..32] aon_gpio_iso_mode,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnPadCtrl1: u32 {
-        [0..9] aon_pad_oe,
+        [00..09] aon_pad_oe,
         [10..19] aon_pad_pd,
         [20..29] aon_pad_pu,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRsv0: u32 {
-        [0..32] rsv0,
+        [00..32] rsv0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRsv1: u32 {
-        [0..32] rsv1,
+        [00..32] rsv1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRsv2: u32 {
-        [0..32] rsv2,
+        [00..32] rsv2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRsv3: u32 {
         /// Alias for `rsv3 & 0xFF`.
-        [0..8] xtal_type,
+        [00..08] xtal_type,
         /// Alias for `(rsv3 >> 8) & 0xFF`.
-        [8..16] xtal_flag,
-        [0..32] rsv3,
+        [08..16] xtal_flag,
+        [00..32] rsv3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRc32kCtrl0: u32 {
-        [0..1] rc32k_cal_done,
-        [1..2] rc32k_rdy,
-        [2..3] rc32k_cal_inprogress,
-        [3..5] rc32k_cal_div,
-        [5..6] rc32k_cal_precharge,
-        [6..16] rc32k_dig_code_fr_cal,
+        [00..01] rc32k_cal_done,
+        [01..02] rc32k_rdy,
+        [02..03] rc32k_cal_inprogress,
+        [03..05] rc32k_cal_div,
+        [05..06] rc32k_cal_precharge,
+        [06..16] rc32k_dig_code_fr_cal,
         [16..18] rc32k_vref_dly,
         [18..19] rc32k_allow_cal,
         [19..20] rc32k_ext_code_en,
@@ -219,14 +219,14 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnXtal32k: u32 {
-        [2..3] xtal32k_ext_sel,
-        [3..5] xtal32k_amp_ctrl,
-        [5..7] xtal32k_reg,
-        [7..8] xtal32k_outbuf_stre,
-        [8..9] xtal32k_otf_short,
-        [9..11] xtal32k_inv_stre,
+        [02..03] xtal32k_ext_sel,
+        [03..05] xtal32k_amp_ctrl,
+        [05..07] xtal32k_reg,
+        [07..08] xtal32k_outbuf_stre,
+        [08..09] xtal32k_otf_short,
+        [09..11] xtal32k_inv_stre,
         [11..17] xtal32k_capbank,
         [17..18] xtal32k_ac_cap_short,
         [18..19] pu_xtal32k_buf,
@@ -238,17 +238,17 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRtcRstCtrl: u32 {
-        [0..16] rtc_rst_wait_cnt_rtc,
+        [00..16] rtc_rst_wait_cnt_rtc,
         [16..19] rtc_rst_refdiv_rtc,
         [19..32] rtc_rst_ctrl_misc,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct HbnRtcRstCtrl2: u32 {
-        [0..8] rtc_resv,
-        [8..9] en_hw_pu_rc32k,
+        [00..08] rtc_resv,
+        [08..09] en_hw_pu_rc32k,
     }
 }

@@ -1,6 +1,6 @@
 //! MIPI CSI registers.
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct Csi {
         [0x000] rw mipi_config: CsiMipiConfig,
         [0x010] rw int_status: CsiIntStatus,
@@ -17,68 +17,68 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiMipiConfig: u32 {
-        [0..1] cr_csi_en,
-        [1..2] cr_lane_num,
-        [3..4] cr_lane_inv,
-        [4..5] cr_data_bit_inv,
-        [5..6] cr_sync_sp_en,
-        [6..7] cr_unpack_en,
+        [00..01] cr_csi_en,
+        [01..02] cr_lane_num,
+        [03..04] cr_lane_inv,
+        [04..05] cr_data_bit_inv,
+        [05..06] cr_sync_sp_en,
+        [06..07] cr_unpack_en,
         [12..14] cr_vc_dvp0,
         [14..16] cr_vc_dvp1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiIntStatus: u32 {
-        [0..4] int_status,
+        [00..04] int_status,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiIntMask: u32 {
-        [0..4] int_mask,
+        [00..04] int_mask,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiIntClear: u32 {
-        [0..4] int_clear,
+        [00..04] int_clear,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiIntEnable: u32 {
-        [0..4] int_enable,
+        [00..04] int_enable,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiGnrBufStatus: u32 {
-        [0..4] st_gnr_fifo_cnt,
+        [00..04] st_gnr_fifo_cnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiGnrBufRdata: u32 {
-        [0..32] gnr_buf_rdata,
+        [00..32] gnr_buf_rdata,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiDphyConfig0: u32 {
         /// Enable lane number 0.
-        [0..1] dl0_enable,
+        [00..01] dl0_enable,
         /// Enable lane number 1.
-        [1..2] dl1_enable,
+        [01..02] dl1_enable,
         /// Enable clock lane.
-        [2..3] cl_enable,
-        [4..5] dl0_stopstate,
-        [5..6] dl1_stopstate,
-        [6..7] cl_stopstate,
-        [8..9] dl0_ulpsactivenot,
-        [9..10] dl1_ulpsactivenot,
+        [02..03] cl_enable,
+        [04..05] dl0_stopstate,
+        [05..06] dl1_stopstate,
+        [06..07] cl_stopstate,
+        [08..09] dl0_ulpsactivenot,
+        [09..10] dl1_ulpsactivenot,
         [10..11] cl_ulpsactivenot,
         [12..13] dl0_forcerxmode,
         [13..14] dl1_forcerxmode,
@@ -88,26 +88,26 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiDphyConfig1: u32 {
         /// Time interval during which the HS receiver shall ignore any clock lane HS transitions.
-        [0..8] time_ck_settle,
+        [00..08] time_ck_settle,
         /// Time for the clock lane receiver to enable the HS line termination.
-        [8..16] time_ck_term_en,
+        [08..16] time_ck_term_en,
         /// Time interval during which the HS receiver shall ignore any data lane HS transitions.
         [16..24] time_hs_settle,
         [24..32] time_hs_term_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiDphyConfig2: u32 {
-        [0..1] ana_lprxen_clk,
-        [1..2] ana_hsrxen_clk,
-        [2..4] ana_hsrx_stop_state,
-        [4..6] ana_hsrx_sync_en,
-        [6..8] ana_lprxen,
-        [8..10] ana_hsrxen,
+        [00..01] ana_lprxen_clk,
+        [01..02] ana_hsrxen_clk,
+        [02..04] ana_hsrx_stop_state,
+        [04..06] ana_hsrx_sync_en,
+        [06..08] ana_lprxen,
+        [08..10] ana_hsrxen,
         [10..15] ana_term_en,
         [15..16] ana_test_en,
         [16..20] pt_lock_counter,
@@ -117,15 +117,15 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiDphyConfig3: u32 {
-        [0..16] csi_ana_1,
+        [00..16] csi_ana_1,
         [16..32] csi_ana_0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct CsiDummyReg: u32 {
-        [0..32] dummy_reg,
+        [00..32] dummy_reg,
     }
 }

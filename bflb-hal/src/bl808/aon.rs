@@ -1,6 +1,6 @@
 //! 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct Aon {
         [0x800] rw aon: Aon0,
         [0x804] rw common: AonCommon,
@@ -39,9 +39,9 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct Aon0: u32 {
-        [0..8] resv,
+        [00..08] resv,
         [12..13] pu_aon_dc_tbuf,
         [20..21] ldo11_rt_pulldown,
         [21..22] ldo11_rt_pulldown_sel,
@@ -49,16 +49,16 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonCommon: u32 {
-        [0..3] tmux_aon,
-        [3..4] pmip_dc_tp_out_en_aon,
-        [4..5] ten_bg_sys_aon,
-        [5..6] ten_dcdc11_0_aon,
-        [6..7] ten_dcdc11_1_aon,
-        [7..8] ten_dcdc18_0_aon,
-        [8..9] ten_dcdc18_1_aon,
-        [9..10] ten_ldo12uhs,
+        [00..03] tmux_aon,
+        [03..04] pmip_dc_tp_out_en_aon,
+        [04..05] ten_bg_sys_aon,
+        [05..06] ten_dcdc11_0_aon,
+        [06..07] ten_dcdc11_1_aon,
+        [07..08] ten_dcdc18_0_aon,
+        [08..09] ten_dcdc18_1_aon,
+        [09..10] ten_ldo12uhs,
         [10..11] ten_ldo18flash,
         [11..12] ten_ldo15cis,
         [12..13] ten_ldo18io_aon,
@@ -73,25 +73,25 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonMisc: u32 {
-        [0..1] sw_soc_en_aon,
-        [1..2] sw_wb_en_aon,
+        [00..01] sw_soc_en_aon,
+        [01..02] sw_wb_en_aon,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonBgSysTop: u32 {
-        [0..1] pu_bg_sys_aon,
-        [1..2] istart_ctrl_aon,
+        [00..01] pu_bg_sys_aon,
+        [01..02] istart_ctrl_aon,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonDcdcTop0: u32 {
-        [0..2] dcdc11_sstart_time_aon,
-        [4..7] dcdc11_stby_lp_cur_aon,
-        [8..11] dcdc11_vc_clamp_vth_aon,
+        [00..02] dcdc11_sstart_time_aon,
+        [04..07] dcdc11_stby_lp_cur_aon,
+        [08..11] dcdc11_vc_clamp_vth_aon,
         [11..16] dcdc11_vout_sel_aon,
         [16..20] dcdc11_vout_trim_aon,
         [20..24] dcdc11_vpfm_aon,
@@ -100,12 +100,12 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonDcdcTop1: u32 {
-        [0..5] dcdc11_nonoverlap_td_aon,
-        [5..6] dcdc11_ocp_out_aon,
-        [6..7] dcdc11_ocp_rst_aon,
-        [8..11] dcdc11_ocp_vth_aon,
+        [00..05] dcdc11_nonoverlap_td_aon,
+        [05..06] dcdc11_ocp_out_aon,
+        [06..07] dcdc11_ocp_rst_aon,
+        [08..11] dcdc11_ocp_vth_aon,
         [11..12] dcdc11_osc_2m_mode_aon,
         [12..16] dcdc11_osc_freq_trim_aon,
         [16..17] dcdc11_pulldown_aon,
@@ -115,10 +115,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonLdo11socAndDctest: u32 {
-        [4..8] dcdc11_cfb_sel_aon,
-        [8..12] dcdc11_chf_sel_aon,
+        [04..08] dcdc11_cfb_sel_aon,
+        [08..12] dcdc11_chf_sel_aon,
         [12..15] dcdc11_comp_gm_sel_aon,
         [16..19] dcdc11_cs_delay_aon,
         [20..22] dcdc11_drv_sr_aon,
@@ -132,11 +132,11 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonDcdc18Top0: u32 {
-        [0..2] dcdc18_sstart_time_aon,
-        [4..7] dcdc18_stby_lp_cur_aon,
-        [8..11] dcdc18_vc_clamp_vth_aon,
+        [00..02] dcdc18_sstart_time_aon,
+        [04..07] dcdc18_stby_lp_cur_aon,
+        [08..11] dcdc18_vc_clamp_vth_aon,
         [11..16] dcdc18_vout_sel_aon,
         [16..20] dcdc18_vout_trim_aon,
         [20..24] dcdc18_vpfm_aon,
@@ -145,12 +145,12 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonDcdc18Top1: u32 {
-        [0..5] dcdc18_nonoverlap_td_aon,
-        [5..6] dcdc18_ocp_out_aon,
-        [6..7] dcdc18_ocp_rst_aon,
-        [8..11] dcdc18_ocp_vth_aon,
+        [00..05] dcdc18_nonoverlap_td_aon,
+        [05..06] dcdc18_ocp_out_aon,
+        [06..07] dcdc18_ocp_rst_aon,
+        [08..11] dcdc18_ocp_vth_aon,
         [11..12] dcdc18_osc_2m_mode_aon,
         [12..16] dcdc18_osc_freq_trim_aon,
         [16..17] dcdc18_pulldown_aon,
@@ -160,10 +160,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonDcdc18Top2: u32 {
-        [4..8] dcdc18_cfb_sel_aon,
-        [8..12] dcdc18_chf_sel_aon,
+        [04..08] dcdc18_cfb_sel_aon,
+        [08..12] dcdc18_chf_sel_aon,
         [12..15] dcdc18_comp_gm_sel_aon,
         [16..19] dcdc18_cs_delay_aon,
         [20..22] dcdc18_drv_sr_aon,
@@ -177,9 +177,9 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonPswIrrcv: u32 {
-        [0..1] pu_psw_irrcv_aon,
+        [00..01] pu_psw_irrcv_aon,
         [19..20] usb20_rref_ext_en_aon,
         [20..21] en_por33_aon,
         [21..22] usb20_rref_hiz_aon,
@@ -187,15 +187,15 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonRfTopAon: u32 {
-        [0..1] pu_mbg_aon,
-        [1..2] pu_ldo15rf_aon,
-        [2..3] pu_sfreg_aon,
-        [4..5] pu_xtal_buf_aon,
-        [5..6] pu_xtal_aon,
-        [8..9] ldo15rf_sstart_sel_aon,
-        [9..11] ldo15rf_sstart_delay_aon,
+        [00..01] pu_mbg_aon,
+        [01..02] pu_ldo15rf_aon,
+        [02..03] pu_sfreg_aon,
+        [04..05] pu_xtal_buf_aon,
+        [05..06] pu_xtal_aon,
+        [08..09] ldo15rf_sstart_sel_aon,
+        [09..11] ldo15rf_sstart_delay_aon,
         [12..13] ldo15rf_pulldown_aon,
         [13..14] ldo15rf_pulldown_sel_aon,
         [16..19] ldo15rf_vout_sel_aon,
@@ -204,13 +204,13 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonXtalCfg: u32 {
-        [0..2] xtal_bk_aon,
-        [2..3] xtal_capcode_extra_aon,
-        [3..4] xtal_ext_sel_aon,
-        [4..8] xtal_buf_en_aon,
-        [8..12] xtal_buf_hp_aon,
+        [00..02] xtal_bk_aon,
+        [02..03] xtal_capcode_extra_aon,
+        [03..04] xtal_ext_sel_aon,
+        [04..08] xtal_buf_en_aon,
+        [08..12] xtal_buf_hp_aon,
         [12..13] xtal_fast_startup_aon,
         [13..14] xtal_sleep_aon,
         [14..16] xtal_amp_ctrl_aon,
@@ -221,20 +221,20 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonXtalCfg2: u32 {
-        [0..1] wifi_xtal_ldo33_bypass_aon,
-        [1..4] wifi_xtal_ldo33_sel_aon,
-        [4..6] wifi_xtal_ldo18_sel_aon,
-        [6..7] wifi_xtal_ldo33_pu_aon,
-        [7..8] wifi_xtal_ldo18_pu_aon,
+        [00..01] wifi_xtal_ldo33_bypass_aon,
+        [01..04] wifi_xtal_ldo33_sel_aon,
+        [04..06] wifi_xtal_ldo18_sel_aon,
+        [06..07] wifi_xtal_ldo33_pu_aon,
+        [07..08] wifi_xtal_ldo18_pu_aon,
         [10..14] wifi_xtal_reserve,
         [16..17] wifi_xtal_ldo18_short_filter_aon,
         [30..32] xtal_buf_drv_aon,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonXtalCfg3: u32 {
         [12..13] wifi_xtal_clk_inv_en_aon,
         [16..17] wifi_xtal_cml_en_aon,
@@ -244,9 +244,9 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonTsen: u32 {
-        [0..12] tsen_refcode_corner,
+        [00..12] tsen_refcode_corner,
         [16..28] tsen_refcode_rfcal,
         [28..29] xtal_rdy,
         [29..30] xtal_inn_cfg_en_aon,
@@ -254,13 +254,13 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonLdo18io: u32 {
-        [1..2] ldo18io_bypass_iso_aon,
-        [2..3] ldo18io_pulldown_aon,
-        [3..4] ldo18io_pulldown_sel_aon,
-        [4..7] ldo18io_bm_aon,
-        [8..11] ldo18io_cc_aon,
+        [01..02] ldo18io_bypass_iso_aon,
+        [02..03] ldo18io_pulldown_aon,
+        [03..04] ldo18io_pulldown_sel_aon,
+        [04..07] ldo18io_bm_aon,
+        [08..11] ldo18io_cc_aon,
         [11..12] ldo18io_ocp_out_aon,
         [12..15] ldo18io_ocp_th_aon,
         [15..16] ldo18io_ocp_en_aon,
@@ -271,11 +271,11 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonAcomp0Ctrl: u32 {
-        [0..1] acomp0_en,
-        [4..7] acomp0_hyst_seln,
-        [7..10] acomp0_hyst_selp,
+        [00..01] acomp0_en,
+        [04..07] acomp0_hyst_seln,
+        [07..10] acomp0_hyst_selp,
         [10..12] acomp0_bias_prog,
         [12..18] acomp0_level_sel,
         [18..22] acomp0_neg_sel,
@@ -284,11 +284,11 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonAcomp1Ctrl: u32 {
-        [0..1] acomp1_en,
-        [4..7] acomp1_hyst_seln,
-        [7..10] acomp1_hyst_selp,
+        [00..01] acomp1_en,
+        [04..07] acomp1_hyst_seln,
+        [07..10] acomp1_hyst_selp,
         [10..12] acomp1_bias_prog,
         [12..18] acomp1_level_sel,
         [18..22] acomp1_neg_sel,
@@ -297,12 +297,12 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonAcompCtrl: u32 {
-        [0..1] acomp1_rstn_ana,
-        [1..2] acomp0_rstn_ana,
-        [8..9] acomp1_test_en,
-        [9..10] acomp0_test_en,
+        [00..01] acomp1_rstn_ana,
+        [01..02] acomp0_rstn_ana,
+        [08..09] acomp1_test_en,
+        [09..10] acomp0_test_en,
         [10..12] acomp1_test_sel,
         [12..14] acomp0_test_sel,
         [17..18] acomp1_out_raw,
@@ -312,13 +312,13 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegCmd: u32 {
-        [0..1] gpadc_global_en,
-        [1..2] gpadc_conv_start,
-        [2..3] gpadc_soft_rst,
-        [3..8] gpadc_neg_sel,
-        [8..13] gpadc_pos_sel,
+        [00..01] gpadc_global_en,
+        [01..02] gpadc_conv_start,
+        [02..03] gpadc_soft_rst,
+        [03..08] gpadc_neg_sel,
+        [08..13] gpadc_pos_sel,
         [13..14] gpadc_neg_gnd,
         [14..15] gpadc_micbias_en,
         [15..16] gpadc_micpga_en,
@@ -335,13 +335,13 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegConfig1: u32 {
-        [0..1] gpadc_cal_os_en,
-        [1..2] gpadc_cont_conv_en,
-        [2..5] gpadc_res_sel,
-        [8..9] gpadc_vcm_sel_en,
-        [9..10] gpadc_vcm_hyst_sel,
+        [00..01] gpadc_cal_os_en,
+        [01..02] gpadc_cont_conv_en,
+        [02..05] gpadc_res_sel,
+        [08..09] gpadc_vcm_sel_en,
+        [09..10] gpadc_vcm_hyst_sel,
         [10..11] gpadc_lowv_det_en,
         [11..12] gpadc_pwm_trg_en,
         [12..16] gpadc_clk_ana_dly,
@@ -356,15 +356,15 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegConfig2: u32 {
-        [2..3] gpadc_diff_mode,
-        [3..4] gpadc_vref_sel,
-        [4..5] gpadc_vbat_en,
-        [5..6] gpadc_tsext_sel,
-        [6..7] gpadc_ts_en,
-        [7..9] gpadc_pga_vcm,
-        [9..13] gpadc_pga_os_cal,
+        [02..03] gpadc_diff_mode,
+        [03..04] gpadc_vref_sel,
+        [04..05] gpadc_vbat_en,
+        [05..06] gpadc_tsext_sel,
+        [06..07] gpadc_ts_en,
+        [07..09] gpadc_pga_vcm,
+        [09..13] gpadc_pga_os_cal,
         [13..14] gpadc_pga_en,
         [14..15] gpadc_pga_vcmi_en,
         [15..17] gpadc_chop_mode,
@@ -378,10 +378,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegScnPos1: u32 {
-        [0..5] gpadc_scan_pos_0,
-        [5..10] gpadc_scan_pos_1,
+        [00..05] gpadc_scan_pos_0,
+        [05..10] gpadc_scan_pos_1,
         [10..15] gpadc_scan_pos_2,
         [15..20] gpadc_scan_pos_3,
         [20..25] gpadc_scan_pos_4,
@@ -389,10 +389,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegScnPos2: u32 {
-        [0..5] gpadc_scan_pos_6,
-        [5..10] gpadc_scan_pos_7,
+        [00..05] gpadc_scan_pos_6,
+        [05..10] gpadc_scan_pos_7,
         [10..15] gpadc_scan_pos_8,
         [15..20] gpadc_scan_pos_9,
         [20..25] gpadc_scan_pos_10,
@@ -400,10 +400,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegScnNeg1: u32 {
-        [0..5] gpadc_scan_neg_0,
-        [5..10] gpadc_scan_neg_1,
+        [00..05] gpadc_scan_neg_0,
+        [05..10] gpadc_scan_neg_1,
         [10..15] gpadc_scan_neg_2,
         [15..20] gpadc_scan_neg_3,
         [20..25] gpadc_scan_neg_4,
@@ -411,10 +411,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegScnNeg2: u32 {
-        [0..5] gpadc_scan_neg_6,
-        [5..10] gpadc_scan_neg_7,
+        [00..05] gpadc_scan_neg_6,
+        [05..10] gpadc_scan_neg_7,
         [10..15] gpadc_scan_neg_8,
         [15..20] gpadc_scan_neg_9,
         [20..25] gpadc_scan_neg_10,
@@ -422,50 +422,50 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegStatus: u32 {
-        [0..1] gpadc_data_rdy,
+        [00..01] gpadc_data_rdy,
         [16..32] gpadc_reserved,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegIsr: u32 {
-        [0..1] gpadc_neg_satur,
-        [1..2] gpadc_pos_satur,
-        [4..5] gpadc_neg_satur_clr,
-        [5..6] gpadc_pos_satur_clr,
-        [8..9] gpadc_neg_satur_mask,
-        [9..10] gpadc_pos_satur_mask,
+        [00..01] gpadc_neg_satur,
+        [01..02] gpadc_pos_satur,
+        [04..05] gpadc_neg_satur_clr,
+        [05..06] gpadc_pos_satur_clr,
+        [08..09] gpadc_neg_satur_mask,
+        [09..10] gpadc_pos_satur_mask,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegResult: u32 {
-        [0..26] gpadc_data_out,
+        [00..26] gpadc_data_out,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegRawResult: u32 {
-        [0..12] gpadc_raw_data,
+        [00..12] gpadc_raw_data,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonGpadcRegDefine: u32 {
-        [0..16] gpadc_os_cal_data,
+        [00..16] gpadc_os_cal_data,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonHbncoreResv0: u32 {
-        [0..32] hbncore_resv0_data,
+        [00..32] hbncore_resv0_data,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct AonHbncoreResv1: u32 {
-        [0..32] hbncore_resv1_data,
+        [00..32] hbncore_resv1_data,
     }
 }

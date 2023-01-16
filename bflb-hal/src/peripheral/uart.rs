@@ -2,8 +2,8 @@
 
 use embedded_util::peripheral;
 
-use crate::register::{Uart as UartRegs, GLB, UART0, UART1, UART2};
-use crate::register::uart::UartBitPrd;
+use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
+use crate::bl808::uart::UartBitPrd;
 
 use super::gpio::{PinPort, PinPull, PinDrive, Uart as UartFunc};
 use super::clock::Clocks;

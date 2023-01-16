@@ -18,12 +18,12 @@
 //! - https://raw.githubusercontent.com/riscv/riscv-fast-interrupt/master/clic.pdf
 
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
 
     /// Core-Local Interrupt Controller memory registers.
     pub struct Clic {
         [0x0000] rw cfg: ClicCfg,
-        [0x0004] r info: ClicInfo,
+        [0x0004] ro info: ClicInfo,
         [0x0008] rw int_th: u32,
     }
 
@@ -75,7 +75,7 @@ impl Clic {
 
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
 
     pub struct ClicCfg: u32 {
         /// Enable `shv` field in [`ClicIntAttr`].

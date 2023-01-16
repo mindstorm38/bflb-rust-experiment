@@ -1,6 +1,6 @@
 //! Video/H264 registers.
 
-emhal::mmio_struct! {
+embedded_util::mmio! {
     pub struct Vdo {
         [0x000] rw h264_encoder_ctrl: VdoH264EncoderCtrl,
         [0x004] rw h264_frame_size: VdoH264FrameSize,
@@ -221,11 +221,11 @@ emhal::mmio_struct! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264EncoderCtrl: u32 {
-        [0..7] cfg_enc_ctrl_mby_idx,
-        [8..9] cfg_core_clk_en,
-        [9..10] cfg_zstuf_dis,
+        [00..07] cfg_enc_ctrl_mby_idx,
+        [08..09] cfg_core_clk_en,
+        [09..10] cfg_zstuf_dis,
         [10..11] cfg_qr_upd,
         [11..12] cfg_s_qr_upd,
         [12..13] cfg_mem_clk_en,
@@ -250,59 +250,59 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264FrameSize: u32 {
-        [0..11] cfg_frame_width,
+        [00..11] cfg_frame_width,
         [16..27] cfg_frame_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264FrameBaseAddrY: u32 {
-        [0..32] cfg_frame_base_addr_y,
+        [00..32] cfg_frame_base_addr_y,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264FrameBaseAddrUv: u32 {
-        [0..32] cfg_frame_base_addr_uv,
+        [00..32] cfg_frame_base_addr_uv,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264BsBaseAddr: u32 {
-        [0..32] cfg_bs_base_addr,
+        [00..32] cfg_bs_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264LbBaseAddr: u32 {
-        [0..32] cfg_lb_base_addr,
+        [00..32] cfg_lb_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264BsSize: u32 {
-        [0..32] cfg_bs_size,
+        [00..32] cfg_bs_size,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264BsFullThr: u32 {
-        [0..32] cfg_bs_full_thr,
+        [00..32] cfg_bs_full_thr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SrcBfHeight: u32 {
-        [0..15] cfg_c_src_bf_height,
+        [00..15] cfg_c_src_bf_height,
         [16..31] cfg_y_src_bf_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg0: u32 {
-        [0..1] enc_en,
+        [00..01] enc_en,
         [12..13] vui_aspect_info,
         [13..14] vui_fixed_f_rate,
         [14..15] vui_timing_info,
@@ -315,160 +315,160 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg1: u32 {
-        [0..11] img_width,
+        [00..11] img_width,
         [16..27] s_img_width,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg2: u32 {
-        [0..11] img_height,
+        [00..11] img_height,
         [16..27] s_img_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg3: u32 {
-        [0..6] target_i_qp,
+        [00..06] target_i_qp,
         [16..22] s_target_i_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg4: u32 {
-        [0..5] cqp_offset,
+        [00..05] cqp_offset,
         [16..21] s_cqp_offset,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg5: u32 {
-        [0..6] target_p_qp,
+        [00..06] target_p_qp,
         [16..22] s_target_p_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg6: u32 {
-        [0..7] mb_lines,
+        [00..07] mb_lines,
         [16..23] s_mb_lines,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg7: u32 {
-        [0..4] num_slices,
+        [00..04] num_slices,
         [16..20] s_num_slices,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg8: u32 {
-        [0..10] num_pframes,
+        [00..10] num_pframes,
         [16..26] s_num_pframes,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg9: u32 {
-        [0..1] dis_filter,
+        [00..01] dis_filter,
         [16..17] s_dis_filter,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg10: u32 {
-        [0..4] alpha_off,
+        [00..04] alpha_off,
         [16..20] s_alpha_off,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg11: u32 {
-        [0..4] beta_off,
+        [00..04] beta_off,
         [16..20] s_beta_off,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg12: u32 {
-        [0..1] profile_idc,
+        [00..01] profile_idc,
         [16..17] s_profile_idc,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg13: u32 {
-        [0..8] level_idc,
+        [00..08] level_idc,
         [16..24] s_level_idc,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg14: u32 {
-        [0..3] luma8x8_cost,
-        [3..6] luma16x16_cost,
-        [6..9] chroma8x8_cost,
+        [00..03] luma8x8_cost,
+        [03..06] luma16x16_cost,
+        [06..09] chroma8x8_cost,
         [16..19] s_luma8x8_cost,
         [19..22] s_luma16x16_cost,
         [22..25] s_chroma8x8_cost,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg16: u32 {
-        [0..14] frame0,
+        [00..14] frame0,
         [16..30] s_frame0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg17: u32 {
-        [0..14] frame1,
+        [00..14] frame1,
         [16..30] s_frame1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg18: u32 {
-        [0..14] ext_data,
+        [00..14] ext_data,
         [16..30] s_ext_data,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg19: u32 {
-        [0..6] ext_mem_config0,
+        [00..06] ext_mem_config0,
         [16..22] s_ext_mem_config0,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg20: u32 {
-        [0..5] ext_mem_config1,
+        [00..05] ext_mem_config1,
         [16..21] s_ext_mem_config1,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg21: u32 {
-        [0..12] ext_mem_config2,
+        [00..12] ext_mem_config2,
         [16..28] s_ext_mem_config2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg22: u32 {
-        [0..10] ext_mem_config3,
+        [00..10] ext_mem_config3,
         [16..26] s_ext_mem_config3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg23: u32 {
-        [0..12] num_imb_bits,
+        [00..12] num_imb_bits,
         [13..14] nal_align,
         [14..15] cons_ipred,
         [16..28] s_num_imb_bits,
@@ -477,181 +477,181 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg24: u32 {
-        [0..12] num_pmb_bits,
+        [00..12] num_pmb_bits,
         [16..28] s_num_pmb_bits,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg25: u32 {
-        [0..1] interlace_mode,
-        [1..2] bottom_field_first,
-        [2..3] prev_field_ref,
+        [00..01] interlace_mode,
+        [01..02] bottom_field_first,
+        [02..03] prev_field_ref,
         [16..17] s_interlace_mode,
         [17..18] s_bottom_field_first,
         [18..19] s_prev_field_ref,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg28: u32 {
-        [0..6] pframe_min_qp,
-        [8..14] pframe_max_qp,
+        [00..06] pframe_min_qp,
+        [08..14] pframe_max_qp,
         [16..22] s_pframe_min_qp,
         [24..30] s_pframe_max_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg30: u32 {
         [15..16] reset_i_state,
         [31..32] s_reset_i_state,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg31: u32 {
-        [0..6] iframe_min_qp,
-        [8..14] iframe_max_qp,
+        [00..06] iframe_min_qp,
+        [08..14] iframe_max_qp,
         [16..22] s_iframe_min_qp,
         [24..30] s_iframe_max_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg32: u32 {
-        [0..16] vui_time_scale_l,
+        [00..16] vui_time_scale_l,
         [16..32] s_vui_time_scale_l,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg33: u32 {
-        [0..16] vui_time_scale_h,
+        [00..16] vui_time_scale_h,
         [16..32] s_vui_time_scale_h,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg34: u32 {
-        [0..16] vui_num_u_tick_l,
+        [00..16] vui_num_u_tick_l,
         [16..32] s_vui_num_u_tick_l,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg35: u32 {
-        [0..16] vui_num_u_tick_h,
+        [00..16] vui_num_u_tick_h,
         [16..32] s_vui_num_u_tick_h,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg36: u32 {
-        [0..8] vui_aspect_idc,
+        [00..08] vui_aspect_idc,
         [16..24] s_vui_aspect_idc,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg37: u32 {
-        [0..16] vui_aspect_width,
+        [00..16] vui_aspect_width,
         [16..32] s_vui_aspect_width,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreReg38: u32 {
-        [0..16] vui_aspect_height,
+        [00..16] vui_aspect_height,
         [16..32] s_vui_aspect_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSrcDvpSel: u32 {
-        [0..3] uv_dvp2axi_sel,
-        [4..7] y_dvp2axi_sel,
+        [00..03] uv_dvp2axi_sel,
+        [04..07] y_dvp2axi_sel,
         [16..19] s_uv_dvp2axi_sel,
         [20..23] s_y_dvp2axi_sel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPaddingCtrl: u32 {
-        [0..8] y_padding_pixel,
-        [8..16] u_padding_pixel,
+        [00..08] y_padding_pixel,
+        [08..16] u_padding_pixel,
         [16..24] v_padding_pixel,
         [24..29] y_line_pad,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoFrameIdClr: u32 {
-        [0..1] frame_id_clr,
-        [1..2] s_frame_id_clr,
+        [00..01] frame_id_clr,
+        [01..02] s_frame_id_clr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoInt: u32 {
-        [0..1] frm_done_int,
-        [1..2] s_frm_done_int,
-        [4..5] seq_done_int,
-        [5..6] s_seq_done_int,
-        [8..9] bs_full_int,
-        [9..10] s_bs_full_int,
+        [00..01] frm_done_int,
+        [01..02] s_frm_done_int,
+        [04..05] seq_done_int,
+        [05..06] s_seq_done_int,
+        [08..09] bs_full_int,
+        [09..10] s_bs_full_int,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoIntClr: u32 {
-        [0..1] frm_done_int_clr,
-        [1..2] s_frm_done_int_clr,
-        [4..5] seq_done_int_clr,
-        [5..6] s_seq_done_int_clr,
-        [8..9] bs_full_int_clr,
-        [9..10] s_bs_full_int_clr,
+        [00..01] frm_done_int_clr,
+        [01..02] s_frm_done_int_clr,
+        [04..05] seq_done_int_clr,
+        [05..06] s_seq_done_int_clr,
+        [08..09] bs_full_int_clr,
+        [09..10] s_bs_full_int_clr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoIntMask: u32 {
-        [0..1] frm_done_int_mask,
-        [1..2] s_frm_done_int_mask,
-        [4..5] seq_done_int_mask,
-        [5..6] s_seq_done_int_mask,
-        [8..9] bs_full_int_mask,
-        [9..10] s_bs_full_int_mask,
+        [00..01] frm_done_int_mask,
+        [01..02] s_frm_done_int_mask,
+        [04..05] seq_done_int_mask,
+        [05..06] s_seq_done_int_mask,
+        [08..09] bs_full_int_mask,
+        [09..10] s_bs_full_int_mask,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoTotalBytecount: u32 {
-        [0..32] bs_tot_bycnt,
+        [00..32] bs_tot_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoFrameBytecount: u32 {
-        [0..32] bs_frm_bycnt,
+        [00..32] bs_frm_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSrcRDbg: u32 {
-        [0..13] y_read_mbx,
+        [00..13] y_read_mbx,
         [16..29] uv_read_mbx,
         [30..31] axi_r_idle,
         [31..32] src_wr_ov_rd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreDbg: u32 {
-        [0..7] core_mbx,
-        [8..15] core_mby,
+        [00..07] core_mbx,
+        [08..15] core_mby,
         [16..17] m_core_idle,
         [17..18] s_core_idle,
         [20..25] se_fsm,
@@ -661,191 +661,191 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCtrlDbg: u32 {
-        [0..3] ctrl_state,
-        [3..4] h264_proc,
-        [4..7] s_ctrl_state,
-        [7..8] s_h264_proc,
-        [8..9] ctrl_ce,
+        [00..03] ctrl_state,
+        [03..04] h264_proc,
+        [04..07] s_ctrl_state,
+        [07..08] s_h264_proc,
+        [08..09] ctrl_ce,
         [12..13] stream_idx,
         [16..24] ctrler_frm_cnt,
         [24..32] s_ctrler_frm_cnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum0: u32 {
-        [0..32] vdo0_axi_rdata_chksum,
+        [00..32] vdo0_axi_rdata_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum1: u32 {
-        [0..32] vdo0_axi_wdata_chksum,
+        [00..32] vdo0_axi_wdata_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum2: u32 {
-        [0..32] vdo1_axi_rdata_chksum,
+        [00..32] vdo1_axi_rdata_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum3: u32 {
-        [0..32] vdo1_axi_wdata_chksum,
+        [00..32] vdo1_axi_wdata_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum4: u32 {
-        [0..32] ld_yblk_chksum,
+        [00..32] ld_yblk_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum5: u32 {
-        [0..32] ld_cblk_chksum,
+        [00..32] ld_cblk_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum6: u32 {
-        [0..32] mem_din_chksum,
+        [00..32] mem_din_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoChecksum7: u32 {
-        [0..32] mem_dout_chksum,
+        [00..32] mem_dout_chksum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoReserved: u32 {
-        [0..32] reserved,
+        [00..32] reserved,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264YFrameMemSize: u32 {
-        [0..32] cfg_mem_bcnt_y,
+        [00..32] cfg_mem_bcnt_y,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264UvFrameMemSize: u32 {
-        [0..32] cfg_mem_bcnt_uv,
+        [00..32] cfg_mem_bcnt_uv,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SFrameSize: u32 {
-        [0..11] cfg_s_frame_width,
+        [00..11] cfg_s_frame_width,
         [16..27] cfg_s_frame_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SFrameBaseAddrY: u32 {
-        [0..32] cfg_s_frame_base_addr_y,
+        [00..32] cfg_s_frame_base_addr_y,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SFrameBaseAddrUv: u32 {
-        [0..32] cfg_s_frame_base_addr_uv,
+        [00..32] cfg_s_frame_base_addr_uv,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SYFrameMemSize: u32 {
-        [0..32] cfg_s_mem_bcnt_y,
+        [00..32] cfg_s_mem_bcnt_y,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SUvFrameMemSize: u32 {
-        [0..32] cfg_s_mem_bcnt_uv,
+        [00..32] cfg_s_mem_bcnt_uv,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SBsBaseAddr: u32 {
-        [0..32] cfg_s_bs_base_addr,
+        [00..32] cfg_s_bs_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoReserved2: u32 {
-        [0..32] reserved2,
+        [00..32] reserved2,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SBsSize: u32 {
-        [0..32] cfg_s_bs_size,
+        [00..32] cfg_s_bs_size,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SBsFullThr: u32 {
-        [0..32] cfg_s_bs_full_thr,
+        [00..32] cfg_s_bs_full_thr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SSrcBfHeight: u32 {
-        [0..15] cfg_s_c_src_bf_height,
+        [00..15] cfg_s_c_src_bf_height,
         [16..31] cfg_s_y_src_bf_height,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSPaddingCtrl: u32 {
-        [0..8] s_y_padding_pixel,
-        [8..16] s_u_padding_pixel,
+        [00..08] s_y_padding_pixel,
+        [08..16] s_u_padding_pixel,
         [16..24] s_v_padding_pixel,
         [24..29] s_y_line_pad,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSTotalBytecount: u32 {
-        [0..32] s_bs_tot_bycnt,
+        [00..32] s_bs_tot_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSFrameBytecount: u32 {
-        [0..32] s_bs_frm_bycnt,
+        [00..32] s_bs_frm_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSSrcRDbg: u32 {
-        [0..13] s_y_read_mbx,
+        [00..13] s_y_read_mbx,
         [16..29] s_uv_read_mbx,
         [30..31] s_axi_r_idle,
         [31..32] s_src_wr_ov_rd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSrcStaClr: u32 {
-        [0..1] src_uv_wovr_clr,
-        [4..5] src_y_wovr_clr,
-        [8..9] s_src_uv_wovr_clr,
+        [00..01] src_uv_wovr_clr,
+        [04..05] src_y_wovr_clr,
+        [08..09] s_src_uv_wovr_clr,
         [12..13] s_src_y_wovr_clr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSrcCtrl: u32 {
-        [0..4] frm_buf_num,
-        [4..5] mfrm_buf_en,
-        [5..15] req_period,
+        [00..04] frm_buf_num,
+        [04..05] mfrm_buf_en,
+        [05..15] req_period,
         [15..16] no_wait_1st_vsync,
         [16..20] s_frm_buf_num,
         [20..21] s_mfrm_buf_en,
@@ -854,94 +854,94 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refy0BaseAddr: u32 {
-        [0..32] cfg_refy0_base_addr,
+        [00..32] cfg_refy0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refu0BaseAddr: u32 {
-        [0..32] cfg_refu0_base_addr,
+        [00..32] cfg_refu0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refv0BaseAddr: u32 {
-        [0..32] cfg_refv0_base_addr,
+        [00..32] cfg_refv0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refy1BaseAddr: u32 {
-        [0..32] cfg_refy1_base_addr,
+        [00..32] cfg_refy1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refu1BaseAddr: u32 {
-        [0..32] cfg_refu1_base_addr,
+        [00..32] cfg_refu1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Refv1BaseAddr: u32 {
-        [0..32] cfg_refv1_base_addr,
+        [00..32] cfg_refv1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264ExtBaseAddr: u32 {
-        [0..32] cfg_ext_base_addr,
+        [00..32] cfg_ext_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefy0BaseAddr: u32 {
-        [0..32] cfg_s_refy0_base_addr,
+        [00..32] cfg_s_refy0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefu0BaseAddr: u32 {
-        [0..32] cfg_s_refu0_base_addr,
+        [00..32] cfg_s_refu0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefv0BaseAddr: u32 {
-        [0..32] cfg_s_refv0_base_addr,
+        [00..32] cfg_s_refv0_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefy1BaseAddr: u32 {
-        [0..32] cfg_s_refy1_base_addr,
+        [00..32] cfg_s_refy1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefu1BaseAddr: u32 {
-        [0..32] cfg_s_refu1_base_addr,
+        [00..32] cfg_s_refu1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRefv1BaseAddr: u32 {
-        [0..32] cfg_s_refv1_base_addr,
+        [00..32] cfg_s_refv1_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SExtBaseAddr: u32 {
-        [0..32] cfg_s_ext_base_addr,
+        [00..32] cfg_s_ext_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoCoreDbg2: u32 {
-        [0..1] pframe,
-        [4..14] pframe_cnt,
+        [00..01] pframe,
+        [04..14] pframe_cnt,
         [16..26] tclock,
         [26..27] r_yref_wait,
         [27..28] r_vref_wait,
@@ -952,10 +952,10 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSCoreDbg2: u32 {
-        [0..1] s_pframe,
-        [4..14] s_pframe_cnt,
+        [00..01] s_pframe,
+        [04..14] s_pframe_cnt,
         [16..26] s_tclock,
         [26..27] s_r_yref_wait,
         [27..28] s_r_vref_wait,
@@ -966,868 +966,868 @@ emhal::mmio_reg! {
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264YSrcbfSize: u32 {
-        [0..32] cfg_y_srcbf_bycnt,
+        [00..32] cfg_y_srcbf_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264UvSrcbfSize: u32 {
-        [0..32] cfg_uv_srcbf_bycnt,
+        [00..32] cfg_uv_srcbf_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SYSrcbfSize: u32 {
-        [0..32] cfg_s_y_srcbf_bycnt,
+        [00..32] cfg_s_y_srcbf_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SUvSrcbfSize: u32 {
-        [0..32] cfg_s_uv_srcbf_bycnt,
+        [00..32] cfg_s_uv_srcbf_bycnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SrcDbg: u32 {
-        [0..1] d2b_sync_en,
-        [4..9] old_read_mode,
+        [00..01] d2b_sync_en,
+        [04..09] old_read_mode,
         [16..17] s_d2b_sync_en,
         [20..25] s_old_read_mode,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264YyD2bAddr: u32 {
-        [0..32] yy_d2b_addr_dbg,
+        [00..32] yy_d2b_addr_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264UvD2bAddr: u32 {
-        [0..32] uv_d2b_addr_dbg,
+        [00..32] uv_d2b_addr_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264YyOfstAddr: u32 {
-        [0..32] yy_mfrm_ofst_dbg,
+        [00..32] yy_mfrm_ofst_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264UvOfstAddr: u32 {
-        [0..32] uv_mfrm_ofst_dbg,
+        [00..32] uv_mfrm_ofst_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264D2bMl: u32 {
-        [0..16] yy_d2b_ml_dbg,
+        [00..16] yy_d2b_ml_dbg,
         [16..32] uv_d2b_ml_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264LoadMbidxDbg: u32 {
-        [0..32] load_mbidx_dbg,
+        [00..32] load_mbidx_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264YcMbErr: u32 {
-        [0..3] yc_mb_err,
+        [00..03] yc_mb_err,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SYyD2bAddr: u32 {
-        [0..32] s_yy_d2b_addr_dbg,
+        [00..32] s_yy_d2b_addr_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SUvD2bAddr: u32 {
-        [0..32] s_uv_d2b_addr_dbg,
+        [00..32] s_uv_d2b_addr_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SYyOfstAddr: u32 {
-        [0..32] s_yy_mfrm_ofst_dbg,
+        [00..32] s_yy_mfrm_ofst_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SUvOfstAddr: u32 {
-        [0..32] s_uv_mfrm_ofst_dbg,
+        [00..32] s_uv_mfrm_ofst_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SD2bMl: u32 {
-        [0..16] s_yy_d2b_ml_dbg,
+        [00..16] s_yy_d2b_ml_dbg,
         [16..32] s_uv_d2b_ml_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SLoadMbidxDbg: u32 {
-        [0..32] s_load_mbidx_dbg,
+        [00..32] s_load_mbidx_dbg,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SYcMbErr: u32 {
-        [0..3] s_yc_mb_err,
+        [00..03] s_yc_mb_err,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264PfchCtrl: u32 {
-        [0..7] cfg_pfch_mbx_s,
-        [8..15] cfg_pfch_mby_s,
+        [00..07] cfg_pfch_mbx_s,
+        [08..15] cfg_pfch_mby_s,
         [16..17] cfg_pfch_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264PfchBase: u32 {
-        [0..32] cfg_pfch_base_addr,
+        [00..32] cfg_pfch_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264PfchvBase: u32 {
-        [0..32] cfg_pfchv_base_addr,
+        [00..32] cfg_pfchv_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SPfchCtrl: u32 {
-        [0..7] cfg_s_pfch_mbx_s,
-        [8..15] cfg_s_pfch_mby_s,
+        [00..07] cfg_s_pfch_mbx_s,
+        [08..15] cfg_s_pfch_mby_s,
         [16..17] cfg_s_pfch_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SPfchBase: u32 {
-        [0..32] cfg_s_pfch_base_addr,
+        [00..32] cfg_s_pfch_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SPfchvBase: u32 {
-        [0..32] cfg_s_pfchv_base_addr,
+        [00..32] cfg_s_pfchv_base_addr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264HwbackMode: u32 {
-        [0..1] cfg_sramck_mode,
-        [1..2] cfg_nal_mp_mode,
-        [2..3] cfg_s_nal_mp_mode,
+        [00..01] cfg_sramck_mode,
+        [01..02] cfg_nal_mp_mode,
+        [02..03] cfg_s_nal_mp_mode,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264RoiMode: u32 {
-        [0..8] cfg_roi_en,
-        [8..9] cfg_roi_upd,
+        [00..08] cfg_roi_en,
+        [08..09] cfg_roi_upd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264RoiBit: u32 {
-        [0..13] cfg_pbit_ratio,
+        [00..13] cfg_pbit_ratio,
         [13..26] cfg_ibit_ratio,
         [26..32] cfg_ithre,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264RoiQptune: u32 {
-        [0..6] cfg_pqp_decr,
-        [8..14] cfg_iqp_decr,
+        [00..06] cfg_pqp_decr,
+        [08..14] cfg_iqp_decr,
         [16..22] cfg_n2r_qp_decr,
         [24..30] cfg_fixqp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264RoiBittune: u32 {
-        [0..5] cfg_roi_pbit_ofst,
-        [8..16] cfg_roi_ibit_ofst,
+        [00..05] cfg_roi_pbit_ofst,
+        [08..16] cfg_roi_ibit_ofst,
         [16..21] cfg_nroi_pbit_ofst,
         [24..32] cfg_nroi_ibit_ofst,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi0: u32 {
-        [0..7] cfg_roi0_mbx_s,
-        [8..15] cfg_roi0_mbx_e,
+        [00..07] cfg_roi0_mbx_s,
+        [08..15] cfg_roi0_mbx_e,
         [16..23] cfg_roi0_mby_s,
         [24..31] cfg_roi0_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi1: u32 {
-        [0..7] cfg_roi1_mbx_s,
-        [8..15] cfg_roi1_mbx_e,
+        [00..07] cfg_roi1_mbx_s,
+        [08..15] cfg_roi1_mbx_e,
         [16..23] cfg_roi1_mby_s,
         [24..31] cfg_roi1_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi2: u32 {
-        [0..7] cfg_roi2_mbx_s,
-        [8..15] cfg_roi2_mbx_e,
+        [00..07] cfg_roi2_mbx_s,
+        [08..15] cfg_roi2_mbx_e,
         [16..23] cfg_roi2_mby_s,
         [24..31] cfg_roi2_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi3: u32 {
-        [0..7] cfg_roi3_mbx_s,
-        [8..15] cfg_roi3_mbx_e,
+        [00..07] cfg_roi3_mbx_s,
+        [08..15] cfg_roi3_mbx_e,
         [16..23] cfg_roi3_mby_s,
         [24..31] cfg_roi3_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi4: u32 {
-        [0..7] cfg_roi4_mbx_s,
-        [8..15] cfg_roi4_mbx_e,
+        [00..07] cfg_roi4_mbx_s,
+        [08..15] cfg_roi4_mbx_e,
         [16..23] cfg_roi4_mby_s,
         [24..31] cfg_roi4_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi5: u32 {
-        [0..7] cfg_roi5_mbx_s,
-        [8..15] cfg_roi5_mbx_e,
+        [00..07] cfg_roi5_mbx_s,
+        [08..15] cfg_roi5_mbx_e,
         [16..23] cfg_roi5_mby_s,
         [24..31] cfg_roi5_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi6: u32 {
-        [0..7] cfg_roi6_mbx_s,
-        [8..15] cfg_roi6_mbx_e,
+        [00..07] cfg_roi6_mbx_s,
+        [08..15] cfg_roi6_mbx_e,
         [16..23] cfg_roi6_mby_s,
         [24..31] cfg_roi6_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Roi7: u32 {
-        [0..7] cfg_roi7_mbx_s,
-        [8..15] cfg_roi7_mbx_e,
+        [00..07] cfg_roi7_mbx_s,
+        [08..15] cfg_roi7_mbx_e,
         [16..23] cfg_roi7_mby_s,
         [24..31] cfg_roi7_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoiMode: u32 {
-        [0..8] cfg_s_roi_en,
-        [8..9] cfg_s_roi_upd,
+        [00..08] cfg_s_roi_en,
+        [08..09] cfg_s_roi_upd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoiBit: u32 {
-        [0..13] cfg_s_pbit_ratio,
+        [00..13] cfg_s_pbit_ratio,
         [13..26] cfg_s_ibit_ratio,
         [26..32] cfg_s_ithre,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoiQptune: u32 {
-        [0..6] cfg_s_pqp_decr,
-        [8..14] cfg_s_iqp_decr,
+        [00..06] cfg_s_pqp_decr,
+        [08..14] cfg_s_iqp_decr,
         [16..22] cfg_s_n2r_qp_decr,
         [24..30] cfg_s_fixqp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoiBittune: u32 {
-        [0..5] cfg_s_roi_pbit_ofst,
-        [8..16] cfg_s_roi_ibit_ofst,
+        [00..05] cfg_s_roi_pbit_ofst,
+        [08..16] cfg_s_roi_ibit_ofst,
         [16..21] cfg_s_nroi_pbit_ofst,
         [24..32] cfg_s_nroi_ibit_ofst,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi0: u32 {
-        [0..7] cfg_s_roi0_mbx_s,
-        [8..15] cfg_s_roi0_mbx_e,
+        [00..07] cfg_s_roi0_mbx_s,
+        [08..15] cfg_s_roi0_mbx_e,
         [16..23] cfg_s_roi0_mby_s,
         [24..31] cfg_s_roi0_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi1: u32 {
-        [0..7] cfg_s_roi1_mbx_s,
-        [8..15] cfg_s_roi1_mbx_e,
+        [00..07] cfg_s_roi1_mbx_s,
+        [08..15] cfg_s_roi1_mbx_e,
         [16..23] cfg_s_roi1_mby_s,
         [24..31] cfg_s_roi1_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi2: u32 {
-        [0..7] cfg_s_roi2_mbx_s,
-        [8..15] cfg_s_roi2_mbx_e,
+        [00..07] cfg_s_roi2_mbx_s,
+        [08..15] cfg_s_roi2_mbx_e,
         [16..23] cfg_s_roi2_mby_s,
         [24..31] cfg_s_roi2_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi3: u32 {
-        [0..7] cfg_s_roi3_mbx_s,
-        [8..15] cfg_s_roi3_mbx_e,
+        [00..07] cfg_s_roi3_mbx_s,
+        [08..15] cfg_s_roi3_mbx_e,
         [16..23] cfg_s_roi3_mby_s,
         [24..31] cfg_s_roi3_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi4: u32 {
-        [0..7] cfg_s_roi4_mbx_s,
-        [8..15] cfg_s_roi4_mbx_e,
+        [00..07] cfg_s_roi4_mbx_s,
+        [08..15] cfg_s_roi4_mbx_e,
         [16..23] cfg_s_roi4_mby_s,
         [24..31] cfg_s_roi4_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi5: u32 {
-        [0..7] cfg_s_roi5_mbx_s,
-        [8..15] cfg_s_roi5_mbx_e,
+        [00..07] cfg_s_roi5_mbx_s,
+        [08..15] cfg_s_roi5_mbx_e,
         [16..23] cfg_s_roi5_mby_s,
         [24..31] cfg_s_roi5_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi6: u32 {
-        [0..7] cfg_s_roi6_mbx_s,
-        [8..15] cfg_s_roi6_mbx_e,
+        [00..07] cfg_s_roi6_mbx_s,
+        [08..15] cfg_s_roi6_mbx_e,
         [16..23] cfg_s_roi6_mby_s,
         [24..31] cfg_s_roi6_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264SRoi7: u32 {
-        [0..7] cfg_s_roi7_mbx_s,
-        [8..15] cfg_s_roi7_mbx_e,
+        [00..07] cfg_s_roi7_mbx_s,
+        [08..15] cfg_s_roi7_mbx_e,
         [16..23] cfg_s_roi7_mby_s,
         [24..31] cfg_s_roi7_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264OsdEn: u32 {
-        [0..16] cfg_osd_en,
+        [00..16] cfg_osd_en,
         [16..32] cfg_osd_mssel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd0: u32 {
-        [0..7] cfg_osd0_mbx_s,
-        [8..15] cfg_osd0_mbx_e,
+        [00..07] cfg_osd0_mbx_s,
+        [08..15] cfg_osd0_mbx_e,
         [16..23] cfg_osd0_mby_s,
         [24..31] cfg_osd0_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd1: u32 {
-        [0..7] cfg_osd1_mbx_s,
-        [8..15] cfg_osd1_mbx_e,
+        [00..07] cfg_osd1_mbx_s,
+        [08..15] cfg_osd1_mbx_e,
         [16..23] cfg_osd1_mby_s,
         [24..31] cfg_osd1_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd2: u32 {
-        [0..7] cfg_osd2_mbx_s,
-        [8..15] cfg_osd2_mbx_e,
+        [00..07] cfg_osd2_mbx_s,
+        [08..15] cfg_osd2_mbx_e,
         [16..23] cfg_osd2_mby_s,
         [24..31] cfg_osd2_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd3: u32 {
-        [0..7] cfg_osd3_mbx_s,
-        [8..15] cfg_osd3_mbx_e,
+        [00..07] cfg_osd3_mbx_s,
+        [08..15] cfg_osd3_mbx_e,
         [16..23] cfg_osd3_mby_s,
         [24..31] cfg_osd3_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd4: u32 {
-        [0..7] cfg_osd4_mbx_s,
-        [8..15] cfg_osd4_mbx_e,
+        [00..07] cfg_osd4_mbx_s,
+        [08..15] cfg_osd4_mbx_e,
         [16..23] cfg_osd4_mby_s,
         [24..31] cfg_osd4_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd5: u32 {
-        [0..7] cfg_osd5_mbx_s,
-        [8..15] cfg_osd5_mbx_e,
+        [00..07] cfg_osd5_mbx_s,
+        [08..15] cfg_osd5_mbx_e,
         [16..23] cfg_osd5_mby_s,
         [24..31] cfg_osd5_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd6: u32 {
-        [0..7] cfg_osd6_mbx_s,
-        [8..15] cfg_osd6_mbx_e,
+        [00..07] cfg_osd6_mbx_s,
+        [08..15] cfg_osd6_mbx_e,
         [16..23] cfg_osd6_mby_s,
         [24..31] cfg_osd6_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd7: u32 {
-        [0..7] cfg_osd7_mbx_s,
-        [8..15] cfg_osd7_mbx_e,
+        [00..07] cfg_osd7_mbx_s,
+        [08..15] cfg_osd7_mbx_e,
         [16..23] cfg_osd7_mby_s,
         [24..31] cfg_osd7_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd8: u32 {
-        [0..7] cfg_osd8_mbx_s,
-        [8..15] cfg_osd8_mbx_e,
+        [00..07] cfg_osd8_mbx_s,
+        [08..15] cfg_osd8_mbx_e,
         [16..23] cfg_osd8_mby_s,
         [24..31] cfg_osd8_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd9: u32 {
-        [0..7] cfg_osd9_mbx_s,
-        [8..15] cfg_osd9_mbx_e,
+        [00..07] cfg_osd9_mbx_s,
+        [08..15] cfg_osd9_mbx_e,
         [16..23] cfg_osd9_mby_s,
         [24..31] cfg_osd9_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd10: u32 {
-        [0..7] cfg_osd10_mbx_s,
-        [8..15] cfg_osd10_mbx_e,
+        [00..07] cfg_osd10_mbx_s,
+        [08..15] cfg_osd10_mbx_e,
         [16..23] cfg_osd10_mby_s,
         [24..31] cfg_osd10_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd11: u32 {
-        [0..7] cfg_osd11_mbx_s,
-        [8..15] cfg_osd11_mbx_e,
+        [00..07] cfg_osd11_mbx_s,
+        [08..15] cfg_osd11_mbx_e,
         [16..23] cfg_osd11_mby_s,
         [24..31] cfg_osd11_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd12: u32 {
-        [0..7] cfg_osd12_mbx_s,
-        [8..15] cfg_osd12_mbx_e,
+        [00..07] cfg_osd12_mbx_s,
+        [08..15] cfg_osd12_mbx_e,
         [16..23] cfg_osd12_mby_s,
         [24..31] cfg_osd12_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd13: u32 {
-        [0..7] cfg_osd13_mbx_s,
-        [8..15] cfg_osd13_mbx_e,
+        [00..07] cfg_osd13_mbx_s,
+        [08..15] cfg_osd13_mbx_e,
         [16..23] cfg_osd13_mby_s,
         [24..31] cfg_osd13_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd14: u32 {
-        [0..7] cfg_osd14_mbx_s,
-        [8..15] cfg_osd14_mbx_e,
+        [00..07] cfg_osd14_mbx_s,
+        [08..15] cfg_osd14_mbx_e,
         [16..23] cfg_osd14_mby_s,
         [24..31] cfg_osd14_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Osd15: u32 {
-        [0..7] cfg_osd15_mbx_s,
-        [8..15] cfg_osd15_mbx_e,
+        [00..07] cfg_osd15_mbx_s,
+        [08..15] cfg_osd15_mbx_e,
         [16..23] cfg_osd15_mby_s,
         [24..31] cfg_osd15_mby_e,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoH264Mv0En: u32 {
-        [0..1] cfg_mv0_en,
-        [1..2] cfg_s_mv0_en,
+        [00..01] cfg_mv0_en,
+        [01..02] cfg_s_mv0_en,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchDbgReqcnt: u32 {
-        [0..32] dbg_reqcnt,
+        [00..32] dbg_reqcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchDbgRcmd: u32 {
-        [0..32] dbg_rcmd,
+        [00..32] dbg_rcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchDbgWcmd: u32 {
-        [0..32] dbg_wcmd,
+        [00..32] dbg_wcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchDbgWdata: u32 {
-        [0..32] dbg_wdata,
+        [00..32] dbg_wdata,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchDbgPfchsta: u32 {
-        [0..32] dbg_pfchsta,
+        [00..32] dbg_pfchsta,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvDbgReqcnt: u32 {
-        [0..32] dbgv_reqcnt,
+        [00..32] dbgv_reqcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvDbgRcmd: u32 {
-        [0..32] dbgv_rcmd,
+        [00..32] dbgv_rcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvDbgWcmd: u32 {
-        [0..32] dbgv_wcmd,
+        [00..32] dbgv_wcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvDbgWdata: u32 {
-        [0..32] dbgv_wdata,
+        [00..32] dbgv_wdata,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvDbgPfchsta: u32 {
-        [0..32] dbgv_pfchsta,
+        [00..32] dbgv_pfchsta,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchSDbgReqcnt: u32 {
-        [0..32] s_dbg_reqcnt,
+        [00..32] s_dbg_reqcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchSDbgRcmd: u32 {
-        [0..32] s_dbg_rcmd,
+        [00..32] s_dbg_rcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchSDbgWcmd: u32 {
-        [0..32] s_dbg_wcmd,
+        [00..32] s_dbg_wcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchSDbgWdata: u32 {
-        [0..32] s_dbg_wdata,
+        [00..32] s_dbg_wdata,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchSDbgPfchsta: u32 {
-        [0..32] s_dbg_pfchsta,
+        [00..32] s_dbg_pfchsta,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvSDbgReqcnt: u32 {
-        [0..32] s_dbgv_reqcnt,
+        [00..32] s_dbgv_reqcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvSDbgRcmd: u32 {
-        [0..32] s_dbgv_rcmd,
+        [00..32] s_dbgv_rcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvSDbgWcmd: u32 {
-        [0..32] s_dbgv_wcmd,
+        [00..32] s_dbgv_wcmd,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvSDbgWdata: u32 {
-        [0..32] s_dbgv_wdata,
+        [00..32] s_dbgv_wdata,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchvSDbgPfchsta: u32 {
-        [0..32] s_dbgv_pfchsta,
+        [00..32] s_dbgv_pfchsta,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct Vdonr: u32 {
-        [0..6] noiselevel,
-        [8..12] temperalfilterstrength,
+        [00..06] noiselevel,
+        [08..12] temperalfilterstrength,
         [16..22] s_noiselevel,
         [24..28] s_temperalfilterstrength,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrMvctrl: u32 {
-        [0..17] zmv_pflevel,
+        [00..17] zmv_pflevel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrStaCtrl: u32 {
-        [0..16] ysmlr_thr,
+        [00..16] ysmlr_thr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrAbsmvSum: u32 {
-        [0..22] absmv_sum,
+        [00..22] absmv_sum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrMvlevel: u32 {
-        [0..14] nzmv_mbcnt,
+        [00..14] nzmv_mbcnt,
         [16..30] ysmlr_mbcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrPmbsad: u32 {
-        [0..30] pmb_sad,
+        [00..30] pmb_sad,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrImbcnt: u32 {
-        [0..14] intra_mbcnt,
+        [00..14] intra_mbcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSMvctrl: u32 {
-        [0..17] s_zmv_pflevel,
+        [00..17] s_zmv_pflevel,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSStaCtrl: u32 {
-        [0..16] s_ysmlr_thr,
+        [00..16] s_ysmlr_thr,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSAbsmvSum: u32 {
-        [0..22] s_absmv_sum,
+        [00..22] s_absmv_sum,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSMvlevel: u32 {
-        [0..14] s_nzmv_mbcnt,
+        [00..14] s_nzmv_mbcnt,
         [16..30] s_ysmlr_mbcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSPmbsad: u32 {
-        [0..30] s_pmb_sad,
+        [00..30] s_pmb_sad,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdonrSImbcnt: u32 {
-        [0..14] s_intra_mbcnt,
+        [00..14] s_intra_mbcnt,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoStufDbg: u32 {
-        [0..26] pic_bycnt,
+        [00..26] pic_bycnt,
         [26..27] pic_bycnt_ovf,
         [27..28] stuf_ovf,
         [28..29] bincnt_ovf,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoNalDbg1: u32 {
-        [0..26] stuf_cnt,
+        [00..26] stuf_cnt,
         [26..32] sh_state,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoNalDbg2: u32 {
-        [0..30] bincntx3,
+        [00..30] bincntx3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoNalDbg3: u32 {
-        [0..7] mp_mbx,
-        [8..15] mp_mby,
+        [00..07] mp_mbx,
+        [08..15] mp_mby,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoRoiDbg: u32 {
-        [0..12] roi_pmbbits,
+        [00..12] roi_pmbbits,
         [16..28] nroi_pmbbits,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoRcDbg: u32 {
-        [0..6] rc_min_qp,
-        [8..14] rc_qp,
+        [00..06] rc_min_qp,
+        [08..14] rc_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSStufDbg: u32 {
-        [0..26] s_pic_bycnt,
+        [00..26] s_pic_bycnt,
         [26..27] s_pic_bycnt_ovf,
         [27..28] s_stuf_ovf,
         [28..29] s_bincnt_ovf,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSNalDbg1: u32 {
-        [0..26] s_stuf_cnt,
+        [00..26] s_stuf_cnt,
         [26..32] s_sh_state,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSNalDbg2: u32 {
-        [0..30] s_bincntx3,
+        [00..30] s_bincntx3,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSNalDbg3: u32 {
-        [0..7] s_mp_mbx,
-        [8..15] s_mp_mby,
+        [00..07] s_mp_mbx,
+        [08..15] s_mp_mby,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSRoiDbg: u32 {
-        [0..12] s_roi_pmbbits,
+        [00..12] s_roi_pmbbits,
         [16..28] s_nroi_pmbbits,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSRcDbg: u32 {
-        [0..6] s_rc_min_qp,
-        [8..14] s_rc_qp,
+        [00..06] s_rc_min_qp,
+        [08..14] s_rc_qp,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoRefaxiDbg: u32 {
-        [0..1] ref2axi_busy,
-        [4..6] ref_rfifo_error,
-        [6..8] ref_wfifo_error,
-        [8..11] ref_rfifo_empty,
+        [00..01] ref2axi_busy,
+        [04..06] ref_rfifo_error,
+        [06..08] ref_wfifo_error,
+        [08..11] ref_rfifo_empty,
         [12..17] ref_wfifo_empty,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoPfchaxiDbg: u32 {
-        [0..1] pfch_rfifo_busy,
-        [4..6] pfch_rfifo_error,
-        [8..11] pfch_rfifo_empty,
+        [00..01] pfch_rfifo_busy,
+        [04..06] pfch_rfifo_error,
+        [08..11] pfch_rfifo_empty,
         [12..13] pfchv_rfifo_busy,
         [16..18] pfchv_rfifo_error,
         [20..23] pfchv_rfifo_empty,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoBsaxiDbg: u32 {
-        [0..1] bs_wfifo_busy,
-        [4..6] bs_wfifo_error,
-        [8..13] bs_wfifo_empty,
+        [00..01] bs_wfifo_busy,
+        [04..06] bs_wfifo_error,
+        [08..13] bs_wfifo_empty,
         [16..18] bs_st,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoFrameId: u32 {
-        [0..32] frame_id,
+        [00..32] frame_id,
     }
 }
 
-emhal::mmio_reg! {
+embedded_util::reg! {
     pub struct VdoSVdoFrameId: u32 {
-        [0..32] s_frame_id,
+        [00..32] s_frame_id,
     }
 }
