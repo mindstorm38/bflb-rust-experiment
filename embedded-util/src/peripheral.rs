@@ -149,7 +149,9 @@ pub trait Peripheral: Sized {
 }
 
 
-pub struct PeripheralGuard<P: Peripheral>(pub P);
+/// A lifetime-guarded wrapper for a particular peripheral type. When this guard
+/// reached end of scope, the peripheral is automatically freed.
+pub struct PeripheralGuard<P: Peripheral>(P);
 
 impl<P: Peripheral> Drop for PeripheralGuard<P> {
     fn drop(&mut self) {
