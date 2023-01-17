@@ -9,14 +9,16 @@ use crate::bl808::glb::GlbGpioCfg0;
 
 
 /// Represent an unconfigured GPIO pin peripheral
+/// 
+/// Available ports: 0 to 45 (included).
 pub struct PinPort<const NUM: u8> {}
 peripheral!(PinPort<NUM>, NUM: u8[0..46]);
 
 impl<const NUM: u8> PinPort<NUM> {
 
-    /// Generic types erasing, this transfer checks to the runtime.
-    pub fn erase(self) -> ! {
-        todo!()
+    /// Erase generic types, this transfer checks to the runtime.
+    pub fn erase(self) -> PinErased {
+        PinErased { num: NUM }
     }
 
     fn new_pin<M: Mode>() -> Pin<NUM, M> {
@@ -45,12 +47,12 @@ impl<const NUM: u8> PinPort<NUM> {
         pin
     }
 
-    /// Get a new alternate pin from this port.
-    pub fn into_alternate<F: Function>(self) -> Pin<NUM, Alternate<F>> {
-        let pin = Self::new_pin();
-        pin.get_cfg().modify(|reg| {
-            reg.gpio_0_func_sel().set(F::id());
-        });
+    /// Get a new alternate pin from this port. This requires an
+    /// initial function to be given, even if this can be modified
+    /// later.
+    pub fn into_alternate(self, func: PinFunction) -> Pin<NUM, Alternate> {
+        let mut pin = Self::new_pin();
+        pin.set_function(func);
         pin
     }
 
@@ -85,60 +87,13 @@ pub struct Output {}
 impl Mode for Output {}
 impl OutputLike for Output {}
 
-/// Alternate function pin mode.
-pub struct Alternate<F: Function> {
-    _func: PhantomData<F>,
-}
-impl<F: Function> Mode for Alternate<F> {}
-impl<F: Function> InputLike for Alternate<F> {}
-impl<F: Function> OutputLike for Alternate<F> {}
-
-/// Alternate function trait.
-pub trait Function {
-    fn id() -> u32;
-}
-
-/// Internal macro used to implement all structures that can
-/// be used to define alternate functions.
-macro_rules! functions {
-    ($($func:ident = $val:literal),+ $(,)?) => {
-        $(
-        pub struct $func {}
-        impl Function for $func {
-            #[inline]
-            fn id() -> u32 { $val }
-        }
-        )+
-    };
-}
-
-functions! {
-    Sdh         = 0,
-    Spi0        = 1,
-    I2s         = 3,
-    Pdm         = 4,
-    I2c0        = 5,
-    I2c1        = 6,
-    Uart        = 7,
-    Emac        = 8,
-    Cam         = 9,
-    Analog      = 10,
-    Digital     = 11,
-    Sdu         = 12,
-    Pwm0        = 16,
-    Pwm1        = 17,
-    Spi1        = 18,
-    I2c2        = 19,
-    I2c3        = 20,
-    DbiB        = 22,
-    DbiC        = 23,
-    JtagLP      = 25,
-    JtagM0      = 26,
-    JtagD0      = 27,
-    ClockOut    = 31,
-    Unused      = 0xFF,
-}
-
+/// Alternate function pin mode. This mode basically allow to do
+/// anything on the pin because alternate function may need unusual
+/// configuration sequences.
+pub struct Alternate {}
+impl Mode for Alternate {}
+impl InputLike for Alternate {}
+impl OutputLike for Alternate {}
 
 impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     
@@ -146,6 +101,11 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     /// This can be used to free the peripheral.
     pub fn into_port(self) -> PinPort<NUM> {
         PinPort {}
+    }
+
+    /// Erase generic types, this transfer checks to the runtime.
+    pub fn erase(self) -> PinErased {
+        self.into_port().erase()
     }
 
     /// Internal function to get a read/write pointer to the 
@@ -203,6 +163,7 @@ impl<const NUM: u8, M: OutputLike> Pin<NUM, M> {
         self.get_cfg().modify(|reg| reg.gpio_0_drv().set(drive as _));
     }
 
+    /// Set this output pin state to high.
     #[inline]
     pub fn set_high(&mut self) {
 
@@ -217,6 +178,7 @@ impl<const NUM: u8, M: OutputLike> Pin<NUM, M> {
 
     }
 
+    /// Set this output pin state to low.
     #[inline]
     pub fn set_low(&mut self) {
 
@@ -230,6 +192,37 @@ impl<const NUM: u8, M: OutputLike> Pin<NUM, M> {
         });
 
     }
+
+}
+
+impl<const NUM: u8> Pin<NUM, Alternate> {
+
+    /// Set the function for this alternate pin.
+    #[inline]
+    pub fn set_function(&mut self, func: PinFunction) {
+        self.get_cfg().modify(|reg| {
+            reg.gpio_0_func_sel().set(func as _);
+        });
+    }
+
+    /// Get the function of this alternate pin.
+    #[inline]
+    pub fn get_function(&self) -> PinFunction {
+        PinFunction::from_number(self.get_cfg().get().gpio_0_func_sel().get() as _).unwrap()
+    }
+
+}
+
+
+/// A type-erased pin, checks are done at runtime.
+#[allow(unused)]
+pub struct PinErased {
+    num: u8,
+}
+
+impl PinErased {
+
+    // TODO:
 
 }
 
@@ -268,63 +261,63 @@ pub enum PinDrive {
     Drive3 = 3,
 }
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// #[repr(u8)]
-// pub enum PinFunction {
-//     Sdh      = 0,
-//     Spi0     = 1,
-//     I2s      = 3,
-//     Pdm      = 4,
-//     I2c0     = 5,
-//     I2c1     = 6,
-//     Uart     = 7,
-//     Emac     = 8,
-//     Cam      = 9,
-//     Analog   = 10,
-//     Digital  = 11,
-//     Sdu      = 12,
-//     Pwm0     = 16,
-//     Pwm1     = 17,
-//     Spi1     = 18,
-//     I2c2     = 19,
-//     I2c3     = 20,
-//     DbiB     = 22,
-//     DbiC     = 23,
-//     JtagLP   = 25,
-//     JtagM0   = 26,
-//     JtagD0   = 27,
-//     ClockOut = 31,
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum PinFunction {
+    Sdh      = 0,
+    Spi0     = 1,
+    I2s      = 3,
+    Pdm      = 4,
+    I2c0     = 5,
+    I2c1     = 6,
+    Uart     = 7,
+    Emac     = 8,
+    Cam      = 9,
+    Analog   = 10,
+    Digital  = 11,
+    Sdu      = 12,
+    Pwm0     = 16,
+    Pwm1     = 17,
+    Spi1     = 18,
+    I2c2     = 19,
+    I2c3     = 20,
+    DbiB     = 22,
+    DbiC     = 23,
+    JtagLP   = 25,
+    JtagM0   = 26,
+    JtagD0   = 27,
+    ClockOut = 31,
+}
 
-// impl PinFunction {
+impl PinFunction {
 
-//     pub fn from_number(num: u8) -> Option<Self> {
-//         Some(match num {
-//             0 => Self::Sdh,
-//             1 => Self::Spi0,
-//             3 => Self::I2s,
-//             4 => Self::Pdm,
-//             5 => Self::I2c0,
-//             6 => Self::I2c1,
-//             7 => Self::Uart,
-//             8 => Self::Emac,
-//             9 => Self::Cam,
-//             10 => Self::Analog,
-//             11 => Self::Digital,
-//             12 => Self::Sdu,
-//             16 => Self::Pwm0,
-//             17 => Self::Pwm1,
-//             18 => Self::Spi1,
-//             19 => Self::I2c2,
-//             20 => Self::I2c3,
-//             22 => Self::DbiB,
-//             23 => Self::DbiC,
-//             25 => Self::JtagLP,
-//             26 => Self::JtagM0,
-//             27 => Self::JtagD0,
-//             31 => Self::ClockOut,
-//             _ => return None,
-//         })
-//     }
+    pub fn from_number(num: u8) -> Option<Self> {
+        Some(match num {
+            0 => Self::Sdh,
+            1 => Self::Spi0,
+            3 => Self::I2s,
+            4 => Self::Pdm,
+            5 => Self::I2c0,
+            6 => Self::I2c1,
+            7 => Self::Uart,
+            8 => Self::Emac,
+            9 => Self::Cam,
+            10 => Self::Analog,
+            11 => Self::Digital,
+            12 => Self::Sdu,
+            16 => Self::Pwm0,
+            17 => Self::Pwm1,
+            18 => Self::Spi1,
+            19 => Self::I2c2,
+            20 => Self::I2c3,
+            22 => Self::DbiB,
+            23 => Self::DbiC,
+            25 => Self::JtagLP,
+            26 => Self::JtagM0,
+            27 => Self::JtagD0,
+            31 => Self::ClockOut,
+            _ => return None,
+        })
+    }
 
-// }
+}

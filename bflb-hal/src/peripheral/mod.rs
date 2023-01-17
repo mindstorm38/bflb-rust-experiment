@@ -8,5 +8,7 @@ pub mod gpio;
 pub mod uart;
 pub mod usb;
 
+pub mod irq;
+
 // pub mod camera;
 // pub mod mjpeg;

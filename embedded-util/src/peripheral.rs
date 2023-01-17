@@ -120,7 +120,7 @@ pub trait Peripheral: Sized {
             Self::taken().compare_exchange(false, true, 
                 core::sync::atomic::Ordering::Acquire, 
                 core::sync::atomic::Ordering::Acquire
-            ).expect("peripheral is already owned and cannot be taken out");
+            ).expect("peripheral is already owned and cannot be borrowed");
             Self::new() 
         }
     }

@@ -83,12 +83,13 @@ pub use bflb_hal as hal;
 mod clic;
 mod trap;
 
-/// Re-export the IRQ type enumeration.
-pub use chip::{IrqNum, get_interrupt_threshold, set_interrupt_threshold};
+/// Re-exports
+pub use chip::{get_interrupt_threshold, set_interrupt_threshold};
 pub use trap::TrapHandler;
 
 // Internal use.
 use trap::TrapHandlers;
+use hal::irq::IrqNum;
 
 /// All exception (synchronous) handlers.
 static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();

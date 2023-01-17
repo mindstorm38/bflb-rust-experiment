@@ -1,20 +1,22 @@
 //! Serial I/O management on BL808.
 
+use core::marker::PhantomData;
+use core::fmt;
+
 use embedded_util::peripheral;
 
 use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::bl808::uart::UartBitPrd;
 
-use super::gpio::{PinPort, PinPull, PinDrive, Uart as UartFunc};
+use super::gpio::{PinPort, PinPull, PinDrive, PinFunction};
 use super::clock::Clocks;
-
-use core::marker::PhantomData;
-use core::fmt;
 
 
 /// Definition of a UART port. This port need to be configured in
 /// order to obtain a [`Uart`] structure that is actually usable
 /// for TX and/or RX communications.
+/// 
+/// Available ports: 0, 1, 2.
 pub struct UartPort<const PORT: u8> {}
 peripheral!(UartPort<PORT>, PORT: u8[0..3]);
 
@@ -303,7 +305,7 @@ fn attach_pin<const NUM: u8>(pin: PinPort<NUM>, func: UartFunction) {
         reg.0 |= (func as u32) << field;
     });
 
-    let mut pin = pin.into_alternate::<UartFunc>();
+    let mut pin = pin.into_alternate(PinFunction::Uart);
     pin.set_pull(PinPull::Up);
     pin.set_drive(PinDrive::Drive1);
     pin.set_smt(true);
