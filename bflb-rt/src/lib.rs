@@ -89,12 +89,12 @@ pub use trap::TrapHandler;
 
 // Internal use.
 use trap::TrapHandlers;
-use hal::irq::IrqNum;
+use hal::irq::{IrqNum, IRQ_COUNT};
 
 /// All exception (synchronous) handlers.
 static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
 /// All interrupt (asynchronous) handlers.
-static INTERRUPT_HANDLERS: TrapHandlers<{chip::IRQ_COUNT}> = TrapHandlers::new();
+static INTERRUPT_HANDLERS: TrapHandlers<IRQ_COUNT> = TrapHandlers::new();
 
 
 /// The global writer to use to print panicking information when happening.

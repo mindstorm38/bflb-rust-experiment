@@ -5,8 +5,12 @@
 
 
 #[cfg(any(feature = "bl808_d0", feature = "bl808_lp"))]
-compile_error!("IrqNum is not yet available for D0/LP cores");
+compile_error!("IRQ module is not yet available for D0/LP cores");
 
+
+/// IRQ count on BL808 M0 core.
+#[cfg(feature = "bl808_m0")]
+pub const IRQ_COUNT: usize = 16 + 64;
 
 /// IRQ types for BL808 M0 core.
 #[cfg(feature = "bl808_m0")]

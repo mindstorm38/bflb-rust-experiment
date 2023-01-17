@@ -10,10 +10,7 @@ use riscv_hal::clic::{Clic, set_mintthresh, get_mintthresh};
 use crate::clic::ClicVectorTable;
 use crate::InterruptTrigger;
 use crate::IrqNum;
-
-
-/// 16 RISC-V codes + 64 BouffaloLab codes.
-pub const IRQ_COUNT: usize = 16 + 64;
+use crate::IRQ_COUNT;
 
 
 /// On the M0/LP core, we use the CLIC for interruption handling.
