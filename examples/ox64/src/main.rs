@@ -79,8 +79,12 @@ fn main() {
     loop {
         
         if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
-            let timer = CoreTimer::borrow();
-            write!(uart, "Interrupted! RTC time: {}\r\n", timer.get_time()).unwrap();
+            mtimer_int.set_enable(false);
+            {
+                let timer = CoreTimer::borrow();
+                write!(uart, "Interrupted! RTC time: {}\r\n", timer.get_time()).unwrap();
+            }
+            mtimer_int.set_enable(true);
         }
 
     }

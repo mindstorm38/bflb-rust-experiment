@@ -4,6 +4,10 @@
 //! interrupts given these numbers.
 
 
+#[cfg(any(feature = "bl808_d0", feature = "bl808_lp"))]
+compile_error!("IrqNum is not yet available for D0/LP cores");
+
+
 /// IRQ types for BL808 M0 core.
 #[cfg(feature = "bl808_m0")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
