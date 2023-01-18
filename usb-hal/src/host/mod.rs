@@ -7,34 +7,21 @@ pub trait HostController {
     /// Initialize the USB controller.
     fn init(&mut self);
 
-    /// Get frame number.
-    fn get_frame_number(&self) -> u16;
-
-    /// Allocate a pipe to an endpoint with a specific configuration.
-    fn alloc_pipe(&mut self, config: &EndpointConfig) -> usize;
-
-    /// Submit a USB Request Block (URB) to the pipe.
-    fn submit_urb(&mut self, pipe: usize, urb: &RequestBlock);
-
 }
 
 
-/// Configuration for an endpoint pipe config.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EndpointConfig {
-    pub address: u8,
-    pub kind: EndpointKind,
-    pub max_packet_size: u16,
-    pub interval: u8,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EndpointKind {
+pub enum EndpointType {
     Control,
     Bulk,
     Interrupt,
     Isochronous,
 }
+
+
+
+
+
 
 
 /// USB Request Block (URB).
@@ -101,7 +88,6 @@ pub struct SetupPacket {
 pub struct Host<C: HostController> {
     controller: C,
 }
-
 
 
 

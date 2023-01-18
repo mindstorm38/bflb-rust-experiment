@@ -1,6 +1,9 @@
 //! EHCI abstraction layer for USB.
 
-use crate::host::{HostController, RequestBlock, EndpointConfig};
+use crate::host::{
+    HostController,
+    EndpointType,
+};
 
 pub mod reg;
 pub mod data;
@@ -89,7 +92,7 @@ impl HostController for EhciHostController<'_> {
                     let mut qh = unsafe { &mut *qh };
 
                     // TODO: Rework this horrible mutable pointers unsafety.
-                    while !std::ptr::eq(qh, qh_head) {
+                    while !core::ptr::eq(qh, qh_head) {
                         if let Some(NextLinkType::Qh(next_qh)) = qh.horizontal_link.get_valid() {
                             qh = unsafe { &mut *next_qh };
                         } else {
@@ -141,18 +144,6 @@ impl HostController for EhciHostController<'_> {
 
     }
 
-    fn get_frame_number(&self) -> u16 {
-        todo!()
-    }
-
-    fn alloc_pipe(&mut self, config: &EndpointConfig) -> usize {
-        todo!()
-    }
-
-    fn submit_urb(&mut self, pipe: usize, urb: &RequestBlock) {
-
-    }
-
 }
 
 impl EhciHostController<'_> {
@@ -160,6 +151,74 @@ impl EhciHostController<'_> {
 }
 
 
-struct EhciPipe {
+fn fill_qh(qh: &mut Qh, pipe: &EhciPipe) {
 
+    // Reset characteristics.
+    qh.endpoint_characteristics.0 = 0;
+    qh.endpoint_characteristics.device_addr().set(pipe.device_addr as _);
+    qh.endpoint_characteristics.endpoint_num().set((pipe.endpoint_addr & 0xF) as _);
+    qh.endpoint_characteristics.endpoint_speed().set(pipe.endpoint_speed as u8 as _);
+    qh.endpoint_characteristics.max_packet_len().set(pipe.max_packed_len as _);
+    qh.endpoint_characteristics.data_toggle_control().fill();
+    qh.endpoint_characteristics.nak_count_reload().clear();
+    if pipe.endpoint_type == EndpointType::Control && pipe.endpoint_speed != EhciSpeed::FullSpeed {
+        qh.endpoint_characteristics.control_endpoint_flag().fill();
+    }
+
+    // Reset capabilities.
+    qh.endpoint_capabilities.0 = 0;
+
+}
+
+
+struct EhciPipe {
+    pub device_addr: u8,
+    pub endpoint_addr: u8,
+    pub endpoint_type: EndpointType,
+    pub endpoint_speed: EhciSpeed,
+    pub max_packed_len: u8,
+}
+
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+enum EhciSpeed {
+    LowSpeed = 1,
+    FullSpeed = 0,
+    HighSpeed = 2,
+}
+
+
+
+
+
+
+
+
+struct HubPort {
+    pub connected: bool,
+    pub port: u8,
+    pub device_addr: u8,
+    pub speed: u8,
+    // ep0
+
+}
+
+#[repr(C)]
+struct DeviceDescriptor {
+    len: u8,
+    ty: u8,
+    spec_bcd: u16,
+    device_class: u8,
+    device_subclass: u8,
+    device_proto: u8,
+    max_packet_size: u8,
+    id_vendor: u16,
+    id_product: u16,
+    bcd_device: u16,
+    manufacturer_index: u8,
+    product_index: u8,
+    serial_number_index: u8,
+    configurations_count: u8,
 }
