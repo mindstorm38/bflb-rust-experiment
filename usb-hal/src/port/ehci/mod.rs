@@ -1,6 +1,6 @@
 //! EHCI abstraction layer for USB.
 
-use crate::host::HostController;
+use crate::host::{HostController, RequestBlock, EndpointConfig};
 
 pub mod reg;
 pub mod data;
@@ -8,7 +8,7 @@ pub mod data;
 use reg::Ehci;
 use data::{Qh, PeriodicFrameList};
 
-use self::data::{NextLink, NextLinkType};
+use self::data::NextLinkType;
 
 
 pub const PERIODIC_FRAME_COUNT: usize = 1024;
@@ -56,6 +56,7 @@ impl HostController for EhciHostController<'_> {
         
         let async_qh = &mut *self.async_queue_head;
         *async_qh = Qh::default();
+
         let async_qh_link_type = NextLinkType::Qh(async_qh);
         async_qh.horizontal_link.set_valid(async_qh_link_type);
         async_qh.endpoint_characteristics.head_of_reclamation_list_flag().fill();
@@ -139,5 +140,26 @@ impl HostController for EhciHostController<'_> {
         });
 
     }
+
+    fn get_frame_number(&self) -> u16 {
+        todo!()
+    }
+
+    fn alloc_pipe(&mut self, config: &EndpointConfig) -> usize {
+        todo!()
+    }
+
+    fn submit_urb(&mut self, pipe: usize, urb: &RequestBlock) {
+
+    }
+
+}
+
+impl EhciHostController<'_> {
+
+}
+
+
+struct EhciPipe {
 
 }
