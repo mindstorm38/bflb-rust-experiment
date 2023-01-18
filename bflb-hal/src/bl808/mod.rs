@@ -48,6 +48,8 @@ pub use csi::Csi;
 // Manually implemented.
 pub mod uart;
 pub use uart::Uart;
+pub mod dma;
+pub use dma::Dma;
 pub mod cam;
 pub use cam::{Cam, CamFront};
 pub mod mjpeg;
