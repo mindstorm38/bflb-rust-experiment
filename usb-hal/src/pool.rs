@@ -1,6 +1,6 @@
 //! Allocation pools.
 
-use std::mem::MaybeUninit;
+use core::mem::MaybeUninit;
 
 
 pub struct AllocPool<T, const LEN: usize> {
