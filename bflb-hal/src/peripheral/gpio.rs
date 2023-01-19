@@ -8,10 +8,10 @@ use crate::bl808::GLB;
 use crate::bl808::glb::GlbGpioCfg0;
 
 
-/// Represent an unconfigured GPIO pin peripheral
+/// Represent an unconfigured GPIO pin peripheral.
 /// 
 /// Available ports: 0 to 45 (included).
-pub struct PinPort<const NUM: u8> {}
+pub struct PinPort<const NUM: u8>(());
 peripheral!(PinPort<NUM>, NUM: u8[0..46]);
 
 impl<const NUM: u8> PinPort<NUM> {
@@ -100,7 +100,7 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     /// Get back the port associated bith this pin.
     /// This can be used to free the peripheral.
     pub fn into_port(self) -> PinPort<NUM> {
-        PinPort {}
+        PinPort(())
     }
 
     /// Erase generic types, this transfer checks to the runtime.

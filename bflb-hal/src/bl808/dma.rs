@@ -153,12 +153,12 @@ embedded_util::reg! {
         [21..23] dst_width,
         /// Only effect when dst_min_mode = 1.
         [23..26] fix_count,
-        /// Source increment. When set, the source address is incremented after 
+        /// Source increment (SI). When set, the source address is incremented after 
         /// each transfer. Default to 1.
         [26..27] src_increment,
-        /// Destination increment. When set, the destination address is incremented 
+        /// Destination increment (DI). When set, the destination address is incremented 
         /// after each transfer. Default to 1.
-        [27..28] src_increment,
+        [27..28] dst_increment,
         /// Currently unused.
         [28..31] prot,
         /// Terminal count interrupt enable bit. It controls whether the current 

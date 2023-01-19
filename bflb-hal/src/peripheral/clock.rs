@@ -17,7 +17,7 @@ use crate::bl808::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
 
 
 /// Clocks controller for BL808.
-pub struct Clocks {}
+pub struct Clocks(());
 peripheral!(Clocks);
 
 /// High-level mtimer methods.

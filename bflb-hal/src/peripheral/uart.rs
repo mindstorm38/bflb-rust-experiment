@@ -17,7 +17,7 @@ use super::clock::Clocks;
 /// for TX and/or RX communications.
 /// 
 /// Available ports: 0, 1, 2.
-pub struct UartPort<const PORT: u8> {}
+pub struct UartPort<const PORT: u8>(());
 peripheral!(UartPort<PORT>, PORT: u8[0..3]);
 
 impl<const PORT: u8> UartPort<PORT> {
@@ -109,7 +109,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
     /// This can be used to free the peripheral.
     pub fn into_port(self) -> UartPort<PORT> {
         // Note that here the object is dropped, and therefore TX/RX lanes are stopped.
-        UartPort {}
+        UartPort(())
     }
 
     /// Internal function used to initialize the I/O given a configuration and clocks.

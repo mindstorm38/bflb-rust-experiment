@@ -2,12 +2,13 @@
 
 #![no_std]
 
+pub mod atomic;
 
-mod register;
-pub use register::*;
-
-mod peripheral;
-pub use peripheral::*;
+mod reg;
+pub use reg::{Reg, RegPtr};
 
 mod mmio;
-pub use mmio::*;
+pub use mmio::{PtrRo, PtrWo, PtrRw};
+
+mod peripheral;
+pub use peripheral::{Peripheral, PeripheralGuard};

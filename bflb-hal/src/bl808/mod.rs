@@ -80,6 +80,11 @@ pub const CCI: Cci              = Cci(addr::CCI_BASE as _);
 /// The Serial Flash Control registers.
 pub const SF_CTRL: SfCtrl       = SfCtrl(addr::SF_CTRL_BASE as _);
 
+// DMA
+pub const DMA0: Dma             = Dma(addr::DMA0_BASE as _);
+pub const DMA1: Dma             = Dma(addr::DMA1_BASE as _);
+pub const DMA2: Dma             = Dma(addr::DMA2_BASE as _);
+
 // UART
 pub const UART0: Uart           = Uart(addr::UART0_BASE as _);
 pub const UART1: Uart           = Uart(addr::UART1_BASE as _);

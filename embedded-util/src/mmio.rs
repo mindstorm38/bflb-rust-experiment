@@ -1,5 +1,6 @@
 //! Utilities for MMIO structures.
 
+
 /// This macro can be used to generate MMIO structures. These structures are
 /// special because they are actually a single pointer in size, but provides
 /// many methods to access in a volatile way the internal registers that are

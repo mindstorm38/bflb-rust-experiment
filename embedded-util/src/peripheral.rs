@@ -40,46 +40,35 @@ macro_rules! peripheral {
 
         impl $crate::Peripheral for $type {
             
+            #[inline]
             unsafe fn taken() -> &'static core::sync::atomic::AtomicBool {
                 static TAKEN: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
                 &TAKEN
             }
 
+            #[inline]
             unsafe fn new() -> Self {
-                Self {}
+                Self(())
             }
 
         }
 
     };
     // For array peripherals.
-    ($type:ty, $var:ident: $var_type:ty[$start:literal .. $stop:literal]) => {
+    ($type:ty, $var:ident: $var_type:ty [ $start:literal .. $stop:literal ]) => {
 
         impl<const $var: $var_type> $crate::Peripheral for $type {
 
             unsafe fn taken() -> &'static core::sync::atomic::AtomicBool {
-
-                const COUNT: usize = $stop - $start;
-                static TAKEN_ARR: [core::sync::atomic::AtomicBool; COUNT] = {
-                    
-                    // SAFETY: This trick is actually valid in a const context because both bool 
-                    // and AtomicBool has the same layout as stated in their doc/definition.
-
-                    union AtomicInit {
-                        raw: [bool; COUNT],
-                        atomic: core::mem::ManuallyDrop<[core::sync::atomic::AtomicBool; COUNT]>,
-                    }
-                    
-                    core::mem::ManuallyDrop::into_inner(unsafe { AtomicInit { raw: [false; COUNT] }.atomic })
-                
-                };
-
+                debug_assert!($var >= $start && $var < $stop, "invalid peripheral port {}", $var);
+                const LEN: usize = $stop - $start;
+                static TAKEN_ARR: [core::sync::atomic::AtomicBool; LEN] = $crate::atomic::atomic_bool_array(false);
                 &TAKEN_ARR[$var as usize - $start]
-
             }
 
+            #[inline]
             unsafe fn new() -> Self {
-                Self {}
+                Self(())
             }
 
         }

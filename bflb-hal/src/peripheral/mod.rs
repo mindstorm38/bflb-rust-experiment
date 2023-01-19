@@ -5,6 +5,7 @@ pub mod clock;
 pub mod time;
 
 pub mod gpio;
+pub mod dma;
 pub mod uart;
 pub mod usb;
 
