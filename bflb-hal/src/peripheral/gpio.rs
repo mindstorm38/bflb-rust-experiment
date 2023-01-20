@@ -8,21 +8,21 @@ use crate::bl808::GLB;
 use crate::bl808::glb::GlbGpioCfg0;
 
 
-/// Represent an unconfigured GPIO pin peripheral.
+/// An exclusive access to a GPIO pin on a particular port.
 /// 
 /// Available ports: 0 to 45 (included).
-pub struct PinPort<const NUM: u8>(());
-peripheral!(PinPort<NUM>, NUM: u8[0..46]);
+pub struct PinAccess<const NUM: u8>(());
+peripheral!(PinAccess<NUM>, NUM: u8[0..46]);
 
-impl<const NUM: u8> PinPort<NUM> {
-
-    /// Erase generic types, this transfer checks to the runtime.
-    pub fn erase(self) -> PinErased {
-        PinErased { num: NUM }
-    }
+impl<const NUM: u8> PinAccess<NUM> {
 
     fn new_pin<M: Mode>() -> Pin<NUM, M> {
         Pin { _mode: PhantomData }
+    }
+
+    /// Erase generic types, this transfer checks to the runtime.
+    pub fn into_erased(self) -> PinErased {
+        PinErased { num: NUM }
     }
 
     /// Get a new input pin from this port.
@@ -99,13 +99,13 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     
     /// Get back the port associated bith this pin.
     /// This can be used to free the peripheral.
-    pub fn into_port(self) -> PinPort<NUM> {
-        PinPort(())
+    pub fn into_port(self) -> PinAccess<NUM> {
+        PinAccess(())
     }
 
     /// Erase generic types, this transfer checks to the runtime.
     pub fn erase(self) -> PinErased {
-        self.into_port().erase()
+        self.into_port().into_erased()
     }
 
     /// Internal function to get a read/write pointer to the 

@@ -2,9 +2,9 @@
 #![no_main]
 
 use bflb_hal::clock::{Clocks, XtalType, Mux2, UartSel};
-use bflb_hal::uart::{UartPort, UartConfig};
+use bflb_hal::uart::{UartAccess, UartConfig};
 use bflb_hal::time::CoreTimer;
-use bflb_hal::gpio::PinPort;
+use bflb_hal::gpio::PinAccess;
 use bflb_hal::irq::IrqNum;
 
 use embedded_util::Peripheral;
@@ -60,9 +60,9 @@ fn main() {
     
     // CONSOLE INIT
 
-    let uart_tx = PinPort::<14>::take();
-    let uart_rx = PinPort::<15>::take();
-    let mut uart = UartPort::<0>::take()
+    let uart_tx = PinAccess::<14>::take();
+    let uart_rx = PinAccess::<15>::take();
+    let mut uart = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
     let mut timer = CoreTimer::borrow();

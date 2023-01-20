@@ -8,32 +8,32 @@ use embedded_util::peripheral;
 use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::bl808::uart::UartBitPrd;
 
-use super::gpio::{PinPort, PinPull, PinDrive, PinFunction};
+use super::gpio::{PinAccess, PinPull, PinDrive, PinFunction};
 use super::clock::Clocks;
 
 
-/// Definition of a UART port. This port need to be configured in
-/// order to obtain a [`Uart`] structure that is actually usable
-/// for TX and/or RX communications.
+/// Definition of an exclusive access to a UART port. This port need 
+/// to be configured in order to obtain a [`Uart`] structure that is 
+/// actually usable for TX and/or RX communications.
 /// 
 /// Available ports: 0, 1, 2.
-pub struct UartPort<const PORT: u8>(());
-peripheral!(UartPort<PORT>, PORT: u8[0..3]);
+pub struct UartAccess<const PORT: u8>(());
+peripheral!(UartAccess<PORT>, PORT: u8[0..3]);
 
-impl<const PORT: u8> UartPort<PORT> {
+impl<const PORT: u8> UartAccess<PORT> {
 
     /// Generic types erasing, this transfer checks to the runtime.
     pub fn erase(self) -> ! {
         todo!()
-    }
+    } 
 
     /// Configure this UART port for duplex communications.
     pub fn into_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
-        tx: PinPort<TX_PIN>,
-        rx: PinPort<RX_PIN>,
+        tx: PinAccess<TX_PIN>,
+        rx: PinAccess<RX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> Uart<PORT, PinPort<TX_PIN>, PinPort<RX_PIN>> {
+    ) -> Uart<PORT, PinAccess<TX_PIN>, PinAccess<RX_PIN>> {
 
         attach_pin(tx, match PORT {
             0 => UartFunction::Uart0Tx,
@@ -55,10 +55,10 @@ impl<const PORT: u8> UartPort<PORT> {
 
     /// Configure this UART port for TX-only communications.
     pub fn into_tx<const TX_PIN: u8>(self, 
-        tx: PinPort<TX_PIN>,
+        tx: PinAccess<TX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> Uart<PORT, PinPort<TX_PIN>, Detached> {
+    ) -> Uart<PORT, PinAccess<TX_PIN>, Detached> {
 
         attach_pin(tx, match PORT {
             0 => UartFunction::Uart0Tx,
@@ -73,10 +73,10 @@ impl<const PORT: u8> UartPort<PORT> {
 
     /// Configure this UART port for RX-only communications.
     pub fn into_rx<const RX_PIN: u8>(self, 
-        rx: PinPort<RX_PIN>,
+        rx: PinAccess<RX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> Uart<PORT, Detached, PinPort<RX_PIN>> {
+    ) -> Uart<PORT, Detached, PinAccess<RX_PIN>> {
 
         attach_pin(rx, match PORT {
             0 => UartFunction::Uart0Rx,
@@ -107,9 +107,9 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
     
     /// Get back the port associated bith this configured UART.
     /// This can be used to free the peripheral.
-    pub fn into_port(self) -> UartPort<PORT> {
+    pub fn into_port(self) -> UartAccess<PORT> {
         // Note that here the object is dropped, and therefore TX/RX lanes are stopped.
-        UartPort(())
+        UartAccess(())
     }
 
     /// Internal function used to initialize the I/O given a configuration and clocks.
@@ -228,7 +228,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
 }
 
 
-impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinPort<TX_PIN>, Rx> {
+impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinAccess<TX_PIN>, Rx> {
 
     /// Simplest function to write a single byte of data to the UART TX.
     pub fn write_byte(&mut self, byte: u8) {
@@ -239,7 +239,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinPort<TX_PIN
     
 }
 
-impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT, PinPort<TX_PIN>, Rx> {
+impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT, PinAccess<TX_PIN>, Rx> {
 
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for &byte in s.as_bytes() {
@@ -251,7 +251,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT,
 }
 
 
-impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> Uart<PORT, Tx, PinPort<RX_PIN>> {
+impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> Uart<PORT, Tx, PinAccess<RX_PIN>> {
 
     /// Simplest function to read a single byte, if available.
     pub fn read_byte(&mut self) -> Option<u8> {
@@ -289,7 +289,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Drop for Uart<PORT, Tx, Rx>
 
 
 /// Internal function to attach a pin to a specific UART function.
-fn attach_pin<const NUM: u8>(pin: PinPort<NUM>, func: UartFunction) {
+fn attach_pin<const NUM: u8>(pin: PinAccess<NUM>, func: UartFunction) {
 
     debug_assert!(NUM < 12, "uart pin number must be between 0 and 11 included");
 
@@ -332,7 +332,7 @@ pub trait Attachment {
     fn get_attachment() -> Option<u8>;
 }
 
-impl<const NUM: u8> Attachment for PinPort<NUM> {
+impl<const NUM: u8> Attachment for PinAccess<NUM> {
     #[inline(always)]
     fn get_attachment() -> Option<u8> {
         Some(NUM)

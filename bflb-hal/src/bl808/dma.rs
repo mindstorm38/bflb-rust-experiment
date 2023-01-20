@@ -112,7 +112,7 @@ embedded_util::reg! {
 
     pub struct DmaConfig: u32 {
         /// SMDMA Enable.
-        [00..01] smd_dma,
+        [00..01] smdma_enable,
         /// AHB master endianness:
         /// - 0 - Little
         /// - 1 - Big
