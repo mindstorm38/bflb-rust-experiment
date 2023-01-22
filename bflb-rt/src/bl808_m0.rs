@@ -7,6 +7,8 @@ core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
 
 use riscv_hal::clic::{Clic, set_mintthresh, get_mintthresh};
 
+use bflb_hal::bl808::GLB;
+
 use crate::clic::ClicVectorTable;
 use crate::InterruptTrigger;
 use crate::IrqNum;
@@ -36,7 +38,12 @@ pub fn init() {
         int.control().set(255);
     }
 
-    
+    // Disable UART sig swap for all pin groups.
+    GLB.parm_cfg0().modify(|reg| reg.uart_swap_set().clear());
+
+    // These registers are not properly initialized by default.
+    GLB.uart_cfg1().set_with(|reg| reg.0 = 0xFFFFFFFF);
+    GLB.uart_cfg2().set_with(|reg| reg.0 = 0x0000FFFF);
 
 }
 

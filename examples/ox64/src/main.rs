@@ -100,6 +100,9 @@ fn main() {
     mtimer_int.set_enable(true);
     mtimer_int.set_level(255);
 
+    let _ = writeln!(uart, "- GLB.uart_cfg1: {:08X}", GLB.uart_cfg1().get().0);
+    let _ = writeln!(uart, "- GLB.uart_cfg2: {:08X}", GLB.uart_cfg2().get().0);
+
     loop {
 
         // while let Some(b) = uart.read_byte() {
@@ -114,8 +117,8 @@ fn main() {
                 let _ = writeln!(uart, "- rx_fifo_count: {:?}", UART0.fifo_cfg1().get());
                 let _ = writeln!(uart, "- status:        {:?}", UART0.status().get());
                 let _ = writeln!(uart, "- rdata:         {:02X}", UART0.fifo_rdata().get());
-                let _ = writeln!(uart, "- GLB.uart_cfg1: {:?}", GLB.uart_cfg1().get());
-                let _ = writeln!(uart, "- GLB.uart_cfg2: {:?}", GLB.uart_cfg2().get());
+                let _ = writeln!(uart, "- GLB.uart_cfg1: {:08X}", GLB.uart_cfg1().get().0);
+                let _ = writeln!(uart, "- GLB.uart_cfg2: {:08X}", GLB.uart_cfg2().get().0);
             }
             mtimer_int.set_enable(true);
         }
