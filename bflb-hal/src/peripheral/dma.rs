@@ -38,7 +38,7 @@ impl<const PORT: u8, const CHANNEL: u8> Peripheral for DmaAccess<PORT, CHANNEL> 
 impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
     /// Configure and get a channel from this DMA access.
-    pub fn into_channel(self, config: &DmaChannelConfig) -> DmaChannel<PORT, CHANNEL> {
+    pub fn into_channel(self, config: &DmaConfig) -> DmaChannel<PORT, CHANNEL> {
         
         let channel = DmaChannel(());
 
@@ -55,12 +55,12 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
         });
 
         channel_regs.control().modify(|reg| {
-            reg.src_increment().set(config.src_addr_inc as _);
-            reg.dst_increment().set(config.dst_addr_inc as _);
-            reg.src_burst_size().set(config.src_burst_size as _);
-            reg.dst_burst_size().set(config.dst_burst_size as _);
-            reg.src_width().set(config.src_width as _);
-            reg.dst_width().set(config.dst_width as _);
+            reg.src_increment().set(config.src.incr as _);
+            reg.dst_increment().set(config.dst.incr as _);
+            reg.src_burst_size().set(config.src.burst_size as _);
+            reg.dst_burst_size().set(config.dst.burst_size as _);
+            reg.src_width().set(config.src.data_width as _);
+            reg.dst_width().set(config.dst.data_width as _);
         });
 
         channel_regs.config().modify(|reg| {
@@ -71,17 +71,17 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
                     reg.dst_peripheral().clear();
                     reg.flow_control().set(0);
                 }
-                DmaDirection::MemoryToPeripheral { src, dst } => {
+                DmaDirection::MemoryToPeripheral(dst) => {
                     reg.src_peripheral().clear();
                     reg.dst_peripheral().set(get_peripheral_id::<PORT>(dst));
                     reg.flow_control().set(1);
                 }
-                DmaDirection::PeripheralToMemory { src, dst } => {
+                DmaDirection::PeripheralToMemory(src) => {
                     reg.src_peripheral().set(get_peripheral_id::<PORT>(src));
-                    reg.dst_peripheral().set(0);
+                    reg.dst_peripheral().clear();
                     reg.flow_control().set(2);
                 }
-                DmaDirection::PeripheralToPeripheral { src, dst } => {
+                DmaDirection::PeripheralToPeripheral(src, dst) => {
                     reg.src_peripheral().set(get_peripheral_id::<PORT>(src));
                     reg.dst_peripheral().set(get_peripheral_id::<PORT>(dst));
                     reg.flow_control().set(3);
@@ -93,12 +93,17 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
         });
 
+        channel_regs.src_addr().set(config.src.addr);
+        channel_regs.dst_addr().set(config.dst.addr);
+
         channel_regs.control().modify(|reg| {
             reg.tc_int_enable().clear();
         });
 
-        port_regs.int_tc_clear().set_with(|reg| reg.int_tc_clear().fill());
-        port_regs.int_error_clear().set_with(|reg| reg.int_error_clear().fill());
+        port_regs.int_tc_clear().set_with(|reg| reg.set(CHANNEL, true));
+        port_regs.int_error_clear().set_with(|reg| reg.set(CHANNEL, true));
+
+        // TODO: IRQ
 
         channel
 
@@ -107,6 +112,7 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 }
 
 
+/// A configured DMA channel.
 pub struct DmaChannel<const PORT: u8, const CHANNEL: u8>(());
 
 impl<const PORT: u8, const CHANNEL: u8> DmaChannel<PORT, CHANNEL> {
@@ -126,9 +132,28 @@ impl<const PORT: u8, const CHANNEL: u8> DmaChannel<PORT, CHANNEL> {
         self.get_port_regs().channel(CHANNEL as usize)
     }
 
+    pub fn start(&mut self) {
+        self.get_channel_regs().config().modify(|reg| {
+            reg.enable().fill();
+        });
+    }
+
+    pub fn stop(&mut self) {
+        self.get_channel_regs().config().modify(|reg| {
+            reg.enable().clear();
+        });
+    }
+
+    pub fn busy(&self) -> bool {
+        self.get_channel_regs().config().get().enable().get() != 0
+    }
+
 }
 
 
+/// Internal function to get a peripheral numeric identifier corresponding
+/// to the given peripheral and port. Not all peripheral are available for
+/// each port.
 fn get_peripheral_id<const PORT: u8>(peripheral: DmaPeripheral) -> u32 {
     use DmaPeripheral::*;
     if PORT == 0 || PORT == 1 {
@@ -179,33 +204,38 @@ fn get_peripheral_id<const PORT: u8>(peripheral: DmaPeripheral) -> u32 {
 
 /// Configuration structure for DMA channel initialization.
 #[derive(Debug, Clone)]
-pub struct DmaChannelConfig {
+pub struct DmaConfig {
     /// The direction of the channel.
     pub direction: DmaDirection,
-    pub src_addr_inc: bool,
-    pub dst_addr_inc: bool,
-    pub src_burst_size: DmaBurstSize,
-    pub dst_burst_size: DmaBurstSize,
-    pub src_width: DmaDataWidth,
-    pub dst_width: DmaDataWidth,
+    /// Source endpoint configuration.
+    pub src: DmaEndpointConfig,
+    /// Destination endpoint configuration.
+    pub dst: DmaEndpointConfig,
+    /// Length of the transfer, between 0 and 4095.
+    pub size: u16,
+}
+
+/// Configuration structure for source or destination endpoint
+/// of a DMA channel.
+#[derive(Debug, Clone)]
+pub struct DmaEndpointConfig {
+    /// The address of the endpoint.
+    addr: u32,
+    /// Enable increment of the address after each transfer.
+    incr: bool,
+    /// Burst size for this endpoint.
+    burst_size: DmaBurstSize,
+    /// Data with for transfers.
+    data_width: DmaDataWidth,
 }
 
 /// DMA direction of transfers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DmaDirection {
     MemoryToMemory,
-    MemoryToPeripheral {
-        src: usize,
-        dst: DmaPeripheral,
-    },
-    PeripheralToMemory {
-        src: DmaPeripheral,
-        dst: usize,
-    },
-    PeripheralToPeripheral {
-        src: DmaPeripheral,
-        dst: DmaPeripheral,
-    }
+    MemoryToPeripheral(DmaPeripheral),
+    PeripheralToMemory(DmaPeripheral),
+    PeripheralToPeripheral(DmaPeripheral, DmaPeripheral),
 }
 
 /// DMA peripheral available for configuration of a channel.

@@ -13,23 +13,23 @@ embedded_util::mmio! {
         [0x14] rw urx_ir_position: u32,
         [0x18] rw urx_rto_timer: u32,
         [0x1C] rw sw_mode: UartSwMode,
-        [0x20] rw int_sts: u32,
+        [0x20] ro int_sts: u32,
         [0x24] rw int_mask: u32,
         [0x28] rw int_clear: u32,
         [0x2C] rw int_en: u32,
-        [0x30] rw status: u32,
-        [0x34] rw sts_urx_abr_prd: u32,
-        [0x38] rw urx_abr_prd_b01: u32,
-        [0x3C] rw urx_abr_prd_b23: u32,
-        [0x40] rw urx_abr_prd_b45: u32,
-        [0x44] rw urx_abr_prd_b67: u32,
+        [0x30] ro status: UartStatus,
+        [0x34] ro sts_urx_abr_prd: u32,
+        [0x38] ro urx_abr_prd_b01: u32,
+        [0x3C] ro urx_abr_prd_b23: u32,
+        [0x40] ro urx_abr_prd_b45: u32,
+        [0x44] ro urx_abr_prd_b67: u32,
         [0x48] rw urx_abr_pw_tol: u32,
         [0x50] rw urx_bcr_int_cfg: u32,
         [0x54] rw utx_rs485_cfg: u32,
         [0x80] rw fifo_cfg0: UartFifoCfg0,
         [0x84] rw fifo_cfg1: UartFifoCfg1,
-        [0x88] rw fifo_wdata: u8,
-        [0x8C] rw fifo_rdata: u8,
+        [0x88] wo fifo_wdata: u8,
+        [0x8C] ro fifo_rdata: u8,
     }
 }
 
@@ -85,6 +85,7 @@ embedded_util::reg! {
         /// De-glitch function cycle count. On 4 bit.
         [12..16] deg_count,
         /// Length of UART TX data transfer (unit: character).
+        /// When this length is reached, a end_interrupt is asserted.
         [16..32] len,
     }
 }
@@ -112,7 +113,14 @@ embedded_util::reg! {
         [0..1] utx_txd_sw_mode,
         [1..2] utx_txd_sw_val,
         [2..3] urx_rxd_sw_mode,
-        [3..4] urx_rxd_sw_val,
+        [3..4] urx_rts_sw_val,
+    }
+}
+
+embedded_util::reg! {
+    pub struct UartStatus: u32 {
+        [0..1] utx_bus_busy,
+        [1..2] urx_bus_busy,
     }
 }
 

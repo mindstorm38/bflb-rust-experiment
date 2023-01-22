@@ -1,16 +1,23 @@
 #![no_std]
 #![no_main]
 
-use bflb_hal::clock::{Clocks, XtalType, Mux2, UartSel};
+use bflb_hal::clock::{Clocks, XtalType, Mux2, UartClockSel};
 use bflb_hal::uart::{UartAccess, UartConfig};
+use bflb_hal::dma::{DmaAccess, DmaConfig, DmaDirection, DmaPeripheral, DmaEndpointConfig, DmaBurstSize, DmaDataWidth};
 use bflb_hal::time::CoreTimer;
 use bflb_hal::gpio::PinAccess;
 use bflb_hal::irq::IrqNum;
+
+use bflb_hal::bl808::{UART0, GLB};
 
 use embedded_util::Peripheral;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::fmt::Write;
+
+
+#[link_section = ".data"] // Loaded in RAM
+static DMA_MESSAGE: &'static str = "Hello world!";
 
 
 bflb_rt::entry!(main);
@@ -52,11 +59,8 @@ fn main() {
 
     // PERIPHERAL INIT
 
-    clocks.set_uart_enable(false);
-    clocks.set_d0_cpu_div(1);
-    clocks.set_uart_sel(UartSel::Xclock);
-    clocks.set_uart_enable(true);
-    clocks.set_uart0_enable(true);
+    clocks.setup_mcu_uart(UartClockSel::Xclock, 1, true);
+    clocks.set_mcu_uart0_enable(true);
     
     // CONSOLE INIT
 
@@ -64,6 +68,26 @@ fn main() {
     let uart_rx = PinAccess::<15>::take();
     let mut uart = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
+
+    // let uart_dma = DmaAccess::<0, 0>::take()
+    //     .into_channel(&DmaConfig {
+    //         direction: DmaDirection::MemoryToPeripheral(DmaPeripheral::Uart0Tx),
+    //         src: DmaEndpointConfig {
+    //             addr: DMA_MESSAGE.as_ptr() as usize as _,
+    //             incr: true,
+    //             burst_size: DmaBurstSize::Incr1,
+    //             data_width: DmaDataWidth::Word,
+    //         },
+    //         dst: DmaEndpointConfig {
+    //             addr: UART0.fifo_rdata(),
+    //             incr: todo!(),
+    //             burst_size: todo!(),
+    //             data_width: todo!(),
+    //         },
+    //         size: todo!(),
+    //     });
+    
+    // loop {}
 
     let mut timer = CoreTimer::borrow();
     timer.init(&mut clocks);
@@ -77,12 +101,21 @@ fn main() {
     mtimer_int.set_level(255);
 
     loop {
+
+        // while let Some(b) = uart.read_byte() {
+        //     let _ = writeln!(uart, "Received: {}", b as char);
+        // }
         
         if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
             mtimer_int.set_enable(false);
             {
-                let timer = CoreTimer::borrow();
-                write!(uart, "Interrupted! RTC time: {}\r\n", timer.get_time()).unwrap();
+                let _ = writeln!(uart, "Interrupted! RTC time: {}", CoreTimer::borrow().get_time());
+                let _ = writeln!(uart, "UART debug:");
+                let _ = writeln!(uart, "- rx_fifo_count: {:?}", UART0.fifo_cfg1().get());
+                let _ = writeln!(uart, "- status:        {:?}", UART0.status().get());
+                let _ = writeln!(uart, "- rdata:         {:02X}", UART0.fifo_rdata().get());
+                let _ = writeln!(uart, "- GLB.uart_cfg1: {:?}", GLB.uart_cfg1().get());
+                let _ = writeln!(uart, "- GLB.uart_cfg2: {:?}", GLB.uart_cfg2().get());
             }
             mtimer_int.set_enable(true);
         }
@@ -93,6 +126,7 @@ fn main() {
 
 
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
 fn mtimer_handler(_code: usize) {
     let mut timer = CoreTimer::borrow();
     let time_cmp = timer.get_time_cmp();

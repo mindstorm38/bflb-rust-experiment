@@ -7,21 +7,21 @@ embedded_util::mmio! {
 
     pub struct Dma {
         /// Status of the DMA interrupt after masking.
-        [0x000] ro int_status: DmaIntStatus,
+        [0x000] ro int_status: DmaBitField,
         /// Interrupt terminal count request status.
-        [0x004] ro int_tc_status: DmaIntTcStatus,
+        [0x004] ro int_tc_status: DmaBitField,
         /// Terminal count request clear.
-        [0x008] wo int_tc_clear: DmaIntTcClear,
+        [0x008] wo int_tc_clear: DmaBitField,
         /// Interrupt error status.
-        [0x00C] ro int_error_status: DmaIntErrorStatus,
+        [0x00C] ro int_error_status: DmaBitField,
         /// Interrupt error clear.
-        [0x010] wo int_error_clear: DmaIntErrorClear,
+        [0x010] wo int_error_clear: DmaBitField,
         /// Status of the terminal count interrupt prior to masking.
-        [0x014] ro raw_int_tc_status: DmaRawIntTcStatus,
+        [0x014] ro raw_int_tc_status: DmaBitField,
         /// Status of the error interrupt prior to masking.
-        [0x018] ro raw_int_error_status: DmaRawIntErrorStatus,
+        [0x018] ro raw_int_error_status: DmaBitField,
         /// Channel enable status.
-        [0x01C] ro channel_enable_status: DmaChannelEnableStatus,
+        [0x01C] ro channel_enable_status: DmaBitField,
         /// Software burst request (SoftBReq).
         [0x020] rw software_burst_request: u32,
         /// Software single request (SoftSReq).
@@ -68,47 +68,8 @@ impl Dma {
 
 }
 
+
 embedded_util::reg! {
-
-    pub struct DmaIntStatus: u32 {
-        /// Status of the DMA interrupt after masking.
-        [00..08] int_status,
-    }
-
-    pub struct DmaIntTcStatus: u32 {
-        /// Interrupt terminal count request status.
-        [00..08] int_tc_status,
-    }
-
-    pub struct DmaIntTcClear: u32 {
-        /// Terminal count request clear.
-        [00..08] int_tc_clear,
-    }
-
-    pub struct DmaIntErrorStatus: u32 {
-        /// Interrupt error status.
-        [00..08] int_error_status,
-    }
-
-    pub struct DmaIntErrorClear: u32 {
-        /// Interrupt error clear.
-        [00..08] int_error_clear,
-    }
-
-    pub struct DmaRawIntTcStatus: u32 {
-        /// Status of the terminal count interrupt prior to masking.
-        [00..08] raw_int_tc_status,
-    }
-
-    pub struct DmaRawIntErrorStatus: u32 {
-        /// Status of the error interrupt prior to masking..
-        [00..08] raw_int_error_status,
-    }
-
-    pub struct DmaChannelEnableStatus: u32 {
-        /// Channel enable status.
-        [00..08] channel_enable_status,
-    }
 
     pub struct DmaConfig: u32 {
         /// SMDMA Enable.
@@ -205,4 +166,38 @@ embedded_util::reg! {
         [04..05] src_remain_single,
     }
 
+}
+
+
+/// A bit fields where each bit is associated to a channel of a DMA controller.
+#[derive(Clone, Copy, Eq, PartialEq, Default)]
+#[repr(transparent)]
+pub struct DmaBitField(pub u32);
+
+impl DmaBitField {
+
+    /// Set the bit for the given channel.
+    #[inline]
+    pub fn set(&mut self, channel: u8, bit: bool) {
+        if bit {
+            self.0 |= 1 << channel;
+        } else {
+            self.0 &= !(1 << channel);
+        }
+    }
+
+
+    #[inline]
+    pub fn get(&self, channel: u8) -> bool {
+        (self.0 & (1 << channel)) != 0
+    }
+
+}
+
+
+#[repr(C)]
+pub struct DmaChannelLli {
+    pub src_addr: u32,
+    pub dst_addr: u32,
+    pub len: u32,
 }

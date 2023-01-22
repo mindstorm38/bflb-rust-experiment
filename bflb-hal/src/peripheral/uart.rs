@@ -107,16 +107,27 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
     
     /// Get back the port associated bith this configured UART.
     /// This can be used to free the peripheral.
-    pub fn into_port(self) -> UartAccess<PORT> {
+    pub fn downgrade(self) -> UartAccess<PORT> {
         // Note that here the object is dropped, and therefore TX/RX lanes are stopped.
         UartAccess(())
+    }
+
+    /// Get the UART MMIO registers structure associated to the given port.
+    #[inline(always)]
+    fn get_registers() -> UartRegs {
+        match PORT {
+            0 => UART0,
+            1 => UART1,
+            2 => UART2,
+            _ => unreachable!()
+        }
     }
 
     /// Internal function used to initialize the I/O given a configuration and clocks.
     fn init(config: &UartConfig, clocks: &Clocks) -> Self {
 
         // Calculate the baudrate divisor from UART frequency.
-        let uart_freq = clocks.get_uart_freq();
+        let uart_freq = clocks.get_mcu_uart_freq();
         let div = (uart_freq * 10 / config.baudrate + 5) / 10;
 
         let regs = Self::get_registers();
@@ -195,7 +206,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
             reg.dma_rx_en().clear();
         });
 
-        regs.int_mask().set(0xFFFFFFFF);
+        regs.int_mask().set(0xFFF);
 
         // Enable TX if a pin is attached.
         if Tx::get_attachment().is_some() {
@@ -214,16 +225,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
 
     }
 
-    /// Get the UART MMIO registers structure associated to the given port.
-    #[inline(always)]
-    fn get_registers() -> UartRegs {
-        match PORT {
-            0 => UART0,
-            1 => UART1,
-            2 => UART2,
-            _ => unreachable!()
-        }
-    }
+
 
 }
 
@@ -231,6 +233,7 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
 impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinAccess<TX_PIN>, Rx> {
 
     /// Simplest function to write a single byte of data to the UART TX.
+    #[inline(never)]
     pub fn write_byte(&mut self, byte: u8) {
         let regs = Self::get_registers();
         while regs.fifo_cfg1().get().tx_fifo_count().get() == 0 {}
@@ -241,6 +244,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> Uart<PORT, PinAccess<TX_P
 
 impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT, PinAccess<TX_PIN>, Rx> {
 
+    #[inline(never)]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for &byte in s.as_bytes() {
             self.write_byte(byte);
@@ -254,6 +258,7 @@ impl<const PORT: u8, const TX_PIN: u8, Rx: Attachment> fmt::Write for Uart<PORT,
 impl<const PORT: u8, const RX_PIN: u8, Tx: Attachment> Uart<PORT, Tx, PinAccess<RX_PIN>> {
 
     /// Simplest function to read a single byte, if available.
+    #[inline(never)]
     pub fn read_byte(&mut self) -> Option<u8> {
         let regs = Self::get_registers();
         if regs.fifo_cfg1().get().rx_fifo_count().get() != 0 {
@@ -291,11 +296,10 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Drop for Uart<PORT, Tx, Rx>
 /// Internal function to attach a pin to a specific UART function.
 fn attach_pin<const NUM: u8>(pin: PinAccess<NUM>, func: UartFunction) {
 
-    debug_assert!(NUM < 12, "uart pin number must be between 0 and 11 included");
-
     // There are 8 u32 fields per register
-    let reg = NUM / 8;
-    let field = (NUM % 8) * 4;
+    let sig = NUM % 12;
+    let reg = sig / 8;
+    let field = (sig % 8) * 4;
 
     let mut cfg = GLB.uart_cfg1();
     cfg.0 = unsafe { cfg.0.add(reg as usize) };

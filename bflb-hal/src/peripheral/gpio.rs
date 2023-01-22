@@ -99,13 +99,13 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     
     /// Get back the port associated bith this pin.
     /// This can be used to free the peripheral.
-    pub fn into_port(self) -> PinAccess<NUM> {
+    pub fn downgrade(self) -> PinAccess<NUM> {
         PinAccess(())
     }
 
     /// Erase generic types, this transfer checks to the runtime.
     pub fn erase(self) -> PinErased {
-        self.into_port().into_erased()
+        self.downgrade().into_erased()
     }
 
     /// Internal function to get a read/write pointer to the 

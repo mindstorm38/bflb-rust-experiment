@@ -484,77 +484,86 @@ impl Clocks {
 }
 
 
+/// Methods for ADC/DAC peripheral.
+impl Clocks {
+
+    
+
+}
+
+
 /// Methods for UART peripherals.
 impl Clocks {
 
-    pub fn set_uart0_enable(&mut self, enable: bool) {
-        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart0().set(enable as _));
-    }
-
-    pub fn set_uart1_enable(&mut self, enable: bool) {
-        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart1().set(enable as _));
-    }
-
-    /// Enable global UART clock.
-    pub fn set_uart_enable(&mut self, enable: bool) {
+    /// Enable global clock gate for MCU UART controllers (0, 1, 2).
+    pub fn set_mcu_uart_enable(&mut self, enable: bool) {
         GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(enable as _));
     }
 
-    /// Get the UART clock selector.
-    pub fn get_uart_sel(&self) -> UartSel {
+    /// Enable clock gate for MCU UART0 controller.
+    pub fn set_mcu_uart0_enable(&mut self, enable: bool) {
+        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart0().set(enable as _));
+    }
+
+    /// Enable clock gate for MCU UART1 controller.
+    pub fn set_mcu_uart1_enable(&mut self, enable: bool) {
+        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart1().set(enable as _));
+    }
+
+    /// Enable clock gate for MCU UART2 controller.
+    pub fn set_mcu_uart2_enable(&mut self, enable: bool) {
+        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart2().set(enable as _));
+    }
+
+    /// Get global clock selector for MCU UART controllers (0, 1, 2).
+    pub fn get_mcu_uart_sel(&self) -> UartClockSel {
         let mut reg = HBN.glb().get();
         let sel_raw = (reg.uart_clk_sel2().get() << 1) | reg.uart_clk_sel().get();
         match sel_raw {
-            0 => UartSel::SecondaryM0,
-            1 => UartSel::Pll160,
-            2 => UartSel::Xclock,
+            0 => UartClockSel::SecondaryM0,
+            1 => UartClockSel::Pll160,
+            2 => UartClockSel::Xclock,
             _ => unreachable!("invalid uart clock selector")
         }
     }
 
-    /// Set the UART clock selector.
-    pub fn set_uart_sel(&mut self, ref_clock: UartSel) {
+    /// Set global clock selector for MCU UART controllers (0, 1, 2).
+    pub fn set_mcu_uart_sel(&mut self, clock_sel: UartClockSel) {
         HBN.glb().modify(|reg| {
-            let val = ref_clock as u32;
+            let val = clock_sel as u32;
             reg.uart_clk_sel2().set((val >> 1) & 1);
             reg.uart_clk_sel().set(val & 1);
         });
     }
 
-    /// Get the divisor for UART clock.
-    pub fn get_uart_div(&self) -> u32 {
+    /// Get global clock divider for MCU UART controllers (0, 1, 2).
+    pub fn get_mcu_uart_div(&self) -> u32 {
         GLB.uart_cfg0().get().uart_clk_div().get() + 1
     }
 
-    /// Set the divisor for UART clock.
-    pub fn set_uart_div(&mut self, div: u32) {
+    /// Set global clock divider for MCU UART controllers (0, 1, 2).
+    pub fn set_mcu_uart_div(&mut self, div: u32) {
         GLB.uart_cfg0().modify(|reg| reg.uart_clk_div().set(div - 1));
     }
 
-    /// Get the final UART frequency.
-    pub fn get_uart_freq(&self) -> u32 {
-        let freq = match self.get_uart_sel() {
-            UartSel::SecondaryM0 => self.get_m0_secondary_freq(),
-            UartSel::Pll160 => todo!("pll160 is not implemented"),
-            UartSel::Xclock => self.get_xclk_freq(),
+    /// Set global clock frequency for MCU UART controllers (0, 1, 2).
+    pub fn get_mcu_uart_freq(&self) -> u32 {
+        let freq = match self.get_mcu_uart_sel() {
+            UartClockSel::SecondaryM0 => self.get_m0_secondary_freq(),
+            UartClockSel::Pll160 => todo!("pll160 is not implemented"),
+            UartClockSel::Xclock => self.get_xclk_freq(),
         };
-        freq / self.get_uart_div()
+        freq / self.get_mcu_uart_div()
     }
 
-    // pub fn set_uart_clock(&self, enable: bool, ref_clock: UartRefClock, div: u32) {
-
-    //     GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(0));
-    //     GLB.uart_cfg0().modify(|reg| reg.uart_clk_div().set(div - 1));
-
-    //     HBN.glb().modify(|reg| {
-    //         let val = ref_clock as u32;
-    //         reg.uart_clk_sel2().set((val >> 1) & 1);
-    //         reg.uart_clk_sel().set(val & 1);
-    //     });
-
-    //     GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(enable as _));
-
-    // }
+    /// Setup the global clock for MCU UART controllers (0, 1, 2).
+    #[inline(never)]
+    pub fn setup_mcu_uart(&mut self, clock_sel: UartClockSel, div: u32, enable: bool) {
+        self.set_mcu_uart_enable(false);
+        self.set_mcu_uart_sel(clock_sel);
+        self.set_mcu_uart_div(div);
+        self.set_mcu_uart_enable(enable);
+    }
 
 }
 
@@ -891,7 +900,7 @@ impl From<u32> for Mux4 {
 /// Selector for UART clock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum UartSel {
+pub enum UartClockSel {
     /// Source from secondary M0 clock.
     SecondaryM0 = 0,
     /// From mux PLL 160 MHz.
