@@ -278,10 +278,12 @@ impl Clocks {
     pub fn get_m0_secondary_freq(&self) -> u32 {
         self.get_m0_cpu_freq() / self.get_m0_secondary_div()
     }
-
-    /// Disable the M0 clock.
-    pub fn disable_m0_clock(&mut self) {
-        PDS.cpu_core_cfg1().modify(|reg| reg.mcu1_clk_en().set(0));
+    
+    /// Enable or not the M0 core clock gate.
+    pub fn set_m0_enable(&mut self, enable: bool) {
+        PDS.cpu_core_cfg1().modify(|reg| {
+            reg.mcu1_clk_en().set(enable as _);
+        });
     }
 
 }
@@ -442,9 +444,11 @@ impl Clocks {
         self.get_d0_cpu_freq() / self.get_d0_secondary_div()
     }
 
-    /// Disable the D0 clock.
-    pub fn disable_d0_clock(&mut self) {
-        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.mmcpu0_clk_en().set(0));
+    /// Enable or not the D0 core clock gate.
+    pub fn set_d0_enable(&mut self, enable: bool) {
+        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| {
+            reg.mmcpu0_clk_en().set(enable as _);
+        });
     }
 
 }
@@ -476,29 +480,28 @@ impl Clocks {
         self.get_m0_secondary_freq() / self.get_lp_cpu_div()
     }
 
-    /// Disable the LP clock.
-    pub fn disable_lp_clock(&mut self) {
-        PDS.cpu_core_cfg0().modify(|reg| reg.pico_clk_en().set(0));
+    /// Enable or not the LP core clock gate.
+    pub fn set_lp_enable(&mut self, enable: bool) {
+        PDS.cpu_core_cfg0().modify(|reg| {
+            reg.pico_clk_en().set(enable as _);
+        });
     }
 
 }
 
 
-/// Methods for ADC/DAC peripheral.
+/// Methods for PWM peripheral.
 impl Clocks {
 
-    
+    pub fn set_pwm0_enable(&mut self, enable: bool) {
+        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_pwm().set(enable as _));
+    }
 
 }
 
 
 /// Methods for UART peripherals.
 impl Clocks {
-
-    /// Enable global clock gate for MCU UART controllers (0, 1, 2).
-    pub fn set_mcu_uart_enable(&mut self, enable: bool) {
-        GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(enable as _));
-    }
 
     /// Enable clock gate for MCU UART0 controller.
     pub fn set_mcu_uart0_enable(&mut self, enable: bool) {
@@ -513,6 +516,11 @@ impl Clocks {
     /// Enable clock gate for MCU UART2 controller.
     pub fn set_mcu_uart2_enable(&mut self, enable: bool) {
         GLB.cgen_cfg1().modify(|reg| reg.cgen_s1a_uart2().set(enable as _));
+    }
+
+    /// Enable global clock gate for MCU UART controllers (0, 1, 2).
+    pub fn set_mcu_uart_enable(&mut self, enable: bool) {
+        GLB.uart_cfg0().modify(|reg| reg.uart_clk_en().set(enable as _));
     }
 
     /// Get global clock selector for MCU UART controllers (0, 1, 2).

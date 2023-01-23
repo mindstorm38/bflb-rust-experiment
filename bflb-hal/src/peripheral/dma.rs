@@ -50,10 +50,12 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
             reg.smdma_enable().fill();
         });
 
+        // Temporarily disable the channel.
         channel_regs.config().modify(|reg| {
             reg.enable().clear();
         });
 
+        // Configure control parameters.
         channel_regs.control().modify(|reg| {
             reg.src_increment().set(config.src.incr as _);
             reg.dst_increment().set(config.dst.incr as _);
@@ -88,9 +90,14 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
                 }
             }
 
+            reg.lli_counter().clear();
+
+        });
+
+        // Enable DMA error and terminal count interrupt.
+        channel_regs.config().modify(|reg| {
             reg.int_error_mask().fill();
             reg.int_tc_mask().fill();
-
         });
 
         channel_regs.src_addr().set(config.src.addr);
@@ -220,13 +227,13 @@ pub struct DmaConfig {
 #[derive(Debug, Clone)]
 pub struct DmaEndpointConfig {
     /// The address of the endpoint.
-    addr: u32,
+    pub addr: u32,
     /// Enable increment of the address after each transfer.
-    incr: bool,
+    pub incr: bool,
     /// Burst size for this endpoint.
-    burst_size: DmaBurstSize,
+    pub burst_size: DmaBurstSize,
     /// Data with for transfers.
-    data_width: DmaDataWidth,
+    pub data_width: DmaDataWidth,
 }
 
 /// DMA direction of transfers.

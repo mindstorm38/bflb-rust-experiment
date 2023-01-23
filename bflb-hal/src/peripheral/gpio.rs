@@ -51,8 +51,11 @@ impl<const NUM: u8> PinAccess<NUM> {
     /// initial function to be given, even if this can be modified
     /// later.
     pub fn into_alternate(self, func: PinFunction) -> Pin<NUM, Alternate> {
-        let mut pin = Self::new_pin();
-        pin.set_function(func);
+        let pin = Self::new_pin();
+        pin.get_cfg().modify(|reg| {
+            reg.gpio_0_ie().fill();
+            reg.gpio_0_func_sel().set(func as _);
+        });
         pin
     }
 

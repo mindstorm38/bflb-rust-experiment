@@ -3,6 +3,7 @@
 
 pub mod clock;
 pub mod time;
+pub mod cpu;
 
 pub mod gpio;
 pub mod dma;
