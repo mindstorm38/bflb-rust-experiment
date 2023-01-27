@@ -58,7 +58,7 @@ impl<const PORT: u8> UartAccess<PORT> {
         tx: PinAccess<TX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> Uart<PORT, PinAccess<TX_PIN>, Detached> {
+    ) -> UartTx<PORT, TX_PIN> {
 
         attach_pin(tx, match PORT {
             0 => UartFunction::Uart0Tx,
@@ -76,7 +76,7 @@ impl<const PORT: u8> UartAccess<PORT> {
         rx: PinAccess<RX_PIN>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> Uart<PORT, Detached, PinAccess<RX_PIN>> {
+    ) -> UartRx<PORT, RX_PIN> {
 
         attach_pin(rx, match PORT {
             0 => UartFunction::Uart0Rx,
@@ -90,6 +90,25 @@ impl<const PORT: u8> UartAccess<PORT> {
     }
 
 }
+
+
+/// Define the UART Tx, transmission lane. It typically provides write methods
+/// and implement DMA destination endpoint.
+pub struct UartTx<const PORT: u8, const PIN: u8>(());
+
+/// Define the UART Rx, receiving lane. It typically provides read methods and
+/// implement DMA source endpoint.
+pub struct UartRx<const PORT: u8, const PIN: u8>(());
+
+
+impl<const PORT: u8, const PIN: u8> UartTx<PORT, PIN> {
+
+}
+
+
+
+
+
 
 
 /// An I/O capable structure that can be obtained by configuring a
@@ -225,8 +244,6 @@ impl<const PORT: u8, Tx: Attachment, Rx: Attachment> Uart<PORT, Tx, Rx> {
 
     }
 
-
-
 }
 
 
@@ -332,6 +349,7 @@ fn detach_pin(num: u8) {
 }
 
 
+/// Internally used trait to get optional attachment of a pin.
 pub trait Attachment {
     fn get_attachment() -> Option<u8>;
 }

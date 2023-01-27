@@ -4,12 +4,10 @@
 use bflb_hal::clock::{Clocks, XtalType, Mux2, UartClockSel};
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
-use bflb_hal::dma::{DmaAccess, DmaConfig, DmaDirection, DmaPeripheral, DmaEndpointConfig, DmaBurstSize, DmaDataWidth};
+use bflb_hal::dma::{DmaAccess, DmaPeripheral, DmaBurstSize, DmaDataWidth};
 use bflb_hal::time::CoreTimer;
 use bflb_hal::gpio::PinAccess;
 use bflb_hal::irq::IrqNum;
-
-use bflb_hal::bl808::UART0;
 
 use embedded_util::Peripheral;
 
@@ -73,6 +71,13 @@ fn main() {
     let uart_rx = PinAccess::<15>::take();
     let mut uart = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
+
+    // let dma_src = DmaSafe::new([0u8, 1, 2, 3, 4, 5]);
+ 
+    // let dma_channel = DmaAccess::<0, 0>::take()
+    //     .into_transfer(DMA_MESSAGE.as_bytes(), uart.tx(), DMA_MESSAGE.len());
+
+    // dma_channel.wait();
 
     // let mut uart_dma = DmaAccess::<0, 0>::take()
     //     .into_channel(&DmaConfig {

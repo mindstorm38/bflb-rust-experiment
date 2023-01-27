@@ -195,9 +195,19 @@ impl DmaBitField {
 }
 
 
+/// Represent a DMA Linked-List-Item. This is equivalent to the first 4 words
+/// of the [`DmaChannel`] MMIO structure.
 #[repr(C)]
 pub struct DmaChannelLli {
+    /// Source address of the transfer.
     pub src_addr: u32,
+    /// Destination address of the transfer.
     pub dst_addr: u32,
-    pub len: u32,
+    /// Adddress of the next DMA LLI.
+    pub next_lli_addr: u32,
+    /// Control register, it manages configuration of source and destination 
+    /// and the terminal count interrupt.
+    pub control: DmaChannelControl,
 }
+
+

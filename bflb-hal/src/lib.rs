@@ -2,6 +2,8 @@
 
 #![no_std]
 
+// extern crate alloc;
+
 #[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
 pub mod bl808;
 
