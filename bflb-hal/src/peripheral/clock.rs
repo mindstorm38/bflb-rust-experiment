@@ -500,6 +500,17 @@ impl Clocks {
 }
 
 
+/// Methods for DMA peripheral.
+impl Clocks {
+
+    /// Enable clock gate for DMA controllers.
+    pub fn set_dma_enable(&mut self, enable: bool) {
+        GLB.cgen_cfg1().modify(|reg| reg.cgen_s1_dma().set(enable as _));
+    }
+
+}
+
+
 /// Methods for UART peripherals.
 impl Clocks {
 

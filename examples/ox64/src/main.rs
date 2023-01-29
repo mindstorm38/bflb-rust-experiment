@@ -4,9 +4,9 @@
 use bflb_hal::clock::{Clocks, XtalType, Mux2, UartClockSel};
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
-use bflb_hal::dma::{DmaAccess, DmaPeripheral, DmaBurstSize, DmaDataWidth};
 use bflb_hal::time::CoreTimer;
 use bflb_hal::gpio::PinAccess;
+use bflb_hal::dma::DmaAccess;
 use bflb_hal::irq::IrqNum;
 
 use embedded_util::Peripheral;
@@ -16,7 +16,7 @@ use core::fmt::Write;
 
 
 #[link_section = ".data"] // Loaded in RAM
-static DMA_MESSAGE: &'static str = "Hello world!";
+static DMA_MESSAGE: &'static str = "Hello world from DMA!\n";
 
 
 bflb_rt::entry!(main);
@@ -62,6 +62,7 @@ fn main() {
 
     // PERIPHERAL INIT
 
+    clocks.set_dma_enable(true);
     clocks.set_mcu_uart0_enable(true);
     clocks.setup_mcu_uart(UartClockSel::Xclock, 1, true);
     
@@ -69,37 +70,21 @@ fn main() {
 
     let uart_tx = PinAccess::<14>::take();
     let uart_rx = PinAccess::<15>::take();
-    let mut uart = UartAccess::<0>::take()
+
+    let (
+        uart_tx, 
+        mut uart_rx
+    ) = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
-    // let dma_src = DmaSafe::new([0u8, 1, 2, 3, 4, 5]);
- 
-    // let dma_channel = DmaAccess::<0, 0>::take()
-    //     .into_transfer(DMA_MESSAGE.as_bytes(), uart.tx(), DMA_MESSAGE.len());
+    // DMA
 
-    // dma_channel.wait();
+    let dma_channel = DmaAccess::<0, 0>::take()
+        .into_transfer(DMA_MESSAGE.as_bytes(), uart_tx);
 
-    // let mut uart_dma = DmaAccess::<0, 0>::take()
-    //     .into_channel(&DmaConfig {
-    //         direction: DmaDirection::MemoryToPeripheral(DmaPeripheral::Uart0Tx),
-    //         src: DmaEndpointConfig {
-    //             addr: DMA_MESSAGE.as_ptr() as usize as _,
-    //             incr: true,
-    //             burst_size: DmaBurstSize::Incr1,
-    //             data_width: DmaDataWidth::Byte,
-    //         },
-    //         dst: DmaEndpointConfig {
-    //             addr: UART0.fifo_rdata().0 as usize as _,
-    //             incr: false,
-    //             burst_size: DmaBurstSize::Incr1,
-    //             data_width: DmaDataWidth::Byte,
-    //         },
-    //         size: DMA_MESSAGE.len() as _,
-    //     });
+    let (_, mut uart_tx, _) = dma_channel.wait();
 
-    // uart_dma.start();
-    
-    // loop {}
+    // INTS
 
     let mut timer = CoreTimer::borrow();
     timer.init(&mut clocks);
@@ -112,16 +97,18 @@ fn main() {
     mtimer_int.set_enable(true);
     mtimer_int.set_level(255);
 
+    // LOOP
+
     loop {
 
-        while let Some(b) = uart.read_byte() {
-            uart.write_byte(b);
+        while let Some(b) = uart_rx.read_byte() {
+            uart_tx.write_byte(b);
         }
         
         if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
             mtimer_int.set_enable(false);
             {
-                let _ = writeln!(uart, "Interrupted! RTC time: {}", CoreTimer::borrow().get_time());
+                let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", CoreTimer::borrow().get_time());
             }
             mtimer_int.set_enable(true);
         }

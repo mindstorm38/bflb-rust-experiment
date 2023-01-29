@@ -40,10 +40,14 @@ impl<const PORT: u8, const CHANNEL: u8> Peripheral for DmaAccess<PORT, CHANNEL> 
 
 impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
+    /// Execute a new DMA transfer from the given source endpoint to the given
+    /// destination endpoint. Endpoints are generic, see implementors of 
+    /// [`DmaEndpoint`] for more information, note that supported peripherals
+    /// depends on the `PORT` used.
+    #[inline(never)]
     pub fn into_transfer<Src, Dst>(&mut self, 
-        src: Src,
-        dst: Dst,
-        len: usize) -> DmaTransfer<PORT, CHANNEL, Src, Dst>
+        mut src: Src,
+        mut dst: Dst) -> DmaTransfer<PORT, CHANNEL, Src, Dst>
     where
         Src: DmaSrcEndpoint,
         Dst: DmaDstEndpoint,
@@ -52,11 +56,14 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
         let port_regs = get_port_regs::<PORT>();
         let channel_regs = get_channel_regs::<PORT, CHANNEL>();
 
+        let src_config = src.configure();
+        let dst_config = dst.configure();
+
         let transfer_len;
         let mut src_incr = false;
         let mut dst_incr = false;
 
-        match (src.len(), dst.len()) {
+        match (src_config.increment, dst_config.increment) {
             (DmaIncrement::Incr(src_len), DmaIncrement::Incr(dst_len)) => {
                 assert_eq!(src_len, dst_len, "source and destination length must be equal");
                 transfer_len = src_len;
@@ -76,6 +83,9 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
             }
         }
 
+        // TODO: Support for LLI transfers.
+        assert!(transfer_len <= 4064, "doing more than 4064 transfers is currently not supported");
+
         // TODO: Guard this for concurrent calls.
         port_regs.config().modify(|reg| {
             reg.smdma_enable().fill();
@@ -91,33 +101,40 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
             reg.src_increment().set(src_incr as _);
             reg.dst_increment().set(dst_incr as _);
-            reg.src_burst_size().set(src.burst_size() as _);
-            reg.dst_burst_size().set(dst.burst_size() as _);
-            reg.src_width().set(src.data_width() as _);
-            reg.dst_width().set(dst.data_width() as _);
+            reg.src_burst_size().set(src_config.burst_size as _);
+            reg.dst_burst_size().set(dst_config.burst_size as _);
+            reg.src_width().set(src_config.data_width as _);
+            reg.dst_width().set(dst_config.data_width as _);
 
             reg.dst_add_mode().clear();
             reg.dst_minus_mode().clear();
 
             reg.tc_int_enable().fill();
-            reg.transfer_size().set(len as _);
+            reg.transfer_size().set(transfer_len as _);
 
         });
 
         channel_regs.config().modify(|reg| {
 
-            if let Some(src) = src.peripheral() {
+            if let Some(src) = src_config.peripheral {
                 reg.dst_peripheral().set(get_peripheral_id::<PORT>(src));
             } else {
                 reg.src_peripheral().clear();
             }
 
-            if let Some(dst) = dst.peripheral() {
+            if let Some(dst) = dst_config.peripheral {
                 reg.dst_peripheral().set(get_peripheral_id::<PORT>(dst));
             } else {
                 reg.dst_peripheral().clear();
             }
 
+            reg.flow_control().set(match (src_config.peripheral, dst_config.peripheral) {
+                (None, None) => 0,
+                (None, Some(_)) => 1,
+                (Some(_), None) => 2,
+                (Some(_), Some(_)) => 3,
+            });
+            
             reg.lli_counter().clear();
 
         });
@@ -131,13 +148,13 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
         channel_regs.src_addr().set(src.ptr() as _);
         channel_regs.dst_addr().set(dst.ptr() as _);
 
-        channel_regs.control().modify(|reg| {
-            reg.tc_int_enable().clear();
-        });
-
         // Clear interrupt related to this channel.
         port_regs.int_tc_clear().set_with(|reg| reg.set(CHANNEL, true));
         port_regs.int_error_clear().set_with(|reg| reg.set(CHANNEL, true));
+
+        channel_regs.config().modify(|reg| {
+            reg.enable().fill();
+        });
 
         DmaTransfer {
             src,
@@ -155,13 +172,23 @@ pub struct DmaTransfer<const PORT: u8, const CHANNEL: u8, Src, Dst> {
     dst: Dst,
 }
 
-impl<const PORT: u8, const CHANNEL: u8, Src, Dst> DmaTransfer<PORT, CHANNEL, Src, Dst> {
+impl<const PORT: u8, const CHANNEL: u8, Src, Dst> DmaTransfer<PORT, CHANNEL, Src, Dst>
+where
+    Src: DmaEndpoint,
+    Dst: DmaEndpoint
+{
 
-    /// Indefinitly wait for completion of this 
-    pub fn wait(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+    /// Indefinitly wait for completion of this DMA transfer.
+    #[inline(never)]
+    pub fn wait(mut self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
 
-        let tc_status = get_port_regs::<PORT>().int_tc_status();
+        // FIXME: For now we use the raw status because we currently mask the interrupt.
+        let tc_status = get_port_regs::<PORT>().raw_int_tc_status();
         while !tc_status.get().get(CHANNEL) {}
+
+        // Call unconfigured callbacks on endpoints.
+        self.src.unconfigure();
+        self.dst.unconfigure();
 
         (self.src, self.dst, DmaAccess(()))
 
@@ -169,6 +196,33 @@ impl<const PORT: u8, const CHANNEL: u8, Src, Dst> DmaTransfer<PORT, CHANNEL, Src
 
 }
 
+
+/// Structure describing how an endpoint should be configured.
+/// 
+/// *Note that* this does not include the source and destination address.
+#[derive(Debug, Clone)]
+pub struct DmaEndpointConfig {
+    /// Set to `None` if this endpoint is not a peripheral, but some 
+    /// peripheral enumeration if this is one.
+    /// 
+    /// *Note that each DMA controller has its own subset of supported
+    /// peripherals.*
+    pub peripheral: Option<DmaPeripheral>,
+    /// Data width of individual transfers of this endpoint.
+    pub data_width: DmaDataWidth,
+    /// Number of bytes transfered at once while the memory is owned by 
+    /// the DMA transfer.
+    pub burst_size: DmaBurstSize,
+    /// When `Const` is returned, the length is undetermined and the DMA
+    /// increment will be disabled. If the two endpoints have undetermined
+    /// length, the transfer setup will panic.
+    /// 
+    /// When `Incr` is returned, the DMA increment will be enabled and the 
+    /// length must be equal to the opposit endpoint, or the opposit must 
+    /// return `Const` length. The given length tell how many transfers of 
+    /// the given `data_width` to do.
+    pub increment: DmaIncrement,
+}
 
 /// An abstract endpoint (source or destination) for DMA transfers.
 /// 
@@ -182,29 +236,17 @@ impl<const PORT: u8, const CHANNEL: u8, Src, Dst> DmaTransfer<PORT, CHANNEL, Src
 /// data width and burst size.
 pub trait DmaEndpoint {
 
-    /// Returns `None` if this endpoint is not a peripheral, but
-    /// some peripheral enumeration if this is one.
+    /// This is called when the endpoint is about to be configured, it 
+    /// also need to return the configuration to apply to the endpoint.
     /// 
-    /// *Note that each DMA controller has its own subset of supported
-    /// peripherals.*
-    fn peripheral(&self) -> Option<DmaPeripheral>;
+    /// *Note that* this take an exclusive self reference, it's intended
+    /// for use by some implementors to apply modifications to the
+    /// endpoint instance before configuration.
+    fn configure(&mut self) -> DmaEndpointConfig;
 
-    /// Return the data width of individual transfers of this endpoint.
-    fn data_width(&self) -> DmaDataWidth;
-
-    /// Return the number of bytes transfered at once while the memory is
-    /// owned by the DMA tran
-    fn burst_size(&self) -> DmaBurstSize;
-
-    /// When `Const` is returned, the length is undetermined and the DMA
-    /// increment will be disabled. It's impossible to have two endpoints
-    /// with undetermined length.
-    /// 
-    /// When `Incr` is returned, the DMA increment will be enabled and the 
-    /// length must be equal to the opposit endpoint, or the opposit must 
-    /// return `Const` length. The given length tell how many transfers of 
-    /// the given `data_width` to do.
-    fn len(&self) -> DmaIncrement;
+    /// Unconfigure this endpoint, this is called when the DMA transfer
+    /// is deconstructed and endpoints are released.
+    fn unconfigure(&mut self) {}
 
 }
 
@@ -234,29 +276,37 @@ pub trait DmaPrimitiveType {
 
 impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for &'static [T; LEN] {
 
-    #[inline]
-    fn peripheral(&self) -> Option<DmaPeripheral> {
-        None
-    }
-
-    #[inline]
-    fn data_width(&self) -> DmaDataWidth {
-        T::data_width()
-    }
-
-    #[inline]
-    fn burst_size(&self) -> DmaBurstSize {
-        T::burst_size()
-    }
-
-    #[inline]
-    fn len(&self) -> DmaIncrement {
-        DmaIncrement::Incr(LEN)
+    fn configure(&mut self) -> DmaEndpointConfig {
+        DmaEndpointConfig {
+            peripheral: None,
+            data_width: T::data_width(),
+            burst_size: T::burst_size(),
+            increment: DmaIncrement::Incr(LEN),
+        }
     }
 
 }
 
 impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [T; LEN] {
+    fn ptr(&self) -> *const () {
+        *self as *const _ as *const ()
+    }
+}
+
+impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
+
+    fn configure(&mut self) -> DmaEndpointConfig {
+        DmaEndpointConfig {
+            peripheral: None,
+            data_width: T::data_width(),
+            burst_size: T::burst_size(),
+            increment: DmaIncrement::Incr(<[T]>::len(*self)),
+        }
+    }
+
+}
+
+impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
     fn ptr(&self) -> *const () {
         *self as *const _ as *const ()
     }
@@ -309,7 +359,7 @@ impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [T; LEN]
 //         DmaIncrement::Incr(LEN)
 //     }
 
-// }
+// }    
 
 
 /// Define primitive implementations of `DmaEndpoint`.
