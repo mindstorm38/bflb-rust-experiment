@@ -79,10 +79,14 @@ fn main() {
 
     // DMA
 
-    let dma_channel = DmaAccess::<0, 0>::take()
-        .into_transfer(DMA_MESSAGE.as_bytes(), uart_tx);
+    let dma_transfer = DmaAccess::<0, 0>::take()
+        .into_transfer(DMA_MESSAGE, uart_tx);
 
-    let (_, mut uart_tx, _) = dma_channel.wait();
+    let (
+        _src, 
+        mut uart_tx, 
+        _dma,
+    ) = dma_transfer.wait();
 
     // INTS
 

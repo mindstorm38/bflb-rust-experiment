@@ -269,11 +269,16 @@ pub trait DmaDstEndpoint: DmaEndpoint {
 /// Trait internally used and implemented by primitive integer types,
 /// used for generic implementations of [`DmaEndpoint`].
 pub trait DmaPrimitiveType {
+
+    /// The data width to transfer the primitive type.
     fn data_width() -> DmaDataWidth;
+
+    /// The burst size to transfer the primitive type.
     fn burst_size() -> DmaBurstSize;
+
 }
 
-
+/// Implementation for arrays.
 impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for &'static [T; LEN] {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -289,10 +294,11 @@ impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for &'static [T; LEN] {
 
 impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [T; LEN] {
     fn ptr(&self) -> *const () {
-        *self as *const _ as *const ()
+        self.as_ptr() as _
     }
 }
 
+/// Implementation for slices.
 impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -300,7 +306,7 @@ impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
             peripheral: None,
             data_width: T::data_width(),
             burst_size: T::burst_size(),
-            increment: DmaIncrement::Incr(<[T]>::len(*self)),
+            increment: DmaIncrement::Incr(self.len()),
         }
     }
 
@@ -308,7 +314,34 @@ impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
 
 impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
     fn ptr(&self) -> *const () {
-        *self as *const _ as *const ()
+        self.as_ptr() as _
+    }
+}
+
+/// Implementation for str slices.
+impl DmaEndpoint for &'static str {
+
+    fn configure(&mut self) -> DmaEndpointConfig {
+
+        DmaEndpointConfig {
+            peripheral: None,
+            data_width: DmaDataWidth::Byte,
+            burst_size: match self.len() {
+                0..=1 => DmaBurstSize::Incr1,
+                2..=7 => DmaBurstSize::Incr2,
+                8..=15 => DmaBurstSize::Incr8,
+                _ => DmaBurstSize::Incr16,
+            },
+            increment: DmaIncrement::Incr(self.len()),
+        }
+
+    }
+
+}
+
+impl DmaSrcEndpoint for &'static str {
+    fn ptr(&self) -> *const () {
+        self.as_ptr() as _
     }
 }
 
@@ -421,7 +454,7 @@ pub enum DmaIncrement {
     /// The address doesn't change between transfers, the same address
     /// is used but for an unknown count. The count must be determined
     Const,
-    /// The address is increment between the given number of transfers.
+    /// The address is incremented between the given number of transfers.
     Incr(usize),
 }
 
