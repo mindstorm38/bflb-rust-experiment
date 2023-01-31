@@ -62,7 +62,8 @@ macro_rules! peripheral {
             unsafe fn taken() -> &'static core::sync::atomic::AtomicBool {
                 debug_assert!($var >= $start && $var < $stop, "invalid peripheral port {}", $var);
                 const LEN: usize = $stop - $start;
-                static TAKEN_ARR: [core::sync::atomic::AtomicBool; LEN] = $crate::atomic::atomic_bool_array(false);
+                const TAKEN_DEFAULT: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+                static TAKEN_ARR: [core::sync::atomic::AtomicBool; LEN] = [TAKEN_DEFAULT; LEN];
                 &TAKEN_ARR[$var as usize - $start]
             }
 
@@ -108,7 +109,7 @@ pub trait Peripheral: Sized {
         unsafe { 
             Self::taken().compare_exchange(false, true, 
                 core::sync::atomic::Ordering::Acquire, 
-                core::sync::atomic::Ordering::Acquire
+                core::sync::atomic::Ordering::Relaxed
             ).expect("peripheral is already owned and cannot be borrowed");
             Self::new() 
         }

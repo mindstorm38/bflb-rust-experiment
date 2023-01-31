@@ -7,7 +7,7 @@ use core::sync::atomic::AtomicBool;
 
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
 
-use embedded_util::{Peripheral, atomic};
+use embedded_util::Peripheral;
 
 
 /// Represent an exclusive access to a DMA channel on a particular port.
@@ -20,7 +20,8 @@ impl<const PORT: u8, const CHANNEL: u8> Peripheral for DmaAccess<PORT, CHANNEL> 
         debug_assert!(PORT < 3, "invalid dma port {PORT}");
         debug_assert!(CHANNEL < (if PORT == 1 { 4 } else { 8 }), "invalid dma channel {CHANNEL} for port {PORT}");
 
-        static TAKEN_ARR: [AtomicBool; 20] = atomic::atomic_bool_array(false);
+        const TAKEN_DEFAULT: AtomicBool = AtomicBool::new(false);
+        static TAKEN_ARR: [AtomicBool; 20] = [TAKEN_DEFAULT; 20];
 
         match PORT {
             0 => &TAKEN_ARR[0  + CHANNEL as usize],

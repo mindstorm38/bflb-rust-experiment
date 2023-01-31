@@ -96,7 +96,7 @@ fn main() {
     timer.set_time_cmp(1_000_000);
     drop(timer);
 
-    let mtimer_int = bflb_rt::get_interrupt(IrqNum::MachineTimer);
+    let mut mtimer_int = bflb_rt::take_interrupt(IrqNum::MachineTimer);
     mtimer_int.set_handler(mtimer_handler);
     mtimer_int.set_enable(true);
     mtimer_int.set_level(255);

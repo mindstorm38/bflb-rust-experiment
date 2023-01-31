@@ -3,8 +3,6 @@
 #[cfg(not(target_arch = "riscv32"))]
 compile_error!("bl808_m0 chip requires riscv32 target architecture");
 
-core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
-
 use riscv_hal::clic::{Clic, set_mintthresh, get_mintthresh};
 
 use bflb_hal::bl808::GLB;
@@ -13,6 +11,10 @@ use crate::clic::ClicVectorTable;
 use crate::InterruptTrigger;
 use crate::IrqNum;
 use crate::IRQ_COUNT;
+
+
+// Include global startup assembly.
+core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
 
 
 /// On the M0/LP core, we use the CLIC for interruption handling.

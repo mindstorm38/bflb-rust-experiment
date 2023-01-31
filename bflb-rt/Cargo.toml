@@ -9,11 +9,11 @@ build = "build.rs"
 [dependencies]
 bflb-hal = { path = "../bflb-hal", version = "0.1" }
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
+embedded-util = { path = "../embedded-util", version = "0.1" }
 
 [features]
-default = ["panic"]
-panic = []  # To implement a default panic handler.
-__dev = []
+default = []
 bl808_m0 = ["bflb-hal/bl808_m0"]
 bl808_d0 = ["bflb-hal/bl808_d0"]
 bl808_lp = ["bflb-hal/bl808_lp"]
+panic_abort = []

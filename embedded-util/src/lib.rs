@@ -2,8 +2,6 @@
 
 #![no_std]
 
-pub mod atomic;
-
 mod reg;
 pub use reg::{Reg, RegPtr};
 

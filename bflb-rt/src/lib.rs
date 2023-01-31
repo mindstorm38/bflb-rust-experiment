@@ -5,7 +5,7 @@
 #![crate_type = "rlib"]
 
 
-#[cfg(all(not(rt_chip_ok), not(feature = "__dev")))]
+#[cfg(not(rt_chip_ok))]
 compile_error!("no runtime chip selected, use the crate features to select one chip");
 
 
@@ -90,16 +90,18 @@ pub use trap::TrapHandler;
 // Internal use.
 use trap::TrapHandlers;
 use hal::irq::{IrqNum, IRQ_COUNT};
+use core::sync::atomic::{AtomicBool, Ordering};
+
 
 /// All exception (synchronous) handlers.
 static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
 /// All interrupt (asynchronous) handlers.
 static INTERRUPT_HANDLERS: TrapHandlers<IRQ_COUNT> = TrapHandlers::new();
 
-
-/// The global writer to use to print panicking information when happening.
-#[cfg(feature = "panic")]
-static mut PANIC_WRITER: Option<&'static mut dyn core::fmt::Write> = None;
+/// Internally used for default atomic value for taken arrays.
+const TAKEN_DEFAULT: AtomicBool = AtomicBool::new(false);
+/// Taken variables for interrupt handles.
+static INTERRUPT_TAKEN_ARR: [AtomicBool; IRQ_COUNT] = [TAKEN_DEFAULT; IRQ_COUNT];
 
 
 /// Use this macro a single time to define your application.
@@ -184,19 +186,26 @@ pub fn default_trap_handler(code: usize) {
 }
 
 
-/// Get a handle to this particular interrupt, this handle allows you to
-/// manage the interrupt handler and enable status.
-pub fn get_interrupt(num: IrqNum) -> InterruptHandle {
-    InterruptHandle { num }
+/// Acquire control of a particular interrupt, if not possible this function 
+/// will panic, indicating a logical programming error.
+/// 
+/// In case of success, a guard is returned that will release the interrupt
+/// when dropped and goes out of scope.
+pub fn take_interrupt(num: IrqNum) -> InterruptGuard {
+
+    INTERRUPT_TAKEN_ARR[num as usize].compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+        .expect("interrupt is already owned and cannot be borrowed");
+
+    InterruptGuard { num }
+
 }
 
-
 /// Use this structure to manage a particular interrupt.
-pub struct InterruptHandle {
+pub struct InterruptGuard {
     num: IrqNum,
 }
 
-impl InterruptHandle {
+impl InterruptGuard {
 
     /// Get the current trap handler for this interrupt.
     pub fn get_handler(&self) -> TrapHandler {
@@ -208,7 +217,7 @@ impl InterruptHandle {
     /// The given function will be called when an interrupt request is
     /// processed while the interrupt is enabled and has a sufficient 
     /// level compared to the global threshold.
-    pub fn set_handler(&self, handler: TrapHandler) {
+    pub fn set_handler(&mut self, handler: TrapHandler) {
         INTERRUPT_HANDLERS.set(self.num as _, handler);
     }
 
@@ -219,7 +228,7 @@ impl InterruptHandle {
 
     /// Enable or not this interrupt. Need to be true for the trap
     /// handler to be called.
-    pub fn set_enable(&self, enable: bool) {
+    pub fn set_enable(&mut self, enable: bool) {
         chip::set_interrupt_enabled(self.num as _, enable);
     }
 
@@ -233,7 +242,7 @@ impl InterruptHandle {
     /// 
     /// **Note that** this might have no effect depending of the trigger
     /// configured with `set_trigger`.
-    pub fn set_pending(&self, pending: bool) {
+    pub fn set_pending(&mut self, pending: bool) {
         chip::set_interrupt_pending(self.num as _, pending);
     }
 
@@ -244,7 +253,7 @@ impl InterruptHandle {
 
     /// Set the interrupt level. This interrupt need to have a higher level
     /// than the global threshold in order to be processed.
-    pub fn set_level(&self, level: u8) {
+    pub fn set_level(&mut self, level: u8) {
         chip::set_interrupt_level(self.num as _, level);
     }
 
@@ -255,10 +264,16 @@ impl InterruptHandle {
 
     /// Set the type of trigger for this interrupt. Note that this can affect
     /// how `set_pending` can be read/write by software.
-    pub fn set_trigger(&self, trigger: InterruptTrigger) {
+    pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
         chip::set_interrupt_trigger(self.num as _, trigger);
     }
 
+}
+
+impl Drop for InterruptGuard {
+    fn drop(&mut self) {
+        INTERRUPT_TAKEN_ARR[self.num as usize].store(false, Ordering::Release);
+    }
 }
 
 
@@ -272,89 +287,11 @@ pub enum InterruptTrigger {
 }
 
 
-/// Panic handler will only abort.
-#[cfg(feature = "panic")]
+/// This implementation of the panic handler will simply abort without any message.
 #[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-
-    use core::fmt::Write;
-
-    // If some panic writer is available, use it.
-    if let Some(write) = unsafe { PANIC_WRITER.as_mut() } {
-        let _ = write!(write, "{info}");
-    }
-
-    loop {}
-
+#[cfg(feature = "panic_abort")]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    // TODO: Instead of spin looping indefinitly, it might be possible to 
+    // close clock gates and stop the core.
+    loop { core::hint::spin_loop() }
 }
-
-/// Register a panic writer to be used on panics.
-/// 
-/// **This function is unsafe to call because no synchronization is guaranteed
-/// when accessing the global variable. Therefore you should call this on startup 
-/// and ensure that it run on a single hart.**
-#[cfg(feature = "panic")]
-pub unsafe fn register_panic_writer(writer: &'static mut dyn core::fmt::Write) {
-    PANIC_WRITER = Some(writer);
-}
-
-
-// /// The default handler for exceptions, panicking with the code message if valid.
-// pub fn default_exception_handler(code: usize, val: usize) {
-
-//     let _ = val;
-//     let exc_message = match code {
-//         0 => "instruction address misaligned",
-//         1 => "instruction access fault",
-//         2 => "illegal instruction",
-//         3 => "breakpoint",
-//         4 => "load address misaligned",
-//         5 => "load access fault",
-//         6 => "store/amo address misaligned",
-//         7 => "store/amo access fault",
-//         8 => "environment call from user mode",
-//         9 => "environment call from supervisor mode",
-//         11 => "environment call from machine mode",
-//         12 => "instruction page fault",
-//         13 => "load page fault",
-//         15 => "store/amo page fault",
-//         _ => panic!("unhandled cpu exception with unknown code: {code}")
-//     };
-
-//     panic!("unhandled cpu exception: {exc_message}");
-
-// }
-
-
-// /// Register an exception handler for the given exception code.
-// /// 
-// /// **This function is unsafe to call because no synchronization is guaranteed
-// /// when accessing the handlers table. Therefore you should call this on startup 
-// /// and ensure that it run on a single hart.**
-// pub unsafe fn register_exception_handler(exc: usize, handler: TrapHandlerData) {
-//     EXCEPTION_HANDLERS[exc] = handler;
-// }
-
-
-// /// Acquire the control of an IRQ if not already controlled.
-// /// 
-// /// The returned [`IrqGuard`] will automatically release the control of the IRQ
-// /// at the end of its scope. In this interval you can freely change the handler
-// /// for this specific interrupt, the handler is a closure that is lifetime
-// /// constrained by the lifetime of the IRQ guard.
-// /// 
-// /// **Do not use this function inside an interrupt handler.
-// pub fn acquire_irq(num: IrqNum) -> Option<IrqGuard> {
-//     todo!("use this for acquiring control of an IRQ");
-// }
-
-
-// /// Register an interrupt handler for the given IRQ number.
-// pub unsafe fn register_interrupt_handler<'a>(num: usize, handler: &'a mut dyn FnMut(usize, usize)) -> TrapGuard<'a> {
-//     // let data = &mut INTERRUPT_HANDLERS[num];
-
-//     // let closure = &mut *data.closure.get();
-//     // *closure = handler;
-//     // TrapGuard { closure: handler }
-//     todo!()
-// }
