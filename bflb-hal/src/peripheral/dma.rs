@@ -7,15 +7,22 @@ use core::sync::atomic::AtomicBool;
 
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
 
-use embedded_util::Peripheral;
+use embedded_util::peripheral;
 
 
 /// Represent an exclusive access to a DMA channel on a particular port.
 pub struct DmaAccess<const PORT: u8, const CHANNEL: u8>(());
 
-impl<const PORT: u8, const CHANNEL: u8> Peripheral for DmaAccess<PORT, CHANNEL> {
-    
-    unsafe fn taken() -> &'static AtomicBool {
+impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
+
+    peripheral!();
+
+    #[inline]
+    pub unsafe fn new() -> Self {
+        Self(())
+    }
+
+    pub unsafe fn taken() -> &'static AtomicBool {
 
         debug_assert!(PORT < 3, "invalid dma port {PORT}");
         debug_assert!(CHANNEL < (if PORT == 1 { 4 } else { 8 }), "invalid dma channel {CHANNEL} for port {PORT}");
@@ -32,21 +39,16 @@ impl<const PORT: u8, const CHANNEL: u8> Peripheral for DmaAccess<PORT, CHANNEL> 
 
     }
 
-    unsafe fn new() -> Self {
-        Self(())
-    }
-
-}
-
-
-impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
-
     /// Execute a new DMA transfer from the given source endpoint to the given
     /// destination endpoint. Endpoints are generic, see implementors of 
     /// [`DmaEndpoint`] for more information, note that supported peripherals
     /// depends on the `PORT` used.
+    /// 
+    /// The returned [`DmaTransfer`] handle can be used to wait for result
+    /// and get back the source and destination endpoint in order to reuse 
+    /// them.
     #[inline(never)]
-    pub fn into_transfer<Src, Dst>(&mut self, 
+    pub fn into_transfer<Src, Dst>(self, 
         mut src: Src,
         mut dst: Dst) -> DmaTransfer<PORT, CHANNEL, Src, Dst>
     where
@@ -179,20 +181,46 @@ where
     Dst: DmaEndpoint
 {
 
-    /// Indefinitly wait for completion of this DMA transfer.
-    #[inline(never)]
-    pub fn wait(mut self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+    /// Return true if the transfer is completed and can be destructured
+    #[inline]
+    pub fn completed(&self) -> bool {
+        get_port_regs::<PORT>().raw_int_tc_status().get().get(CHANNEL)
+    }
 
-        // FIXME: For now we use the raw status because we currently mask the interrupt.
-        let tc_status = get_port_regs::<PORT>().raw_int_tc_status();
-        while !tc_status.get().get(CHANNEL) {}
+    /// Try destructuring this transfer into its original components.
+    /// 
+    /// This will only succeed if the DMA transfer is completed ([`completed`]).
+    pub fn try_destruct(self) -> Result<(Src, Dst, DmaAccess<PORT, CHANNEL>), Self> {
+        if self.completed() {
 
-        // Call unconfigured callbacks on endpoints.
-        self.src.unconfigure();
-        self.dst.unconfigure();
+            // The structure is droppped here, it's safe to return back the ownership 
+            // of source and destination because we checked that the transfer has 
+            // completed.
+            let DmaTransfer { mut src, mut dst } = self;
 
-        (self.src, self.dst, DmaAccess(()))
+            // Some endpoints need to be unconfigured after DMA transfer is complete.
+            src.unconfigure();
+            dst.unconfigure();
 
+            // It's safe to create a DmaAccess because it has been consumed in order
+            // to create the transfer which ensured exclusive access to DMA channel.
+            Ok((src, dst, DmaAccess(())))
+
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Indefinitly wait for completion of this DMA transfer and then destruct the
+    /// transfer into its original components. See [`try_destruct`].
+    pub fn destruct(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+        let mut transfer = self;
+        loop {
+            transfer = match transfer.try_destruct() {
+                Ok(fields) => return fields,
+                Err(transfer) => transfer,
+            };
+        }
     }
 
 }
@@ -497,7 +525,7 @@ pub enum DmaPeripheral {
 }
 
 
-#[inline]
+#[inline(always)]
 fn get_port_regs<const PORT: u8>() -> dma::Dma {
     match PORT {
         0 => DMA0,
@@ -508,7 +536,7 @@ fn get_port_regs<const PORT: u8>() -> dma::Dma {
 }
 
 
-#[inline]
+#[inline(always)]
 fn get_channel_regs<const PORT: u8, const CHANNEL: u8>() -> dma::DmaChannel {
     get_port_regs::<PORT>().channel(CHANNEL as usize)
 }

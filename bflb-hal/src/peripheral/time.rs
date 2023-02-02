@@ -12,9 +12,10 @@ use super::clock::Clocks;
 /// **Note that** you have to be careful not  to create this structure multiple
 /// time, even if this is not inherently unsafe.
 pub struct CoreTimer(());
-peripheral!(CoreTimer);
 
 impl CoreTimer {
+    
+    peripheral!(simple);
 
     /// The tick frequency of the core timer.
     pub const FREQ: u32 = 1_000_000;

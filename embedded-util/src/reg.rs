@@ -7,8 +7,8 @@
 /// ```
 /// embedded_util::reg! {
 ///     pub struct MyReg: u32 {
-///         [0..10] field0: u16,
-///         [10..11] field1: u8,
+///         [0..10] field0,
+///         [10..11] field1,
 ///     }
 /// }
 /// ```

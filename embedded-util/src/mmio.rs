@@ -12,7 +12,7 @@
 /// 
 /// Example:
 /// ```
-/// mmio! {
+/// embedded_util::mmio! {
 /// 
 ///     pub struct MmioPeripheral {
 ///         [0x00] ro version: u32,          // A simple field at 0x00
@@ -31,8 +31,8 @@
 /// 
 /// }
 /// 
-/// reg! {
-///     pub struct MyReg: u32 { ... }
+/// embedded_util::reg! {
+///     pub struct MyReg: u32 {}
 /// }
 /// ```
 #[macro_export]
@@ -193,7 +193,8 @@ impl<T> PtrRw<T> {
     /// 
     /// You can use this together with registers in order to modify
     /// some bit fields in it and then apply changes. For example:
-    /// ```
+    /// 
+    /// ```compile_fail
     /// let reg_ptr: PtrRw<MyReg>;
     /// reg_ptr.modify(|reg| reg.myfield().set(123));
     /// ```

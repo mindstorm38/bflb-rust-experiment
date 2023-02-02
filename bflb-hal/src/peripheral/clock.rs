@@ -18,10 +18,11 @@ use crate::bl808::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
 
 /// Clocks controller for BL808.
 pub struct Clocks(());
-peripheral!(Clocks);
 
 /// High-level mtimer methods.
 impl Clocks {
+
+    peripheral!(simple);
 
     /// Get the machine timer RTC register for the current core.
     pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {

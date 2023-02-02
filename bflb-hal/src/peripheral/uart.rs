@@ -21,9 +21,10 @@ use super::clock::Clocks;
 /// 
 /// Available ports: 0, 1, 2.
 pub struct UartAccess<const PORT: u8>(());
-peripheral!(UartAccess<PORT>, PORT: u8[0..3]);
 
 impl<const PORT: u8> UartAccess<PORT> {
+
+    peripheral!(array: PORT[0..3]);
 
     /// Generic types erasing, this transfer checks to the runtime.
     pub fn erase(self) -> ! {
@@ -236,7 +237,7 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, 
 
     fn configure(&mut self) -> DmaEndpointConfig {
 
-        // We configure the port to enable DMA for TX.
+        // We configure the port to enable DMA for RX.
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_rx_en().fill());
 
         DmaEndpointConfig {

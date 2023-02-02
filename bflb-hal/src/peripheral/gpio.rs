@@ -12,9 +12,10 @@ use crate::bl808::glb::GlbGpioCfg0;
 /// 
 /// Available ports: 0 to 45 (included).
 pub struct PinAccess<const NUM: u8>(());
-peripheral!(PinAccess<NUM>, NUM: u8[0..46]);
 
 impl<const NUM: u8> PinAccess<NUM> {
+
+    peripheral!(array: NUM[0..46]);
 
     fn new_pin<M: Mode>() -> Pin<NUM, M> {
         Pin { _mode: PhantomData }

@@ -9,8 +9,6 @@ use bflb_hal::gpio::PinAccess;
 use bflb_hal::dma::DmaAccess;
 use bflb_hal::irq::IrqNum;
 
-use embedded_util::Peripheral;
-
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::fmt::Write;
 
@@ -79,22 +77,17 @@ fn main() {
 
     // DMA
 
-    let dma_transfer = DmaAccess::<0, 0>::take()
-        .into_transfer(DMA_MESSAGE, uart_tx);
-
-    let (
-        _src, 
-        mut uart_tx, 
-        _dma,
-    ) = dma_transfer.wait();
+    let (_, mut uart_tx, _) = DmaAccess::<0, 0>::take()
+        .into_transfer(DMA_MESSAGE, uart_tx)
+        .destruct();
 
     // INTS
 
-    let mut timer = CoreTimer::borrow();
+    let mut timer = CoreTimer::take();
     timer.init(&mut clocks);
     timer.set_time(0);
     timer.set_time_cmp(1_000_000);
-    drop(timer);
+    timer.free();
 
     let mut mtimer_int = bflb_rt::take_interrupt(IrqNum::MachineTimer);
     mtimer_int.set_handler(mtimer_handler);
@@ -112,7 +105,9 @@ fn main() {
         if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
             mtimer_int.set_enable(false);
             {
-                let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", CoreTimer::borrow().get_time());
+                let timer = CoreTimer::take();
+                let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", timer.get_time());
+                timer.free();
             }
             mtimer_int.set_enable(true);
         }
@@ -125,8 +120,9 @@ fn main() {
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 fn mtimer_handler(_code: usize) {
-    let mut timer = CoreTimer::borrow();
+    let mut timer = CoreTimer::take();
     let time_cmp = timer.get_time_cmp();
     timer.set_time_cmp(time_cmp + 1_000_000);
     INTERRUPTED.store(true, Ordering::Relaxed);
+    timer.free();
 }
