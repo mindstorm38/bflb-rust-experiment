@@ -351,7 +351,6 @@ impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
 impl DmaEndpoint for &'static str {
 
     fn configure(&mut self) -> DmaEndpointConfig {
-
         DmaEndpointConfig {
             peripheral: None,
             data_width: DmaDataWidth::Byte,
@@ -363,7 +362,6 @@ impl DmaEndpoint for &'static str {
             },
             increment: DmaIncrement::Incr(self.len()),
         }
-
     }
 
 }

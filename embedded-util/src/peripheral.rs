@@ -73,8 +73,11 @@ macro_rules! peripheral {
         $crate::peripheral!();
 
     };
-    // For array peripherals.
     (array: $var:ident [ $start:literal .. $stop:literal ]) => {
+        $crate::peripheral!(array: $var:ident [ ($start) .. ($stop) ]);
+    };
+    // For array peripherals.
+    (array: $var:ident [ ($start:expr) .. ($stop:literal) ]) => {
 
         /// Returns the atomic variable that is used by `try_take` and `take` functions
         /// in order to ensures at runtime that no concurrent ownership of the peripheral
@@ -101,7 +104,7 @@ macro_rules! peripheral {
         
         $crate::peripheral!();
 
-    }
+    };
 }
 
 
