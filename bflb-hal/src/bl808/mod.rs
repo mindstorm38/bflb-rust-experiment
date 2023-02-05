@@ -33,6 +33,7 @@ pub mod sf_ctrl;
 pub mod aon;
 pub mod vdo;
 pub mod csi;
+pub mod gpip;
 pub use mcu_misc::McuMisc;
 pub use mm_misc::MmMisc;
 pub use mm_glb::MmGlb;
@@ -44,6 +45,7 @@ pub use sf_ctrl::SfCtrl;
 pub use aon::Aon;
 pub use vdo::Vdo;
 pub use csi::Csi;
+pub use gpip::Gpip;
 
 // Manually implemented.
 pub mod uart;
@@ -79,6 +81,8 @@ pub const AON: Aon              = Aon(addr::AON_BASE as _);
 pub const CCI: Cci              = Cci(addr::CCI_BASE as _);
 /// The Serial Flash Control registers.
 pub const SF_CTRL: SfCtrl       = SfCtrl(addr::SF_CTRL_BASE as _);
+/// General Purpose ??
+pub const GPIP: Gpip            = Gpip(addr::GPIP_BASE as _);
 
 // DMA
 pub const DMA0: Dma             = Dma(addr::DMA0_BASE as _);
@@ -115,7 +119,6 @@ pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _);
 /// - D0: No CLIC (TODO: Check that)
 /// - LP: 32 interrupts
 pub const CLIC: Clic            = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
-
 
 embedded_util::mmio! {
 

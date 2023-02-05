@@ -189,6 +189,12 @@ STRUCTS = {
         "prefix": "AON_",
         "doc": ""
     },
+    "gpip": {
+        "header": f"{BASE_BFLB_URL}gpip_reg.h",
+        "name": "Gpip",
+        "prefix": "GPIP_",
+        "doc": "",
+    },
     "vdo": {
         "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/bl_mm/mm_drv/mm_reg/vdo_reg.h",
         "name": "Vdo",

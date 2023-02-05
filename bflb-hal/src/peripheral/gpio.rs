@@ -231,19 +231,6 @@ impl PinErased {
 }
 
 
-// /// Configuration mode of a pin.
-// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-// pub enum PinMode {
-//     /// GPIO input.
-//     Input,
-//     /// GPIO output.
-//     Output,
-//     /// TBD
-//     Analog,
-//     /// Alternative custom function.
-//     Alternate(PinFunction)
-// }
-
 /// Pull mode for a pin.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]

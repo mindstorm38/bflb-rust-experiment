@@ -4,7 +4,143 @@
 //! interrupts given these numbers.
 
 use embedded_util::peripheral;
+use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
+use crate::bl808::CLIC;
+
+
+/// Exclusive access to global control of the interrupts.
+pub struct InterruptGlobal(());
+
+impl InterruptGlobal {
+
+    peripheral!(simple);
+
+    #[inline(always)]
+    pub fn get_threshold(&self) -> u8 {
+        get_mintthresh()
+    }
+
+    #[inline(always)]
+    pub fn set_threshold(&mut self, level: u8) {
+        set_mintthresh(level)
+    }
+
+}
+
+
+/// An exclusive access to the control of an interrupt.
+pub struct Interrupt<const NUM: usize>(());
+
+impl<const NUM: usize> Interrupt<NUM> {
+    
+    peripheral!(array: NUM[0..(IRQ_COUNT)]);
+
+    /// Return `true` if this interrupt is enabled.
+    #[inline(always)]
+    pub fn is_enabled(&self) -> bool {
+        CLIC.int(NUM).enable().get() != 0
+    }
+    
+    /// Enable or not the interrupt.
+    #[inline(always)]
+    pub fn set_enabled(&mut self, enabled: bool) {
+        CLIC.int(NUM).enable().set(enabled as _);
+    }
+
+    // TODO: Check if relevant
+    #[inline(always)]
+    pub fn without<F: FnOnce()>(&mut self, func: F) {
+        let enabled = self.is_enabled();
+        self.set_enabled(false);
+        (func)();
+        self.set_enabled(enabled);
+    }
+    
+    #[inline(always)]
+    pub fn is_pending(&self) -> bool {
+        CLIC.int(NUM).pending().get() != 0
+    }
+    
+    #[inline(always)]
+    pub fn set_pending(&mut self, pending: bool) {
+        // NB: Look at Read-only or Read/Write in "pending" doc.
+        CLIC.int(NUM).pending().set(pending as _);
+    }
+    
+    #[inline(always)]
+    pub fn get_level(&self) -> u8 {
+        CLIC.int(NUM).control().get()
+    }
+    
+    #[inline(always)]
+    pub fn set_level(&mut self, level: u8) {
+        // NB: Read doc of "control" to understand that no all level are valid bit patterns.
+        CLIC.int(NUM).control().set(level);
+    }
+    
+    #[inline(always)]
+    pub fn get_trigger(&self) -> InterruptTrigger {
+        let mut tmp = CLIC.int(NUM).attr().get();
+        match (tmp.edge_triggered().get(), tmp.negative_edge().get()) {
+            (0, 0) => InterruptTrigger::PositiveLevel,
+            (0, 1) => InterruptTrigger::NegativeLevel,
+            (1, 0) => InterruptTrigger::PositiveEdge,
+            (1, 1) => InterruptTrigger::NegativeEdge,
+            // Unreachable and should be optimized-out because only these patterns
+            // are valid in the fields' range.
+            _ => unreachable!()
+        }
+    }
+    
+    #[inline(always)]
+    pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
+        CLIC.int(NUM).attr().modify(|reg| {
+    
+            let (edge, neg) = match trigger {
+                InterruptTrigger::PositiveLevel => (0, 0),
+                InterruptTrigger::NegativeLevel => (0, 1),
+                InterruptTrigger::PositiveEdge => (1, 0),
+                InterruptTrigger::NegativeEdge => (1, 1),
+            };
+    
+            reg.edge_triggered().set(edge);
+            reg.negative_edge().set(neg);
+    
+        });
+    }
+
+}
+
+
+/// Trigger mode that can be configured for a particular interrupt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterruptTrigger {
+    /// The interrupt request is considered when its level is 1.
+    PositiveLevel,
+    /// The interrupt request is considered when its level is 0.
+    NegativeLevel,
+    /// The interrupt request is considered when its level goes from 0 to 1.
+    PositiveEdge,
+    /// The interrupt request is considered when its level goes from 1 to 0.
+    NegativeEdge,
+}
+
+
+/// Internal macro for easier definition.
+macro_rules! def_irq {
+    (
+        $(
+            $(#[$meta:meta])*
+            $name:ident = $value:expr ;
+        )*
+    ) => {
+        $(
+            $(#[$meta])* 
+            pub const $name: usize = $value;
+        )*
+    };
+}
 
 def_irq! {
     /// Software interrupt for supervisor privilege.
@@ -165,32 +301,6 @@ def_irq! {
     /// IRQ count on BL808 D0 core.
     IRQ_COUNT           = 16 + 67;
 }
-
-
-/// Internal macro for easier definition.
-macro_rules! def_irq {
-    (
-        $(
-            $(#[$meta:meta])*
-            $name:ident = $value:expr ;
-        )*
-    ) => {
-        $(
-            $(#[$meta])* 
-            pub const $name: usize = $value;
-        )*
-    };
-}
-
-
-pub struct Interrupt<const NUM: usize>(());
-
-impl<const NUM: usize> Interrupt<NUM> {
-    
-    peripheral!(array: NUM[(0)..(IRQ_COUNT)]);
-
-}
-
 
 
 

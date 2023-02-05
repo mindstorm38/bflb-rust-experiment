@@ -7,7 +7,10 @@ use bflb_hal::uart::{UartAccess, UartConfig};
 use bflb_hal::time::CoreTimer;
 use bflb_hal::gpio::PinAccess;
 use bflb_hal::dma::DmaAccess;
-use bflb_hal::irq::IrqNum;
+use bflb_hal::irq::{Interrupt, MACHINE_TIMER};
+use bflb_hal::adc::AdcChannel;
+
+use bflb_rt::InterruptExt;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::fmt::Write;
@@ -75,11 +78,16 @@ fn main() {
     ) = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
+    let adc_ch0 = AdcChannel::with_gnd(PinAccess::<17>::take());
+    let adc_ch1 = AdcChannel::with_gnd(PinAccess::<5>::take());
+
+    let adc_channels = (adc_ch0, adc_ch1);
+
     // DMA
 
     let (_, mut uart_tx, _) = DmaAccess::<0, 0>::take()
         .into_transfer(DMA_MESSAGE, uart_tx)
-        .destruct();
+        .wait_destruct();
 
     // INTS
 
@@ -89,9 +97,9 @@ fn main() {
     timer.set_time_cmp(1_000_000);
     timer.free();
 
-    let mut mtimer_int = bflb_rt::take_interrupt(IrqNum::MachineTimer);
+    let mut mtimer_int = Interrupt::<MACHINE_TIMER>::take();
     mtimer_int.set_handler(mtimer_handler);
-    mtimer_int.set_enable(true);
+    mtimer_int.set_enabled(true);
     mtimer_int.set_level(255);
 
     // LOOP
@@ -103,11 +111,11 @@ fn main() {
         }
         
         if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
-            mtimer_int.set_enable(false);
-            let timer = CoreTimer::take();
-            let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", timer.get_time());
-            timer.free();
-            mtimer_int.set_enable(true);
+            mtimer_int.without(|| {
+                let timer = CoreTimer::take();
+                let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", timer.get_time());
+                timer.free();
+            });
         }
 
     }

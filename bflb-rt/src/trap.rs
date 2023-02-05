@@ -1,7 +1,6 @@
 //! Utilities for traps.
 
 use core::sync::atomic::{Ordering, AtomicUsize};
-use core::mem::ManuallyDrop;
 
 
 /// A trap handler type is a pointer to a function that take the 
@@ -16,27 +15,17 @@ pub struct TrapHandlers<const LEN: usize> {
     /// 
     /// We are using usize atomics because it's guaranteed to have the same layout
     /// as usize and it's practical for const initialization of the array. This
-    /// number can however be null.
+    /// number can however be null. It's more like a `Option<fn()>`.
     handlers: [AtomicUsize; LEN],
-}
-
-/// An internal type for const-initialization of the handlers array.
-/// Note that the raw array has the same layout as the atomic one,
-/// because usize and AtomicUsize have the same layout, and therefore
-/// the array has the same layout.
-union TrapHandlersInit<const LEN: usize> {
-    raw: [usize; LEN],
-    atomic: ManuallyDrop<[AtomicUsize; LEN]>,
 }
 
 impl<const LEN: usize> TrapHandlers<LEN> {
 
     /// Create a new trap handlers structure.
     pub const fn new() -> Self {
-        unsafe { 
-            Self {
-                handlers: ManuallyDrop::into_inner(TrapHandlersInit { raw: [0; LEN] }.atomic),
-            }
+        const HANDLER_DEFAULT: AtomicUsize = AtomicUsize::new(0);
+        Self {
+            handlers: [HANDLER_DEFAULT; LEN],
         }
     }
 

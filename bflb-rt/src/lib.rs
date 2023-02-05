@@ -84,24 +84,17 @@ mod clic;
 mod trap;
 
 /// Re-exports
-pub use chip::{get_interrupt_threshold, set_interrupt_threshold};
 pub use trap::TrapHandler;
 
 // Internal use.
+use hal::irq::{Interrupt, IRQ_COUNT};
 use trap::TrapHandlers;
-use hal::irq::{IrqNum, IRQ_COUNT};
-use core::sync::atomic::{AtomicBool, Ordering};
 
 
 /// All exception (synchronous) handlers.
 static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
 /// All interrupt (asynchronous) handlers.
 static INTERRUPT_HANDLERS: TrapHandlers<IRQ_COUNT> = TrapHandlers::new();
-
-/// Internally used for default atomic value for taken arrays.
-const TAKEN_DEFAULT: AtomicBool = AtomicBool::new(false);
-/// Taken variables for interrupt handles.
-static INTERRUPT_TAKEN_ARR: [AtomicBool; IRQ_COUNT] = [TAKEN_DEFAULT; IRQ_COUNT];
 
 
 /// Use this macro a single time to define your application.
@@ -180,100 +173,38 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
 }
 
 
-/// The default trap handler, do nothing.
-pub fn default_trap_handler(code: usize) {
-    let _ = code;
-}
-
-
-/// Acquire control of a particular interrupt, if not possible this function 
-/// will panic, indicating a logical programming error.
-/// 
-/// In case of success, a guard is returned that will release the interrupt
-/// when dropped and goes out of scope.
-pub fn take_interrupt(num: IrqNum) -> InterruptGuard {
-
-    INTERRUPT_TAKEN_ARR[num as usize].compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
-        .expect("interrupt is already owned and cannot be borrowed");
-
-    InterruptGuard { num }
-
-}
-
-/// Use this structure to manage a particular interrupt.
-pub struct InterruptGuard {
-    num: IrqNum,
-}
-
-impl InterruptGuard {
+/// A trait that extends the HAL `Interrupt` structure and add methods
+/// for setting and getting the trap handler for this particular 
+/// interrupt.
+pub trait InterruptExt {
 
     /// Get the current trap handler for this interrupt.
-    pub fn get_handler(&self) -> TrapHandler {
-        INTERRUPT_HANDLERS.get(self.num as _, default_trap_handler)
-    }
+    fn get_handler(&self) -> TrapHandler;
 
     /// Set the trap handler for this interrupt.
     /// 
     /// The given function will be called when an interrupt request is
     /// processed while the interrupt is enabled and has a sufficient 
     /// level compared to the global threshold.
-    pub fn set_handler(&mut self, handler: TrapHandler) {
-        INTERRUPT_HANDLERS.set(self.num as _, handler);
-    }
-
-    /// Get the enabled status of this interrupt.
-    pub fn is_enabled(&self) -> bool {
-        chip::is_interrupt_enabled(self.num as _)
-    }
-
-    /// Enable or not this interrupt. Need to be true for the trap
-    /// handler to be called.
-    pub fn set_enable(&mut self, enable: bool) {
-        chip::set_interrupt_enabled(self.num as _, enable);
-    }
-
-    /// Return true if this interrupt is pending and the trap handler
-    /// must be called.
-    pub fn is_pending(&self) -> bool {
-        chip::is_interrupt_pending(self.num as _)
-    }
-
-    /// Set the pending status of this interrupt.
-    /// 
-    /// **Note that** this might have no effect depending of the trigger
-    /// configured with `set_trigger`.
-    pub fn set_pending(&mut self, pending: bool) {
-        chip::set_interrupt_pending(self.num as _, pending);
-    }
-
-    /// Get the interrupt's level.
-    pub fn get_level(&self) -> u8 {
-        chip::get_interrupt_level(self.num as _)
-    }
-
-    /// Set the interrupt level. This interrupt need to have a higher level
-    /// than the global threshold in order to be processed.
-    pub fn set_level(&mut self, level: u8) {
-        chip::set_interrupt_level(self.num as _, level);
-    }
-
-    /// Get the type of trigger for this interrupt.
-    pub fn get_trigger(&self) -> InterruptTrigger {
-        chip::get_interrupt_trigger(self.num as _)
-    }
-
-    /// Set the type of trigger for this interrupt. Note that this can affect
-    /// how `set_pending` can be read/write by software.
-    pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
-        chip::set_interrupt_trigger(self.num as _, trigger);
-    }
+    fn set_handler(&mut self, handler: TrapHandler);
 
 }
 
-impl Drop for InterruptGuard {
-    fn drop(&mut self) {
-        INTERRUPT_TAKEN_ARR[self.num as usize].store(false, Ordering::Release);
+impl<const NUM: usize> InterruptExt for Interrupt<NUM> {
+
+    fn get_handler(&self) -> TrapHandler {
+        INTERRUPT_HANDLERS.get(NUM, default_trap_handler)
     }
+
+    fn set_handler(&mut self, handler: TrapHandler) {
+        INTERRUPT_HANDLERS.set(NUM, handler);
+    }
+}
+
+
+/// The default trap handler, do nothing.
+pub fn default_trap_handler(code: usize) {
+    let _ = code;
 }
 
 

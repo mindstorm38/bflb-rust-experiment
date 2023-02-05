@@ -7,7 +7,9 @@ pub mod cpu;
 
 pub mod gpio;
 pub mod dma;
+pub mod adc;
 pub mod uart;
+
 pub mod usb;
 
 pub mod irq;

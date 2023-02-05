@@ -213,7 +213,7 @@ where
 
     /// Indefinitly wait for completion of this DMA transfer and then destruct the
     /// transfer into its original components. See [`try_destruct`].
-    pub fn destruct(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+    pub fn wait_destruct(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
         let mut transfer = self;
         loop {
             transfer = match transfer.try_destruct() {
