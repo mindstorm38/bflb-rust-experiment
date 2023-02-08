@@ -2,17 +2,18 @@
 
 use core::marker::PhantomData;
 use core::fmt;
+use core::ptr::addr_of;
 
 use embedded_util::peripheral;
 
 use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::bl808::uart::UartBitPrd;
 
-use super::gpio::{PinAccess, PinPull, PinDrive, PinFunction};
-use super::dma::{DmaEndpoint, DmaSrcEndpoint, DmaDstEndpoint, 
+use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
+use crate::dma::{DmaEndpoint, DmaSrcEndpoint, DmaDstEndpoint, 
     DmaEndpointConfig, DmaPeripheral, DmaDataWidth, DmaBurstSize, 
     DmaIncrement};
-use super::clock::Clocks;
+use crate::clock::Clocks;
 
 
 /// Definition of an exclusive access to a UART port. This port need 
@@ -33,20 +34,20 @@ impl<const PORT: u8> UartAccess<PORT> {
 
     /// Configure this UART port for duplex communications.
     pub fn into_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
-        tx: PinAccess<TX_PIN>,
-        rx: PinAccess<RX_PIN>,
+        mut tx: Pin<TX_PIN, Alternate>,
+        mut rx: Pin<RX_PIN, Alternate>,
         config: &UartConfig, 
         clocks: &Clocks
     ) -> (UartTx<PORT, TX_PIN, Duplex>, UartRx<PORT, RX_PIN, Duplex>) {
 
-        attach_pin(tx, match PORT {
+        attach_pin(&mut tx, match PORT {
             0 => UartFunction::Uart0Tx,
             1 => UartFunction::Uart1Tx,
             2 => UartFunction::Uart2Tx,
             _ => unreachable!()
         });
 
-        attach_pin(rx, match PORT {
+        attach_pin(&mut rx, match PORT {
             0 => UartFunction::Uart0Rx,
             1 => UartFunction::Uart1Rx,
             2 => UartFunction::Uart2Rx,
@@ -54,18 +55,22 @@ impl<const PORT: u8> UartAccess<PORT> {
         });
 
         init::<PORT>(config, clocks, true, true);
-        (UartTx(PhantomData), UartRx(PhantomData))
+
+        (
+            UartTx { pin: tx, _origin: PhantomData }, 
+            UartRx { pin: rx, _origin: PhantomData },
+        )
 
     }
 
     /// Configure this UART port for TX-only communications.
     pub fn into_tx<const TX_PIN: u8>(self, 
-        tx: PinAccess<TX_PIN>,
+        mut tx: Pin<TX_PIN, Alternate>,
         config: &UartConfig, 
         clocks: &Clocks
     ) -> UartTx<PORT, TX_PIN, SingleTx> {
 
-        attach_pin(tx, match PORT {
+        attach_pin(&mut tx, match PORT {
             0 => UartFunction::Uart0Tx,
             1 => UartFunction::Uart1Tx,
             2 => UartFunction::Uart2Tx,
@@ -73,18 +78,18 @@ impl<const PORT: u8> UartAccess<PORT> {
         });
 
         init::<PORT>(config, clocks, true, false);
-        UartTx(PhantomData)
+        UartTx { pin: tx, _origin: PhantomData }
 
     }
 
     /// Configure this UART port for RX-only communications.
     pub fn into_rx<const RX_PIN: u8>(self, 
-        rx: PinAccess<RX_PIN>,
+        mut rx: Pin<RX_PIN, Alternate>,
         config: &UartConfig, 
         clocks: &Clocks
     ) -> UartRx<PORT, RX_PIN, SingleRx> {
 
-        attach_pin(rx, match PORT {
+        attach_pin(&mut rx, match PORT {
             0 => UartFunction::Uart0Rx,
             1 => UartFunction::Uart1Rx,
             2 => UartFunction::Uart2Rx,
@@ -92,30 +97,36 @@ impl<const PORT: u8> UartAccess<PORT> {
         });
 
         init::<PORT>(config, clocks, false, true);
-        UartRx(PhantomData)
+        UartRx { pin: rx, _origin: PhantomData }
 
     }
 
     /// Reconstruct a UART access from a single TX lane.
-    pub fn from_tx<const TX_PIN: u8>(tx: UartTx<PORT, TX_PIN, SingleTx>) -> Self {
-        let _ = tx;
-        Self(())
+    pub fn from_tx<const TX_PIN: u8>(
+        tx: UartTx<PORT, TX_PIN, SingleTx>
+    ) -> (Self, Pin<TX_PIN, Alternate>) {
+
+        // FIXME: These fixes using read are actually valid since the Pin structure is not
+        // read in the drop implementation of UartTx (also ZST), so we kind of move it 
+        // before drop. I really need to come with a clearer way of doing this, without
+        // runtime overhead.
+        (Self(()), unsafe { addr_of!(tx.pin).read() })
+
     }
 
     /// Reconstruct a UART access from a single RX lane.
-    pub fn from_rx<const RX_PIN: u8>(rx: UartRx<PORT, RX_PIN, SingleRx>) -> Self {
-        let _ = rx;
-        Self(())
+    pub fn from_rx<const RX_PIN: u8>(
+        rx: UartRx<PORT, RX_PIN, SingleRx>
+    ) -> (Self, Pin<RX_PIN, Alternate>) {
+        (Self(()), unsafe { addr_of!(rx.pin).read() })
     }
 
     /// Reconstruct a UART access from duplex lanes.
     pub fn from_duplex<const TX_PIN: u8, const RX_PIN: u8>(
         tx: UartTx<PORT, TX_PIN, Duplex>,
         rx: UartRx<PORT, RX_PIN, Duplex>,
-    ) -> Self {
-        let _ = (tx, rx);
-        // We do nothing with lanes, the correctness arguments is checked at compile-time.
-        Self(())
+    ) -> (Self, Pin<TX_PIN, Alternate>, Pin<RX_PIN, Alternate>) {
+        (Self(()), unsafe { addr_of!(tx.pin).read() }, unsafe { addr_of!(rx.pin).read() })
     }
 
 }
@@ -123,11 +134,17 @@ impl<const PORT: u8> UartAccess<PORT> {
 
 /// Define the UART Tx, transmission lane. It typically provides write methods
 /// and implement DMA destination endpoint.
-pub struct UartTx<const PORT: u8, const PIN: u8, O: UartOrigin>(PhantomData<O>);
+pub struct UartTx<const PORT: u8, const PIN: u8, O: UartOrigin> {
+    pin: Pin<PIN, Alternate>,
+    _origin: PhantomData<O>
+}
 
 /// Define the UART Rx, receiving lane. It typically provides read methods and
 /// implement DMA source endpoint.
-pub struct UartRx<const PORT: u8, const PIN: u8, O: UartOrigin>(PhantomData<O>);
+pub struct UartRx<const PORT: u8, const PIN: u8, O: UartOrigin> {
+    pin: Pin<PIN, Alternate>,
+    _origin: PhantomData<O>
+}
 
 
 /// Marker trait specifying origin of UART lanes, used when reconstructing.
@@ -379,7 +396,7 @@ fn init_internal(regs: UartRegs, config: &UartConfig, clocks: &Clocks, tx: bool,
 }
 
 /// Internal function to attach a pin to a specific UART function.
-fn attach_pin<const NUM: u8>(pin: PinAccess<NUM>, func: UartFunction) {
+fn attach_pin<const NUM: u8>(pin: &mut Pin<NUM, Alternate>, func: UartFunction) {
 
     // There are 8 u32 fields per register
     let sig = NUM % 12;
@@ -394,11 +411,14 @@ fn attach_pin<const NUM: u8>(pin: PinAccess<NUM>, func: UartFunction) {
         reg.0 |= (func as u32) << field;
     });
 
-    let mut pin = pin.into_alternate(PinFunction::Uart);
-    pin.set_pull(PinPull::Up);
-    pin.set_drive(PinDrive::Drive1);
-    pin.set_smt(true);
-    
+    pin.modify_config(|cfg| {
+        cfg.set_function(PinFunction::Uart);
+        cfg.set_pull(PinPull::Up);
+        cfg.set_drive(PinDrive::Drive1);
+        cfg.set_input_enable(true);
+        cfg.set_smt(true);
+    });
+
 }
 
 /// Internal fucntion to detach a pin from this UART.

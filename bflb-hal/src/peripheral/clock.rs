@@ -7,16 +7,43 @@
 //! - RC 32 MHz
 //! - PLL (various...)
 //! 
+//! Glossary:
+//! - CLK: Clock
+//! - XTAL: Crystal
+//! - BCLK: Bus Block
+//! - PBCLK: Peripheral Bus Clock
+//! - HCLK: AHB Clock 
+//! - PLL: Phase-locked Loop
+//! 
 //! Sources:
 //! - https://github.com/bouffalolab/bl_mcu_sdk/blob/master/drivers/soc/bl808/std/src/bl808_clock.c
 //! - Clock diagram in the Datasheet
 
 use embedded_util::{peripheral, PtrRw};
 
-use crate::bl808::{self, CpuRtc, PDS, HBN, AON, GLB, MM_GLB, CCI};
+use crate::bl808::{self, CpuRtc, PDS, HBN, AON, GLB, CCI};
+
+
+mod analog;
+mod mcu;
+mod mm;
+
+pub use analog::*;
+pub use mcu::*;
+pub use mm::*;
 
 
 /// Clocks controller for BL808.
+/// 
+/// This peripheral can be used to interact with most clock demultiplexers,
+/// clock gates and dividers. Naming convention for function follows these
+/// rules:
+/// - Demultiplexer: `set_<name>_sel(&mut self, sel: <enum>)`, 
+///   `get_<name>_sel(&self) -> <enum>`.
+/// - Gate: `set_<name>_enable(&mut self, enable: bool)`,
+///   `is_<name>_enable(&self) -> bool`.
+/// - Divider: `set_<name>_div(&mut self, div: u32)`,
+///   `get_<name>_div(&self) -> u32`.
 pub struct Clocks(());
 
 /// High-level mtimer methods.
@@ -151,22 +178,24 @@ impl Clocks {
 impl Clocks {
 
     /// Get the selector for the main xclock freq.
-    pub fn get_xclk_sel(&self) -> Mux2 {
-        HBN.glb().get().xclk_sel().get().into()
+    pub fn get_xclk_sel(&self) -> XclkSel {
+        match HBN.glb().get().xclk_sel().get() {
+            0 => XclkSel::Rc32m,
+            1 => XclkSel::Xtal,
+            _ => unreachable!()
+        }
     }
 
     /// Set the selector for the main xclock freq.
-    /// - 0 - RC 32MHz
-    /// - 1 - Crystal
-    pub fn set_xclk_sel(&mut self, sel: Mux2) {
+    pub fn set_xclk_sel(&mut self, sel: XclkSel) {
         HBN.glb().modify(|reg| reg.xclk_sel().set(sel as _));
     }
 
     /// Get the main xclock frequency.
     pub fn get_xclk_freq(&self) -> u32 {
         match self.get_xclk_sel() {
-            Mux2::Sel0 => 32_000_000,
-            Mux2::Sel1 => self.get_xtal_freq(),
+            XclkSel::Rc32m => 32_000_000,
+            XclkSel::Xtal => self.get_xtal_freq(),
         }
     }
 
@@ -177,15 +206,20 @@ impl Clocks {
 impl Clocks {
 
     /// Get the selector the F32k clock.
-    pub fn get_f32k_sel(&self) -> Mux4 {
-        HBN.glb().get().f32k_sel().get().into()
+    pub fn get_f32k_sel(&self) -> F32kSel {
+        match HBN.glb().get().f32k_sel().get() {
+            0 => F32kSel::Rc32k,
+            1 => F32kSel::Xtal32k,
+            2 | 3 => F32kSel::Dig32k,
+            _ => unreachable!()
+        }
     }
 
     /// Set the selector the F32k clock.
     /// - 0 - RC 32 kHz
     /// - 1 - Crystal 32 kHz
     /// - 2/3 - Crystal divided
-    pub fn set_f32k_sel(&mut self, sel: Mux4) {
+    pub fn set_f32k_sel(&mut self, sel: F32kSel) {
         HBN.glb().modify(|reg| reg.f32k_sel().set(sel as _));
     }
 
@@ -193,263 +227,13 @@ impl Clocks {
     /// but can vary if sourced from crystal clock.
     pub fn get_f32k_freq(&self) -> u32 {
         match self.get_f32k_sel() {
-            Mux4::Sel0 | Mux4::Sel1 => 32_000,
-            Mux4::Sel2 | Mux4::Sel3 => {
+            F32kSel::Rc32k => 32_000,
+            F32kSel::Xtal32k => 32_000,
+            F32kSel::Dig32k => {
                 let div = GLB.dig_clk_cfg0().get().dig_32k_div().get() + 1;
                 self.get_xtal_freq() / div
             }
         }
-    }
-
-}
-
-
-/// Methods for M0 (part of MCU) clocks.
-impl Clocks {
-
-    /// Get the selector for the PLL MCU freq.
-    pub fn get_m0_pll_sel(&self) -> Mux4 {
-        PDS.cpu_core_cfg1().get().pll_sel().get().into()
-    }
-
-    /// Get the frequency output from MCU multiplexer.
-    pub fn get_m0_pll_freq(&self) -> u32 {
-        match self.get_m0_pll_sel() {
-            Mux4::Sel0 => self.get_cpu_pll_freq(400_000_000),
-            Mux4::Sel1 => self.get_audio_pll_freq(PllAudioDiv::Div1),
-            Mux4::Sel2 => self.get_wifi_pll_freq(240_000_000),
-            Mux4::Sel3 => self.get_wifi_pll_freq(320_000_000),
-        }
-    }
-
-    /// Get the selector for the main MCU freq.
-    pub fn get_m0_root_sel(&self) -> Mux2 {
-        HBN.glb().get().mcu_root_sel().get().into()
-    }
-
-    /// Set the selector for the main MCU freq.
-    /// - 0 - Xclock
-    /// - 1 - M0 PLL
-    pub fn set_m0_root_sel(&mut self, sel: Mux2) {
-        HBN.glb().modify(|reg| reg.mcu_root_sel().set(sel as _));
-    }
-
-    /// Get the frequency for M0 root clock.
-    pub fn get_m0_root_freq(&self) -> u32 {
-        match self.get_m0_root_sel() {
-            Mux2::Sel0 => self.get_xclk_freq(),
-            Mux2::Sel1 => self.get_m0_pll_freq(),
-        }
-    }
-
-    /// Get the divider for M0 CPU clock.
-    pub fn get_m0_cpu_div(&self) -> u32 {
-        GLB.sys_cfg0().get().hclk_div().get() + 1
-    }
-
-    /// Set the divider for M0 CPU clock.
-    pub fn set_m0_cpu_div(&mut self, div: u32) {
-        GLB.sys_cfg0().modify(|reg| reg.hclk_div().set(div - 1));
-    }
-
-    /// Get the frequency for M0 CPU clock.
-    pub fn get_m0_cpu_freq(&self) -> u32 {
-        let root_freq = self.get_m0_root_freq();
-        root_freq / self.get_m0_cpu_div()
-    }
-
-    /// Get the divider for M0 secondary clock.
-    pub fn get_m0_secondary_div(&self) -> u32 {
-        GLB.sys_cfg0().get().bclk_div().get() + 1
-    }
-
-    /// Get the divider for M0 secondary clock.
-    pub fn set_m0_secondary_div(&mut self, div: u32) {
-        GLB.sys_cfg0().modify(|reg| reg.bclk_div().set(div - 1));
-    }
-
-    pub fn set_m0_secondary_div_act_pulse(&mut self, act: bool) {
-        GLB.sys_cfg1().modify(|reg| reg.bclk_div_act_pulse().set(act as _));
-    }
-
-    pub fn get_m0_secondary_prot_done(&self) -> bool {
-        GLB.sys_cfg1().get().sts_bclk_prot_done().get() != 0
-    }
-
-    pub fn get_m0_secondary_freq(&self) -> u32 {
-        self.get_m0_cpu_freq() / self.get_m0_secondary_div()
-    }
-    
-    /// Enable or not the M0 core clock gate.
-    pub fn set_m0_enable(&mut self, enable: bool) {
-        PDS.cpu_core_cfg1().modify(|reg| {
-            reg.mcu1_clk_en().set(enable as _);
-        });
-    }
-
-}
-
-
-/// Methods for MM clocks.
-impl Clocks {
-
-    /// Get the selector for MM xclock.
-    pub fn get_mm_xclk_sel(&self) -> Mux2 {
-        MM_GLB.mm_clk_ctrl_cpu().get().xclk_clk_sel().get().into()
-    }
-
-    /// Set the selector for MM xclock.
-    /// - 0 - RC 32 MHz
-    /// - 1 - Crystal
-    pub fn set_mm_xclk_sel(&mut self, sel: Mux2) {
-        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.xclk_clk_sel().set(sel as _));
-    }
-
-    /// Get the frequency for MM xclock.
-    pub fn get_mm_xclk_freq(&self) -> u32 {
-        match self.get_mm_xclk_sel() {
-            Mux2::Sel0 => 32_000_000,
-            Mux2::Sel1 => self.get_xtal_freq(),
-        }
-    }
-
-    /// Get the selector for MM PLL 160 MHz clock.
-    pub fn get_mm_pll160_sel(&self) -> Mux2 {
-        GLB.dig_clk_cfg1().get().mm_muxpll_160m_sel().get().into()
-    }
-
-    /// Get the frequency for MM PLL 160 MHz clock.
-    pub fn get_mm_pll160_freq(&self) -> u32 {
-        match self.get_mm_pll160_sel() {
-            Mux2::Sel0 => self.get_wifi_pll_freq(160_000_000),
-            Mux2::Sel1 => self.get_cpu_pll_freq(160_000_000),
-        }
-    }
-
-    /// Get the selector for MM PLL 240 MHz clock.
-    pub fn get_mm_pll240_sel(&self) -> Mux2 {
-        GLB.dig_clk_cfg1().get().mm_muxpll_240m_sel().get().into()
-    }
-
-    /// Get the frequency for MM PLL 240 MHz clock.
-    pub fn get_mm_pll240_freq(&self) -> u32 {
-        match self.get_mm_pll240_sel() {
-            Mux2::Sel0 => self.get_wifi_pll_freq(240_000_000),
-            Mux2::Sel1 => self.get_audio_pll_freq(PllAudioDiv::Div2),
-        }
-    }
-
-    /// Get the selector for MM PLL 320 MHz clock.
-    pub fn get_mm_pll320_sel(&self) -> Mux2 {
-        GLB.dig_clk_cfg1().get().mm_muxpll_320m_sel().get().into()
-    }
-
-    /// Get the frequency for MM PLL 320 MHz clock.
-    pub fn get_mm_pll320_freq(&self) -> u32 {
-        match self.get_mm_pll320_sel() {
-            Mux2::Sel0 => self.get_wifi_pll_freq(320_000_000),
-            Mux2::Sel1 => self.get_audio_pll_freq(PllAudioDiv::Div1),
-        }
-    }
-
-    /// Get the selector for MM bclock.
-    pub fn get_mm_bclk_sel(&self) -> Mux4 {
-        MM_GLB.mm_clk_ctrl_cpu().get().bclk1x_sel().get().into()
-    }
-
-    /// Get the frequency for MM bclock.
-    pub fn get_mm_bclk_freq(&self) -> u32 {
-        match self.get_mm_bclk_sel() {
-            Mux4::Sel0 | Mux4::Sel1 => self.get_mm_xclk_freq(),
-            Mux4::Sel2 => self.get_mm_pll160_freq(),
-            Mux4::Sel3 => self.get_mm_pll240_freq()
-        }
-    }
-
-}
-
-
-/// Methods for D0 (part of MM) clocks.
-impl Clocks {
-
-    /// Get the selector for D0 PLL clock.
-    pub fn get_d0_pll_sel(&self) -> Mux4 {
-        MM_GLB.mm_clk_ctrl_cpu().get().cpu_clk_sel().get().into()
-    }
-
-    /// Get the frequency for D0 PLL clock.
-    pub fn get_d0_pll_freq(&self) -> u32 {
-        match self.get_d0_pll_sel() {
-            Mux4::Sel0 => self.get_mm_pll240_freq(),
-            Mux4::Sel1 => self.get_mm_pll320_freq(),
-            Mux4::Sel2 | Mux4::Sel3 => self.get_cpu_pll_freq(400_000_000),
-        }
-    }
-
-    /// Get the selector for D0 root clock.
-    pub fn get_d0_root_sel(&self) -> Mux2 {
-        MM_GLB.mm_clk_ctrl_cpu().get().cpu_root_clk_sel().get().into()
-    }
-
-    /// Set the selector for D0 root clock.
-    /// - 0 - MM xclock
-    /// - 1 - D0 PLL
-    pub fn set_d0_root_sel(&mut self, sel: Mux2) {
-        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.cpu_root_clk_sel().set(sel as _));
-    }
-
-    /// Get the frequency for D0 root clock.
-    pub fn get_d0_root_freq(&self) -> u32 {
-        match self.get_d0_root_sel() {
-            Mux2::Sel0 => self.get_mm_xclk_freq(),
-            Mux2::Sel1 => self.get_d0_pll_freq(),
-        }
-    }
-
-    /// Get the divider applied to the frequency for D0 CPU frequency.
-    pub fn get_d0_cpu_div(&self) -> u32 {
-        MM_GLB.mm_clk_cpu().get().cpu_clk_div().get() + 1
-    }
-
-    /// Set the divider applied to the frequency for D0 CPU frequency.
-    pub fn set_d0_cpu_div(&mut self, div: u32) {
-        MM_GLB.mm_clk_cpu().modify(|reg| reg.cpu_clk_div().set(div - 1));
-    }
-
-    /// Get the final D0 CPU frequency.
-    pub fn get_d0_cpu_freq(&self) -> u32 {
-        let root_freq = self.get_d0_root_freq();
-        root_freq / self.get_d0_cpu_div()
-    }
-
-    /// Get the divider applied to the frequency for D0 secondary frequency.
-    pub fn get_d0_secondary_div(&self) -> u32 {
-        MM_GLB.mm_clk_cpu().get().bclk2x_div().get() + 1
-    }
-
-    /// Get the divider applied to the frequency for D0 secondary frequency.
-    pub fn set_d0_secondary_div(&mut self, div: u32) {
-        MM_GLB.mm_clk_cpu().modify(|reg| reg.bclk2x_div().set(div - 1));
-    }
-
-    pub fn set_d0_secondary_div_act_pulse(&mut self, act: bool) {
-        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| reg.bclk2x_div_act_pulse().set(act as _));
-    }
-
-    pub fn get_d0_secondary_prot_done(&self) -> bool {
-        MM_GLB.mm_clk_ctrl_cpu().get().sts_bclk2x_prot_done().get() != 0
-    }
-
-    /// Get the final D0 secondary frequency.
-    pub fn get_d0_secondary_freq(&self) -> u32 {
-        self.get_d0_cpu_freq() / self.get_d0_secondary_div()
-    }
-
-    /// Enable or not the D0 core clock gate.
-    pub fn set_d0_enable(&mut self, enable: bool) {
-        MM_GLB.mm_clk_ctrl_cpu().modify(|reg| {
-            reg.mmcpu0_clk_en().set(enable as _);
-        });
     }
 
 }
@@ -478,7 +262,7 @@ impl Clocks {
 
     /// Get the frequency for LP CPU clock.
     pub fn get_lp_cpu_freq(&self) -> u32 {
-        self.get_m0_secondary_freq() / self.get_lp_cpu_div()
+        self.get_mcu_pbclk_freq() / self.get_lp_cpu_div()
     }
 
     /// Enable or not the LP core clock gate.
@@ -536,19 +320,19 @@ impl Clocks {
     }
 
     /// Get global clock selector for MCU UART controllers (0, 1, 2).
-    pub fn get_mcu_uart_sel(&self) -> UartClockSel {
+    pub fn get_mcu_uart_sel(&self) -> UartSel {
         let mut reg = HBN.glb().get();
         let sel_raw = (reg.uart_clk_sel2().get() << 1) | reg.uart_clk_sel().get();
         match sel_raw {
-            0 => UartClockSel::SecondaryM0,
-            1 => UartClockSel::Pll160,
-            2 => UartClockSel::Xclock,
+            0 => UartSel::McuPbclk,
+            1 => UartSel::Pll160,
+            2 => UartSel::Xclk,
             _ => unreachable!("invalid uart clock selector")
         }
     }
 
     /// Set global clock selector for MCU UART controllers (0, 1, 2).
-    pub fn set_mcu_uart_sel(&mut self, clock_sel: UartClockSel) {
+    pub fn set_mcu_uart_sel(&mut self, clock_sel: UartSel) {
         HBN.glb().modify(|reg| {
             let val = clock_sel as u32;
             reg.uart_clk_sel2().set((val >> 1) & 1);
@@ -569,16 +353,16 @@ impl Clocks {
     /// Set global clock frequency for MCU UART controllers (0, 1, 2).
     pub fn get_mcu_uart_freq(&self) -> u32 {
         let freq = match self.get_mcu_uart_sel() {
-            UartClockSel::SecondaryM0 => self.get_m0_secondary_freq(),
-            UartClockSel::Pll160 => todo!("pll160 is not implemented"),
-            UartClockSel::Xclock => self.get_xclk_freq(),
+            UartSel::McuPbclk => self.get_mcu_pbclk_freq(),
+            UartSel::Pll160 => todo!("pll160 is not implemented"),
+            UartSel::Xclk => self.get_xclk_freq(),
         };
         freq / self.get_mcu_uart_div()
     }
 
     /// Setup the global clock for MCU UART controllers (0, 1, 2).
     #[inline(never)]
-    pub fn setup_mcu_uart(&mut self, clock_sel: UartClockSel, div: u32, enable: bool) {
+    pub fn setup_mcu_uart(&mut self, clock_sel: UartSel, div: u32, enable: bool) {
         self.set_mcu_uart_enable(false);
         self.set_mcu_uart_sel(clock_sel);
         self.set_mcu_uart_div(div);
@@ -876,57 +660,26 @@ impl From<u32> for XtalType {
     }
 }
 
-/// Selector signals for 2-channel multiplexers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u32)]
-pub enum Mux2 {
-    Sel0 = 0,
-    Sel1 = 1,
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XclkSel {
+    Rc32m = 0,
+    Xtal = 1,
 }
 
-/// Selector signals for 4-channel multiplexers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u32)]
-pub enum Mux4 {
-    Sel0 = 0,
-    Sel1 = 1,
-    Sel2 = 2,
-    Sel3 = 3,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum F32kSel {
+    Rc32k = 0,
+    Xtal32k = 1,
+    Dig32k = 2,
 }
-
-impl From<u32> for Mux2 {
-    fn from(n: u32) -> Self {
-        match n {
-            0 => Self::Sel0,
-            1 => Self::Sel1,
-            _ => unreachable!()
-        }
-    }
-}
-
-impl From<u32> for Mux4 {
-    fn from(n: u32) -> Self {
-        match n {
-            0 => Self::Sel0,
-            1 => Self::Sel1,
-            2 => Self::Sel2,
-            3 => Self::Sel3,
-            _ => unreachable!()
-        }
-    }
-}
-
 
 /// Selector for UART clock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u32)]
-pub enum UartClockSel {
-    /// Source from secondary M0 clock.
-    SecondaryM0 = 0,
-    /// From mux PLL 160 MHz.
+pub enum UartSel {
+    McuPbclk = 0,
     Pll160 = 1,
-    /// From xclock.
-    Xclock = 2,
+    Xclk = 2,
 }
 
 
