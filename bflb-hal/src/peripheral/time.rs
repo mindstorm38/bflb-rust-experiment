@@ -84,4 +84,12 @@ impl CoreTimer {
         unsafe { Self::RV32_MTIMECMP.write_volatile(cmp) }
     }
 
+    #[inline]
+    pub fn wait_time(&self, duration: u64) {
+        let start = self.get_time();
+        while self.get_time() - start < duration {
+            core::hint::spin_loop();
+        }
+    }
+
 }

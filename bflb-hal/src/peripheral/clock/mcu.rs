@@ -113,6 +113,40 @@ impl Clocks {
 
 }
 
+impl Clocks {
+
+    /// Get the divider for LP CPU clock.
+    pub fn get_lp_cpu_div(&self) -> u32 {
+        PDS.cpu_core_cfg7().get().pico_div().get()
+    }
+
+    /// Set the divider for LP CPU clock.
+    pub fn set_lp_cpu_div(&mut self, div: u32) {
+        PDS.cpu_core_cfg7().modify(|reg| reg.pico_div().set(div));
+    }
+
+    pub fn set_lp_cpu_div_act_pulse(&mut self, act: bool) {
+        GLB.sys_cfg1().modify(|reg| reg.pico_clk_div_act_pulse().set(act as _));
+    }
+
+    pub fn get_lp_cpu_prot_done(&self) -> bool {
+        GLB.sys_cfg1().get().sts_pico_clk_prot_done().get() != 0
+    }
+
+    /// Get the frequency for LP CPU clock.
+    pub fn get_lp_cpu_freq(&self) -> u32 {
+        self.get_mcu_pbclk_freq() / self.get_lp_cpu_div()
+    }
+
+    /// Enable or not the LP core clock gate.
+    pub fn set_lp_enable(&mut self, enable: bool) {
+        PDS.cpu_core_cfg0().modify(|reg| {
+            reg.pico_clk_en().set(enable as _);
+        });
+    }
+
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum McuPllSel {

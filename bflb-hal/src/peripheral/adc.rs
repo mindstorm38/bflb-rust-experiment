@@ -13,7 +13,17 @@ impl AdcAccess {
 
     peripheral!(simple);
 
-    /// Configure ADC for scanning mode with the given channel array.
+    /// Create a new single channel converter. This can be used later for polling
+    /// the channel.
+    pub fn into_single<C>(self, config: &AdcConfig, mut channel: C) -> AdcSingle
+    where
+        C: AdcChannelUntyped
+    {
+        todo!()
+    }
+
+    /// Create a new scan handle for an array of channels. This can be used later
+    /// for polling these channels analogic values.
     pub fn into_scan<A>(self, config: &AdcConfig, mut array: A) -> AdcScan<A>
     where
         A: AdcChannelArray,
@@ -140,11 +150,7 @@ pub struct AdcChannel<P: AdcChannelRef, N: AdcChannelRef> {
     raw_value: u32,
 }
 
-impl<P, N> AdcChannel<P, N>
-where
-    P: AdcChannelRef,
-    N: AdcChannelRef,
-{
+impl<P: AdcChannelRef, N: AdcChannelRef> AdcChannel<P, N> {
 
     /// Create a new channel with the given positive and negative reference voltage.
     pub fn new(pos: P, neg: N) -> Self {
@@ -163,15 +169,14 @@ where
 
 }
 
-impl<P> AdcChannel<P, Ground>
-where 
-    P: AdcChannelRef,
-{
+impl<P: AdcChannelRef> AdcChannel<P, Ground> {
+    
     /// Create a new channel with the given positive reference voltage and ground for 
     /// negative reference.
     pub fn with_ground(pos: P) -> Self {
         Self::new(pos, Ground)
     }
+
 }
 
 
@@ -201,18 +206,15 @@ macro_rules! impl_adc_channel_ref_pin {
     };
 }
 
-impl_adc_channel_ref_pin!(0:  17);
-impl_adc_channel_ref_pin!(1:  5);
-impl_adc_channel_ref_pin!(2:  4);
-impl_adc_channel_ref_pin!(3:  11);
-impl_adc_channel_ref_pin!(4:  6);
-impl_adc_channel_ref_pin!(5:  40);
-impl_adc_channel_ref_pin!(6:  12);
-impl_adc_channel_ref_pin!(7:  13);
-impl_adc_channel_ref_pin!(8:  16);
-impl_adc_channel_ref_pin!(9:  18);
-impl_adc_channel_ref_pin!(10: 19);
-impl_adc_channel_ref_pin!(11: 34);
+/// Implementation of [`AdcChannelRef`] on [`Pin`] for BL808.
+#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+mod impl_adc_channel_ref_pin {
+    impl_adc_channel_ref_pin!(0:  17);
+    impl_adc_channel_ref_pin!(3:  11);
+    impl_adc_channel_ref_pin!(8:  16);
+    impl_adc_channel_ref_pin!(9:  18);
+    impl_adc_channel_ref_pin!(10: 19);
+}
 
 /// Internal macro to implement [`AdcChannelRef`] a newly defined 
 /// ZST structures.
@@ -330,7 +332,7 @@ impl ChannelArrayBuilder {
 
     }
 
-    pub fn init(self) {
+    fn init(self) {
 
         AON.gpadc_reg_scn_pos1().set_with(|reg| {
             reg.0 = self.scan_pos as u32

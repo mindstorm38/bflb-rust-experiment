@@ -212,6 +212,11 @@ impl<const NUM: u8> Pin<NUM, Output> {
     /// Set this output pin state to high.
     #[inline]
     pub fn set_high(&mut self) {
+        
+        self.get_cfg().modify(|reg| {
+            reg.gpio_0_ie().clear();
+            reg.gpio_0_oe().fill();
+        });
 
         let reg = NUM / 32;
         let bit = NUM % 32;
@@ -227,16 +232,41 @@ impl<const NUM: u8> Pin<NUM, Output> {
     /// Set this output pin state to low.
     #[inline]
     pub fn set_low(&mut self) {
+        
+        self.get_cfg().modify(|reg| {
+            reg.gpio_0_ie().clear();
+            reg.gpio_0_oe().fill();
+        });
 
         let reg = NUM / 32;
         let bit = NUM % 32;
-
+        
         let mut cfg = GLB.gpio_cfg140();
         cfg.0 = unsafe { cfg.0.add(reg as usize) };
         cfg.modify(|reg| {
             reg.0 |= 1 << bit;
         });
 
+    }
+
+    /// Set this output pin state to floating.
+    #[inline]
+    pub fn set_open(&mut self) {
+        
+        self.get_cfg().modify(|reg| {
+            reg.gpio_0_ie().fill();
+            reg.gpio_0_oe().clear();
+        });
+
+    }
+
+    /// Set the boolean value of this output pin.
+    pub fn set_value(&mut self, val: bool) {
+        if val {
+            self.set_high();
+        } else {
+            self.set_low();
+        }
     }
 
 }

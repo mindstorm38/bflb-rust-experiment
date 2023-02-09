@@ -5,10 +5,10 @@ use bflb_hal::clock::{Clocks, XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel}
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
 use bflb_hal::time::CoreTimer;
-use bflb_hal::gpio::PinAccess;
+use bflb_hal::gpio::{PinAccess, PinDrive, PinPull};
 use bflb_hal::dma::DmaAccess;
 use bflb_hal::irq::{Interrupt, MACHINE_TIMER};
-use bflb_hal::adc::{AdcAccess, AdcChannel, AdcConfig};
+// use bflb_hal::adc::{AdcAccess, AdcChannel, AdcConfig};
 
 use bflb_rt::InterruptExt;
 
@@ -82,18 +82,18 @@ fn main() {
     ) = UartAccess::<0>::take()
         .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
-    let adc_ch0 = AdcChannel::with_ground(
-        PinAccess::<17>::take().into_alternate());
-    let adc_ch1 = AdcChannel::with_ground(
-        PinAccess::<5>::take().into_alternate());
+    // let adc_ch0 = AdcChannel::with_ground(
+    //     PinAccess::<17>::take().into_alternate());
+    // let adc_ch1 = AdcChannel::with_ground(
+    //     PinAccess::<5>::take().into_alternate());
 
-    let adc_channels = (adc_ch0, adc_ch1);
+    // let adc_channels = (adc_ch0, adc_ch1);
 
-    let mut adc = AdcAccess::take()
-        .into_scan(&AdcConfig::default(), adc_channels);
+    // let mut adc = AdcAccess::take()
+    //     .into_scan(&AdcConfig::default(), adc_channels);
 
-    adc.poll();
-    let adc_channels = adc.finish();
+    // adc.poll();
+    // let adc_channels = adc.finish();
 
     // DMA
 
@@ -103,7 +103,7 @@ fn main() {
     
     // ADC TEST
     
-    let _ = writeln!(uart_tx, "ADC values: {}, {}", adc_channels.0.raw_value(), adc_channels.1.raw_value());
+    // let _ = writeln!(uart_tx, "ADC values: {}, {}", adc_channels.0.raw_value(), adc_channels.1.raw_value());
 
     // INTS
 
@@ -111,30 +111,78 @@ fn main() {
     timer.init(&mut clocks);
     timer.set_time(0);
     timer.set_time_cmp(1_000_000);
-    timer.free();
+    // timer.free();
 
-    let mut mtimer_int = Interrupt::<MACHINE_TIMER>::take();
-    mtimer_int.set_handler(mtimer_handler);
-    mtimer_int.set_enabled(true);
-    mtimer_int.set_level(255);
+    // let mut mtimer_int = Interrupt::<MACHINE_TIMER>::take();
+    // mtimer_int.set_handler(mtimer_handler);
+    // mtimer_int.set_enabled(true);
+    // mtimer_int.set_level(255);
+
+    // GPIO
+
+    let mut d0 = PinAccess::<33>::take().into_output();
+    let mut d1 = PinAccess::<32>::take().into_output();
+    let mut d2 = PinAccess::<21>::take().into_output();
+    let mut d3 = PinAccess::<20>::take().into_output();
+    let mut sel0 = PinAccess::<23>::take().into_output();
+    let mut sel1 = PinAccess::<22>::take().into_output();
+
+    d0.set_low();
+    d1.set_low();
+    d2.set_low();
+    d3.set_low();
+
+    sel0.set_high();
+    sel1.set_high();
+
+    let mut write_digit = |digit: u32| {
+        if digit & 0b0001 != 0 { d0.set_open() } else { d0.set_low() }
+        if digit & 0b0010 != 0 { d1.set_open() } else { d1.set_low() }
+        if digit & 0b0100 != 0 { d2.set_open() } else { d2.set_low() }
+        if digit & 0b1000 != 0 { d3.set_open() } else { d3.set_low() }
+    };
+
+    let mut write_num = |num: u32| {
+
+        const DELAY: u64 = 6_000;
+
+        write_digit(num % 10);
+        sel0.set_low();
+        timer.wait_time(DELAY);
+        sel0.set_high();
+        timer.wait_time(DELAY);
+
+        write_digit((num / 10) % 10);
+        sel1.set_low();
+        timer.wait_time(DELAY);
+        sel1.set_high();
+        timer.wait_time(DELAY);
+
+    };
 
     // LOOP
+
+    let mut counter = 0;
 
     loop {
 
         while let Some(b) = uart_rx.read_byte() {
             uart_tx.write_byte(b);
         }
+
+        write_num((timer.get_time() / 100_000) as u32);
         
-        if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
-            mtimer_int.without(|| {
+        // if INTERRUPTED.compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+        //     mtimer_int.without(|| {
 
-                let timer = CoreTimer::take();
-                let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", timer.get_time());
-                timer.free();
+        //         counter += 1;
 
-            });
-        }
+        //         let timer = CoreTimer::take();
+        //         let _ = writeln!(uart_tx, "Interrupted! RTC time: {}", timer.get_time());
+        //         timer.free();
+
+        //     });
+        // }
 
     }
 
@@ -146,7 +194,7 @@ static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 fn mtimer_handler(_code: usize) {
     let mut timer = CoreTimer::take();
     let time_cmp = timer.get_time_cmp();
-    timer.set_time_cmp(time_cmp + 1_000_000);
+    timer.set_time_cmp(time_cmp + 100_000);
     INTERRUPTED.store(true, Ordering::Relaxed);
     timer.free();
 }
