@@ -13,6 +13,8 @@ embedded_util::mmio! {
         [0x084] rw dphy_config_1: CsiDphyConfig1,
         [0x088] rw dphy_config_2: CsiDphyConfig2,
         [0x08C] rw dphy_config_3: CsiDphyConfig3,
+        [0x090] rw dphy_config_4: CsiDphyConfig4,
+        [0x094] rw dphy_config_5: CsiDphyConfig5,
         [0x0FC] rw dummy_reg: CsiDummyReg,
     }
 }
@@ -121,6 +123,18 @@ embedded_util::reg! {
     pub struct CsiDphyConfig3: u32 {
         [00..16] csi_ana_1,
         [16..32] csi_ana_0,
+    }
+}
+
+embedded_util::reg! {
+    pub struct CsiDphyConfig4: u32 {
+
+    }
+}
+
+embedded_util::reg! {
+    pub struct CsiDphyConfig5: u32 {
+        
     }
 }
 

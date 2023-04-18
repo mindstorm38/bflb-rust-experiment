@@ -1,8 +1,8 @@
 //! Camera  management registers.
 //! 
 //! This module is sourced from SDK source code:
-//! - cam_front_reg.h
-//! - cam_reg.h
+//! - https://github.com/bouffalolab/bouffalo_sdk/blob/master/drivers/lhal/include/hardware/cam_reg.h
+//! - https://github.com/bouffalolab/bouffalo_sdk/blob/master/drivers/lhal/include/hardware/cam_front_reg.h
 
 
 embedded_util::mmio! {

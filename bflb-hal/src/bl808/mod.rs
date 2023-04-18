@@ -31,8 +31,6 @@ pub mod hbn;
 pub mod cci;
 pub mod sf_ctrl;
 pub mod aon;
-pub mod vdo;
-pub mod csi;
 pub mod gpip;
 pub use mcu_misc::McuMisc;
 pub use mm_misc::MmMisc;
@@ -43,8 +41,6 @@ pub use hbn::Hbn;
 pub use cci::Cci;
 pub use sf_ctrl::SfCtrl;
 pub use aon::Aon;
-pub use vdo::Vdo;
-pub use csi::Csi;
 pub use gpip::Gpip;
 
 // Manually implemented.
@@ -56,6 +52,8 @@ pub mod cam;
 pub use cam::{Cam, CamFront};
 pub mod mjpeg;
 pub use mjpeg::Mjpeg;
+pub mod csi;
+pub use csi::Csi;
 
 // Externally implemented.
 use riscv_hal::clic::Clic;
@@ -110,7 +108,6 @@ pub const CSI: Csi              = Csi(addr::CSI_BASE as _);
 
 // VIDEO
 pub const MJPEG: Mjpeg          = Mjpeg(addr::MJPEG_DEC_BASE as _);
-pub const VDO: Vdo              = Vdo(addr::VIDEO_BASE as _); 
 
 /// Core-Local Interrupt Controller registers.
 /// 
