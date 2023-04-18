@@ -148,8 +148,8 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
             reg.int_tc_mask().fill();
         });
 
-        channel_regs.src_addr().set(src.ptr() as _);
-        channel_regs.dst_addr().set(dst.ptr() as _);
+        channel_regs.src_addr().set(unsafe { src.ptr() } as _);
+        channel_regs.dst_addr().set(unsafe { dst.ptr() } as _);
 
         // Clear interrupt related to this channel.
         port_regs.int_tc_clear().set_with(|reg| reg.set(CHANNEL, true));
@@ -280,18 +280,29 @@ pub trait DmaEndpoint {
 }
 
 /// Specialized trait for source-capable DMA endpoints.
-pub trait DmaSrcEndpoint: DmaEndpoint {
+/// 
+/// SAFETY: This trait is unsafe because **you must** ensure that the 
+/// returned pointer lead to valid data regarding the configuration
+/// returned by [`DmaEndpoint::configure`]. The pointed data is allowed
+/// to be const referenced while the endpoint is configured.
+pub unsafe trait DmaSrcEndpoint: DmaEndpoint {
 
     /// Get the pointer to the constant data of this endpoint.
-    fn ptr(&self) -> *const ();
+    unsafe fn ptr(&self) -> *const ();
 
 }
 
 /// Specialized trait for destination-capable DMA endpoints.
-pub trait DmaDstEndpoint: DmaEndpoint {
+/// 
+/// SAFETY: This trait is unsafe because **you must** ensure that the 
+/// returned pointer lead to valid data regarding the configuration
+/// returned by [`DmaEndpoint::configure`]. The pointed data should
+/// not be shared while the endpoint is configured to avoid concurrent
+/// accesses and undefined behaviors.
+pub unsafe trait DmaDstEndpoint: DmaEndpoint {
 
     /// Get the pointer to the mutable data of this endpoint.
-    fn ptr(&self) -> *mut ();
+    unsafe fn ptr(&self) -> *mut ();
 
 }
 
@@ -321,8 +332,8 @@ impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for &'static [T; LEN] {
 
 }
 
-impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [T; LEN] {
-    fn ptr(&self) -> *const () {
+unsafe impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [T; LEN] {
+    unsafe fn ptr(&self) -> *const () {
         self.as_ptr() as _
     }
 }
@@ -341,8 +352,8 @@ impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
 
 }
 
-impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
-    fn ptr(&self) -> *const () {
+unsafe impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
+    unsafe fn ptr(&self) -> *const () {
         self.as_ptr() as _
     }
 }
@@ -366,8 +377,8 @@ impl DmaEndpoint for &'static str {
 
 }
 
-impl DmaSrcEndpoint for &'static str {
-    fn ptr(&self) -> *const () {
+unsafe impl DmaSrcEndpoint for &'static str {
+    unsafe fn ptr(&self) -> *const () {
         self.as_ptr() as _
     }
 }

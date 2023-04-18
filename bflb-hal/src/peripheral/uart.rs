@@ -244,8 +244,8 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartTx<PORT, 
 
 }
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaDstEndpoint for UartTx<PORT, PIN, O> {
-    fn ptr(&self) -> *mut () {
+unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaDstEndpoint for UartTx<PORT, PIN, O> {
+    unsafe fn ptr(&self) -> *mut () {
         get_registers::<PORT>().fifo_wdata().0 as _
     }
 }
@@ -277,8 +277,8 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, 
 
 }
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaSrcEndpoint for UartRx<PORT, PIN, O> {
-    fn ptr(&self) -> *const () {
+unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaSrcEndpoint for UartRx<PORT, PIN, O> {
+    unsafe fn ptr(&self) -> *const () {
         get_registers::<PORT>().fifo_rdata().0 as _
     }
 }

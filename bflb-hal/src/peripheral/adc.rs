@@ -1,7 +1,6 @@
 //! Analog to Digital converter peripheral.
 
 use crate::bl808::{AON, GPIP};
-use crate::gpio::{Pin, Alternate, PinFunction, PinDrive, PinConfig};
 
 use embedded_util::peripheral;
 
@@ -13,14 +12,14 @@ impl AdcAccess {
 
     peripheral!(simple);
 
-    /// Create a new single channel converter. This can be used later for polling
-    /// the channel.
-    pub fn into_single<C>(self, config: &AdcConfig, mut channel: C) -> AdcSingle
-    where
-        C: AdcChannelUntyped
-    {
-        todo!()
-    }
+    // /// Create a new single channel converter. This can be used later for polling
+    // /// the channel.
+    // pub fn into_single<C>(self, config: &AdcConfig, mut channel: C) -> AdcSingle
+    // where
+    //     C: AdcChannelUntyped
+    // {
+    //     todo!()
+    // }
 
     /// Create a new scan handle for an array of channels. This can be used later
     /// for polling these channels analogic values.
@@ -209,11 +208,16 @@ macro_rules! impl_adc_channel_ref_pin {
 /// Implementation of [`AdcChannelRef`] on [`Pin`] for BL808.
 #[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
 mod impl_adc_channel_ref_pin {
+
+    use crate::gpio::{Pin, Alternate, PinFunction, PinDrive, PinConfig};
+    use super::AdcChannelRef;
+
     impl_adc_channel_ref_pin!(0:  17);
     impl_adc_channel_ref_pin!(3:  11);
     impl_adc_channel_ref_pin!(8:  16);
     impl_adc_channel_ref_pin!(9:  18);
     impl_adc_channel_ref_pin!(10: 19);
+
 }
 
 /// Internal macro to implement [`AdcChannelRef`] a newly defined 

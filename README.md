@@ -18,4 +18,4 @@ official [MCU SDK].
 ## BouffaloLab Runtime
 TODO
 
-[MCU SDK]: https://github.com/bouffalolab/bl_mcu_sdk/
+[MCU SDK]: https://github.com/bouffalolab/bouffalo_sdk
