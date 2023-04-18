@@ -5,15 +5,10 @@ use bflb_hal::clock::{Clocks, XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel}
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
 use bflb_hal::time::CoreTimer;
-use bflb_hal::gpio::{PinAccess, PinDrive, PinPull};
+use bflb_hal::gpio::PinAccess;
 use bflb_hal::dma::DmaAccess;
-use bflb_hal::irq::{Interrupt, MACHINE_TIMER};
-// use bflb_hal::adc::{AdcAccess, AdcChannel, AdcConfig};
 
-use bflb_rt::InterruptExt;
-
-use core::sync::atomic::{AtomicBool, Ordering};
-use core::fmt::Write;
+use bflb_rt::task::Executor;
 
 
 #[link_section = ".data"] // Loaded in RAM
@@ -162,7 +157,7 @@ fn main() {
 
     // LOOP
 
-    let mut counter = 0;
+    // let mut counter = 0;
 
     loop {
 
@@ -189,12 +184,12 @@ fn main() {
 }
 
 
-static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+// static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
-fn mtimer_handler(_code: usize) {
-    let mut timer = CoreTimer::take();
-    let time_cmp = timer.get_time_cmp();
-    timer.set_time_cmp(time_cmp + 100_000);
-    INTERRUPTED.store(true, Ordering::Relaxed);
-    timer.free();
-}
+// fn mtimer_handler(_code: usize) {
+//     let mut timer = CoreTimer::take();
+//     let time_cmp = timer.get_time_cmp();
+//     timer.set_time_cmp(time_cmp + 100_000);
+//     INTERRUPTED.store(true, Ordering::Relaxed);
+//     timer.free();
+// }

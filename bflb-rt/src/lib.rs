@@ -222,7 +222,7 @@ pub enum InterruptTrigger {
 #[panic_handler]
 #[cfg(feature = "panic_abort")]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    // TODO: Instead of spin looping indefinitly, it might be possible to 
+    // TODO: Instead of spin looping indefinitely, it might be possible to 
     // close clock gates and stop the core.
     loop { core::hint::spin_loop() }
 }
