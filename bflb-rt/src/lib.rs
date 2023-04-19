@@ -23,11 +23,10 @@ mod bl808_d0;
 use crate::bl808_d0 as chip;
 
 
+/// Module providing externally linked symbols, defined either by 
+/// assembly or link script.
 pub mod sym {
 
-    //! Module providing externally linked symbols, defined either 
-    //! by assembly or link script.
-    
     // Here we define all linker script symbols.
     // Note that we can define all symbols as "u32", because 
     // the linker script forces alignments to 4 bytes.
@@ -79,9 +78,10 @@ pub mod sym {
 // Re-export HAL.
 pub use bflb_hal as hal;
 
-// These modules are intentionnaly internal.
+// These modules are intentionally internal.
 mod clic;
 mod trap;
+mod task;
 
 /// Re-exports
 pub use trap::TrapHandler;
