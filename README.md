@@ -1,21 +1,43 @@
 # BouffaloLab Rust Experiment
-This repository is a Cargo workspace containing three lib crates and an example
-binary crate.
-
-## Embedded HAL utilities and runtime (PoC)
-The crate `embedded-util` provides an alternative way of abstracting the embedded 
-development in Rust. It provides utilities to generate peripherals and exclusive
-access.
-
-This crate completes the official `embedded-hal` crate by providing a new way of
-defining Peripheral Access Crate, MMIO structures and bitfield registers.
+This repository is a Cargo workspace containing three lib crates and 
+an example binary crate.
 
 ## BouffaloLab HAL
-This is an HAL implementation for BouffaloLab chips. It currently only support 
-BL808 as it's my main goal for now. It can be considered as a Rust port of the 
-official [MCU SDK].
+This is an HAL implementation for BouffaloLab chips. It currently only 
+support BL808 as it's my main goal for now. It can be considered as a 
+Rust port of the official [MCU SDK].
 
 ## BouffaloLab Runtime
-TODO
+This crate provides small runtime for building and linking binaries 
+for targeting BouffaloLab chips. It also provides a bootstrap assembly
+and interrupt handling.
+
+## Embedded HAL utilities and runtime (PoC)
+The crate `embedded-util` provides an alternative way of abstracting 
+the embedded development in Rust. It provides utilities to generate 
+peripherals and exclusive access to them. It aims to complete the 
+official `embedded-hal` crate by providing a new way of defining 
+Peripheral Access Crate (PAC), MMIO structures and bitfield registers.
+
+## Documents
+- [MCU SDK]
+- [Sipeed SDK]
+- [BL808 RM]
+- [BL808 DS]
+- [QSPI Flash W25Q128JW]
+- [T-head C906]
+- [BLDevCube Tutorial]
+- [MIPI D-PHY]
+- [MIPI CSI-2]
+- [Linker Script]
 
 [MCU SDK]: https://github.com/bouffalolab/bouffalo_sdk
+[Sipeed SDK]: https://github.com/sipeed/M1s_BL808_SDK
+[BL808 RM]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_en_1.3.pdf
+[BL808 DS]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf
+[QSPI Flash W25Q128JW]: https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW
+[T-head C906]: https://github.com/T-head-Semi/openc906
+[BLDevCube Tutorial]: https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html
+[MIPI D-PHY]: http://www.jmrcubed.com/vr/ref_tech/mipi_d_phy_specification_v01-00-00.pdf
+[MIPI CSI-2]: https://caxapa.ru/thumbs/799244/MIPI_Alliance_Specification_for_Camera_S.pdf
+[Linker Script]: https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html

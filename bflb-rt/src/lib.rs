@@ -1,8 +1,11 @@
-//! Embedded Runtime
+//! Embedded runtime for BouffaloLab chips.
 
 #![no_std]
 #![no_main]
 #![crate_type = "rlib"]
+
+// Our crate provides a global allocator usable by alloc.
+extern crate alloc;
 
 
 #[cfg(not(rt_chip_ok))]
@@ -89,6 +92,12 @@ pub use trap::TrapHandler;
 // Internal use.
 use hal::irq::{Interrupt, IRQ_COUNT};
 use trap::TrapHandlers;
+use static_alloc::Bump;
+
+
+/// The global bump allocator.
+#[global_allocator]
+static ALLOCATOR: Bump<[u8; 4096]> = Bump::uninit();
 
 
 /// All exception (synchronous) handlers.
