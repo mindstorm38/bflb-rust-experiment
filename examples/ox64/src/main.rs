@@ -8,7 +8,7 @@ use bflb_hal::time::CoreTimer;
 use bflb_hal::gpio::PinAccess;
 use bflb_hal::dma::DmaAccess;
 
-use bflb_rt::task::Executor;
+use bflb_rt::spawn;
 
 
 #[link_section = ".data"] // Loaded in RAM

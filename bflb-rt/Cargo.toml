@@ -11,7 +11,8 @@ bflb-hal = { path = "../bflb-hal", version = "0.1" }
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
 embedded-util = { path = "../embedded-util", version = "0.1" }
 
-static-alloc = "0.2.4"
+slab = { version = "0.4", default-features = false }
+static-alloc = "0.2"
 
 [features]
 default = []

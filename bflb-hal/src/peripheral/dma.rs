@@ -2,42 +2,13 @@
 //! 
 //! Interesting post: https://blog.japaric.io/safe-dma/
 
-use core::sync::atomic::AtomicBool;
-// use alloc::boxed::Box;
-
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
-
-use embedded_util::peripheral;
 
 
 /// Represent an exclusive access to a DMA channel on a particular port.
-pub struct DmaAccess<const PORT: u8, const CHANNEL: u8>(());
+pub struct DmaAccess<const PORT: u8, const CHANNEL: u8>(pub(crate) ());
 
 impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
-
-    peripheral!();
-
-    #[inline]
-    pub unsafe fn new() -> Self {
-        Self(())
-    }
-
-    pub unsafe fn taken() -> &'static AtomicBool {
-
-        debug_assert!(PORT < 3, "invalid dma port {PORT}");
-        debug_assert!(CHANNEL < (if PORT == 1 { 4 } else { 8 }), "invalid dma channel {CHANNEL} for port {PORT}");
-
-        const TAKEN_DEFAULT: AtomicBool = AtomicBool::new(false);
-        static TAKEN_ARR: [AtomicBool; 20] = [TAKEN_DEFAULT; 20];
-
-        match PORT {
-            0 => &TAKEN_ARR[0  + CHANNEL as usize],
-            2 => &TAKEN_ARR[8  + CHANNEL as usize],
-            1 => &TAKEN_ARR[16 + CHANNEL as usize],
-            _ => unreachable!()
-        }
-
-    }
 
     /// Execute a new DMA transfer from the given source endpoint to the given
     /// destination endpoint. Endpoints are generic, see implementors of 

@@ -19,7 +19,7 @@
 //! - https://github.com/bouffalolab/bl_mcu_sdk/blob/master/drivers/soc/bl808/std/src/bl808_clock.c
 //! - Clock diagram in the Datasheet
 
-use embedded_util::{peripheral, PtrRw};
+use embedded_util::PtrRw;
 
 use crate::bl808::{self, CpuRtc, HBN, AON, GLB, CCI};
 
@@ -45,12 +45,10 @@ pub use uart::*;
 ///   `is_<name>_enable(&self) -> bool`.
 /// - Divider: `set_<name>_div(&mut self, div: u32)`,
 ///   `get_<name>_div(&self) -> u32`.
-pub struct Clocks(());
+pub struct Clocks(pub(crate) ());
 
 /// High-level mtimer methods.
 impl Clocks {
-
-    peripheral!(simple);
 
     /// Get the machine timer RTC register for the current core.
     pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {

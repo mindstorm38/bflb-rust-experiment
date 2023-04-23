@@ -1,16 +1,12 @@
 //! CPU interactions for BL808.
 
-use embedded_util::peripheral;
-
 use crate::bl808::{GLB, MM_GLB};
 
 
 /// A peripheral for controlling CPU.
-pub struct CpuControl(());
+pub struct CpuControl(pub(crate) ());
 
 impl CpuControl {
-
-    peripheral!(simple);
 
     pub fn reset_m0(&mut self) {
         GLB.swrst_cfg2().modify(|reg| reg.ctrl_cpu_reset().fill());

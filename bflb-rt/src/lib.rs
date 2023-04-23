@@ -31,8 +31,8 @@ use crate::bl808_d0 as chip;
 pub mod sym {
 
     // Here we define all linker script symbols.
-    // Note that we can define all symbols as "u32", because 
-    // the linker script forces alignments to 4 bytes.
+    // Note that we can define all symbols as "u32", because the linker 
+    // script forces alignments to 4 bytes.
     extern "C" {
 
         /// First word of the text section.
@@ -69,8 +69,8 @@ pub mod sym {
         /// [`register_exception_handler`] and 
         /// [`register_interrupt_handler`].
         /// 
-        /// ***It should only be called by hardware on interrupt, only use
-        /// this as the symbol.***
+        /// ***It should only be called by hardware on interrupt, only 
+        /// use this as the symbol.***
         pub fn _mtrap_generic_handler() -> !;
 
     }
@@ -88,11 +88,16 @@ mod task;
 
 /// Re-exports
 pub use trap::TrapHandler;
+pub use task::{spawn, wait};
 
 // Internal use.
-use hal::irq::{Interrupt, IRQ_COUNT};
+use hal::irq::{AsyncInterrupts, Interrupts, IRQ_COUNT};
 use trap::TrapHandlers;
 use static_alloc::Bump;
+
+use core::task::{Context, Poll};
+use core::future::Future;
+use core::pin::Pin;
 
 
 /// The global bump allocator.
@@ -107,8 +112,8 @@ static INTERRUPT_HANDLERS: TrapHandlers<IRQ_COUNT> = TrapHandlers::new();
 
 
 /// Use this macro a single time to define your application.
-/// This macro is responsible of defining many symbols required
-/// for startup.
+/// This macro is responsible of defining many symbols required for 
+/// startup.
 /// 
 /// Example:
 /// ```
@@ -156,9 +161,9 @@ extern "C" fn _rust_init() {
 }
 
 
-/// It is called on any trap after the context has been saved in
-/// the most efficient way (when possible, only dirty registers
-/// should be saved).
+/// It is called on any trap after the context has been saved in the 
+/// most efficient way (when possible, only dirty registers should be 
+/// saved).
 #[no_mangle]
 extern "C" fn _rust_mtrap_handler(cause: usize) {
     
@@ -182,33 +187,74 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
 }
 
 
-/// A trait that extends the HAL `Interrupt` structure and add methods
-/// for setting and getting the trap handler for this particular 
-/// interrupt.
-pub trait InterruptExt {
+pub fn async_interrupts(inner: Interrupts) -> impl AsyncInterrupts {
+    AsyncInterruptsImpl {
+        inner,
+    }
+}
 
-    /// Get the current trap handler for this interrupt.
-    fn get_handler(&self) -> TrapHandler;
 
-    /// Set the trap handler for this interrupt.
-    /// 
-    /// The given function will be called when an interrupt request is
-    /// processed while the interrupt is enabled and has a sufficient 
-    /// level compared to the global threshold.
-    fn set_handler(&mut self, handler: TrapHandler);
+struct AsyncInterruptsImpl {
+    inner: Interrupts,
+}
+
+impl AsyncInterrupts for AsyncInterruptsImpl {
+
+    type Single = AsyncInterrupt;
+
+    fn wait(&self, num: usize) -> Self::Single {
+        todo!()
+    }
+
+    fn wait_with(&self, num: usize, f: impl FnMut()) -> Self::Single {
+        todo!()
+    }
 
 }
 
-impl<const NUM: usize> InterruptExt for Interrupt<NUM> {
 
-    fn get_handler(&self) -> TrapHandler {
-        INTERRUPT_HANDLERS.get(NUM, default_trap_handler)
-    }
+struct AsyncInterrupt {
 
-    fn set_handler(&mut self, handler: TrapHandler) {
-        INTERRUPT_HANDLERS.set(NUM, handler);
-    }
 }
+
+impl Future for AsyncInterrupt {
+
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        todo!()
+    }
+
+}
+
+
+// /// A trait that extends the HAL `Interrupt` structure and add methods
+// /// for setting and getting the trap handler for this particular 
+// /// interrupt.
+// pub trait InterruptExt {
+
+//     /// Get the current trap handler for this interrupt.
+//     fn get_handler(&self) -> TrapHandler;
+
+//     /// Set the trap handler for this interrupt.
+//     /// 
+//     /// The given function will be called when an interrupt request is
+//     /// processed while the interrupt is enabled and has a sufficient 
+//     /// level compared to the global threshold.
+//     fn set_handler(&mut self, handler: TrapHandler);
+
+// }
+
+// impl<const NUM: usize> InterruptExt for Interrupt<NUM> {
+
+//     fn get_handler(&self) -> TrapHandler {
+//         INTERRUPT_HANDLERS.get(NUM, default_trap_handler)
+//     }
+
+//     fn set_handler(&mut self, handler: TrapHandler) {
+//         INTERRUPT_HANDLERS.set(NUM, handler);
+//     }
+// }
 
 
 /// The default trap handler, do nothing.
@@ -227,11 +273,12 @@ pub enum InterruptTrigger {
 }
 
 
-/// This implementation of the panic handler will simply abort without any message.
+/// This implementation of the panic handler will simply abort without 
+/// any message.
 #[panic_handler]
 #[cfg(feature = "panic_abort")]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    // TODO: Instead of spin looping indefinitely, it might be possible to 
-    // close clock gates and stop the core.
+    // TODO: Instead of spin looping indefinitely, it might be possible 
+    // to close clock gates and stop the core.
     loop { core::hint::spin_loop() }
 }

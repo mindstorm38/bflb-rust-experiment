@@ -2,7 +2,7 @@
 
 use core::marker::PhantomData;
 
-use embedded_util::{peripheral, PtrRw};
+use embedded_util::PtrRw;
 
 use crate::bl808::GLB;
 use crate::bl808::glb::GlbGpioCfg0;
@@ -11,11 +11,9 @@ use crate::bl808::glb::GlbGpioCfg0;
 /// An exclusive access to a GPIO pin on a particular port.
 /// 
 /// Available ports: 0 to 45 (included).
-pub struct PinAccess<const NUM: u8>(());
+pub struct PinAccess<const NUM: u8>(pub(crate) ());
 
 impl<const NUM: u8> PinAccess<NUM> {
-
-    peripheral!(array: NUM[0..46]);
 
     fn new_pin<M: Mode>() -> Pin<NUM, M> {
         Pin { _mode: PhantomData }

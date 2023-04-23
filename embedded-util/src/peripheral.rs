@@ -12,6 +12,8 @@
 /// This macro can be used in 3 forms:
 /// - `peripheral!()`, with no arguments, only base functions `try_take`, `take` and
 ///   `free` are implemented.
+/// - `peripheral!(single)`, in single mode, the `taken` function is implemented
+///   to return a single boolean, but `new` function is missing.
 /// - `peripheral!(simple)`, in simple mode, the `new` function returns `Self(())` 
 ///   and taken return the same variable. The structure must be a tuple struct with
 ///   one private field of type `()`. This ensures that it can only be constructed
@@ -46,8 +48,7 @@ macro_rules! peripheral {
         }
 
     };
-    // For simple peripherals.
-    (simple) => {
+    (single) => {
 
         /// Returns the atomic variable that is used by `try_take` and `take` functions
         /// in order to ensures at runtime that no concurrent ownership of the peripheral
@@ -60,6 +61,12 @@ macro_rules! peripheral {
             static TAKEN: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
             &TAKEN
         }
+        
+        $crate::peripheral!();
+
+    };
+    // For simple peripherals.
+    (simple) => {
 
         /// Return a new instance of the peripheral.
         /// 
@@ -69,8 +76,8 @@ macro_rules! peripheral {
         pub unsafe fn new() -> Self {
             Self(())
         }
-        
-        $crate::peripheral!();
+
+        $crate::peripheral!(single);
 
     };
     (array: $var:ident [ $start:literal .. $stop:literal ]) => {

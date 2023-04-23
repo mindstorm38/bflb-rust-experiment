@@ -3,18 +3,17 @@
 //! You need a runtime crate such as `bflb-rt` in order to configure
 //! interrupts given these numbers.
 
-use embedded_util::peripheral;
+use core::future::Future;
+
 use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
 use crate::bl808::CLIC;
 
 
 /// Exclusive access to global control of the interrupts.
-pub struct InterruptGlobal(());
+pub struct Interrupts(pub(crate) ());
 
-impl InterruptGlobal {
-
-    peripheral!(simple);
+impl Interrupts {
 
     #[inline(always)]
     pub fn get_threshold(&self) -> u8 {
@@ -26,62 +25,43 @@ impl InterruptGlobal {
         set_mintthresh(level)
     }
 
-}
-
-
-/// An exclusive access to the control of an interrupt.
-pub struct Interrupt<const NUM: usize>(());
-
-impl<const NUM: usize> Interrupt<NUM> {
-    
-    peripheral!(array: NUM[0..(IRQ_COUNT)]);
-
     /// Return `true` if this interrupt is enabled.
     #[inline(always)]
-    pub fn is_enabled(&self) -> bool {
-        CLIC.int(NUM).enable().get() != 0
+    pub fn is_enabled(&self, num: usize) -> bool {
+        CLIC.int(num).enable().get() != 0
     }
     
     /// Enable or not the interrupt.
     #[inline(always)]
-    pub fn set_enabled(&mut self, enabled: bool) {
-        CLIC.int(NUM).enable().set(enabled as _);
-    }
-
-    // TODO: Check if relevant
-    #[inline(always)]
-    pub fn without<F: FnOnce()>(&mut self, func: F) {
-        let enabled = self.is_enabled();
-        self.set_enabled(false);
-        (func)();
-        self.set_enabled(enabled);
+    pub fn set_enabled(&mut self, num: usize, enabled: bool) {
+        CLIC.int(num).enable().set(enabled as _);
     }
     
     #[inline(always)]
-    pub fn is_pending(&self) -> bool {
-        CLIC.int(NUM).pending().get() != 0
+    pub fn is_pending(&self, num: usize) -> bool {
+        CLIC.int(num).pending().get() != 0
     }
     
     #[inline(always)]
-    pub fn set_pending(&mut self, pending: bool) {
+    pub fn set_pending(&mut self, num: usize, pending: bool) {
         // NB: Look at Read-only or Read/Write in "pending" doc.
-        CLIC.int(NUM).pending().set(pending as _);
+        CLIC.int(num).pending().set(pending as _);
     }
     
     #[inline(always)]
-    pub fn get_level(&self) -> u8 {
-        CLIC.int(NUM).control().get()
+    pub fn get_level(&self, num: usize) -> u8 {
+        CLIC.int(num).control().get()
     }
     
     #[inline(always)]
-    pub fn set_level(&mut self, level: u8) {
+    pub fn set_level(&mut self, num: usize, level: u8) {
         // NB: Read doc of "control" to understand that no all level are valid bit patterns.
-        CLIC.int(NUM).control().set(level);
+        CLIC.int(num).control().set(level);
     }
     
     #[inline(always)]
-    pub fn get_trigger(&self) -> InterruptTrigger {
-        let mut tmp = CLIC.int(NUM).attr().get();
+    pub fn get_trigger(&self, num: usize) -> InterruptTrigger {
+        let mut tmp = CLIC.int(num).attr().get();
         match (tmp.edge_triggered().get(), tmp.negative_edge().get()) {
             (0, 0) => InterruptTrigger::PositiveLevel,
             (0, 1) => InterruptTrigger::NegativeLevel,
@@ -94,8 +74,8 @@ impl<const NUM: usize> Interrupt<NUM> {
     }
     
     #[inline(always)]
-    pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
-        CLIC.int(NUM).attr().modify(|reg| {
+    pub fn set_trigger(&mut self, num: usize, trigger: InterruptTrigger) {
+        CLIC.int(num).attr().modify(|reg| {
     
             let (edge, neg) = match trigger {
                 InterruptTrigger::PositiveLevel => (0, 0),
@@ -113,6 +93,90 @@ impl<const NUM: usize> Interrupt<NUM> {
 }
 
 
+// /// An exclusive access to the control of an interrupt.
+// pub struct Interrupt<const NUM: usize>(());
+
+// impl<const NUM: usize> Interrupt<NUM> {
+    
+//     peripheral!(array: NUM[0..(IRQ_COUNT)]);
+
+//     /// Return `true` if this interrupt is enabled.
+//     #[inline(always)]
+//     pub fn is_enabled(&self) -> bool {
+//         CLIC.int(NUM).enable().get() != 0
+//     }
+    
+//     /// Enable or not the interrupt.
+//     #[inline(always)]
+//     pub fn set_enabled(&mut self, enabled: bool) {
+//         CLIC.int(NUM).enable().set(enabled as _);
+//     }
+
+//     // TODO: Check if relevant
+//     #[inline(always)]
+//     pub fn without<F: FnOnce()>(&mut self, func: F) {
+//         let enabled = self.is_enabled();
+//         self.set_enabled(false);
+//         (func)();
+//         self.set_enabled(enabled);
+//     }
+    
+//     #[inline(always)]
+//     pub fn is_pending(&self) -> bool {
+//         CLIC.int(NUM).pending().get() != 0
+//     }
+    
+//     #[inline(always)]
+//     pub fn set_pending(&mut self, pending: bool) {
+//         // NB: Look at Read-only or Read/Write in "pending" doc.
+//         CLIC.int(NUM).pending().set(pending as _);
+//     }
+    
+//     #[inline(always)]
+//     pub fn get_level(&self) -> u8 {
+//         CLIC.int(NUM).control().get()
+//     }
+    
+//     #[inline(always)]
+//     pub fn set_level(&mut self, level: u8) {
+//         // NB: Read doc of "control" to understand that no all level are valid bit patterns.
+//         CLIC.int(NUM).control().set(level);
+//     }
+    
+//     #[inline(always)]
+//     pub fn get_trigger(&self) -> InterruptTrigger {
+//         let mut tmp = CLIC.int(NUM).attr().get();
+//         match (tmp.edge_triggered().get(), tmp.negative_edge().get()) {
+//             (0, 0) => InterruptTrigger::PositiveLevel,
+//             (0, 1) => InterruptTrigger::NegativeLevel,
+//             (1, 0) => InterruptTrigger::PositiveEdge,
+//             (1, 1) => InterruptTrigger::NegativeEdge,
+//             // Unreachable and should be optimized-out because only these patterns
+//             // are valid in the fields' range.
+//             _ => unreachable!()
+//         }
+//     }
+    
+//     #[inline(always)]
+//     pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
+//         CLIC.int(NUM).attr().modify(|reg| {
+    
+//             let (edge, neg) = match trigger {
+//                 InterruptTrigger::PositiveLevel => (0, 0),
+//                 InterruptTrigger::NegativeLevel => (0, 1),
+//                 InterruptTrigger::PositiveEdge => (1, 0),
+//                 InterruptTrigger::NegativeEdge => (1, 1),
+//             };
+    
+//             reg.edge_triggered().set(edge);
+//             reg.negative_edge().set(neg);
+    
+//         });
+//     }
+
+// }
+
+
 /// Trigger mode that can be configured for a particular interrupt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InterruptTrigger {
@@ -124,6 +188,23 @@ pub enum InterruptTrigger {
     PositiveEdge,
     /// The interrupt request is considered when its level goes from 1 to 0.
     NegativeEdge,
+}
+
+
+/// Abstract trait implemented by a runtime to provide management of 
+/// the interrupts handlers, with async support.
+pub trait AsyncInterrupts {
+
+    /// The type of the future used for awaiting a single interrupt.
+    type Single: Future<Output = ()>;
+
+    /// This function registers an interrupt handler for the given
+    /// interrupt number, it then returns a future that can be awaited
+    /// for waiting for the interrupt.
+    fn wait(&self, num: usize) -> Self::Single;
+
+    fn wait_with(&self, num: usize, f: impl FnMut()) -> Self::Single;
+
 }
 
 

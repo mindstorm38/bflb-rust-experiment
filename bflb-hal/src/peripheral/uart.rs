@@ -1,10 +1,8 @@
 //! Serial I/O management on BL808.
 
 use core::marker::PhantomData;
-use core::fmt;
 use core::ptr::addr_of;
-
-use embedded_util::peripheral;
+use core::fmt;
 
 use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::bl808::uart::UartBitPrd;
@@ -21,11 +19,9 @@ use crate::clock::Clocks;
 /// actually usable for TX and/or RX communications.
 /// 
 /// Available ports: 0, 1, 2.
-pub struct UartAccess<const PORT: u8>(());
+pub struct UartAccess<const PORT: u8>(pub(crate) ());
 
 impl<const PORT: u8> UartAccess<PORT> {
-
-    peripheral!(array: PORT[0..3]);
 
     /// Generic types erasing, this transfer checks to the runtime.
     pub fn erase(self) -> ! {

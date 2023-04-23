@@ -2,15 +2,11 @@
 
 use crate::bl808::{AON, GPIP};
 
-use embedded_util::peripheral;
-
 
 /// Exclusive access to ADC peripheral.
-pub struct AdcAccess(());
+pub struct AdcAccess(pub(crate) ());
 
 impl AdcAccess {
-
-    peripheral!(simple);
 
     // /// Create a new single channel converter. This can be used later for polling
     // /// the channel.
