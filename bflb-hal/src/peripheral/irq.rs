@@ -3,6 +3,7 @@
 //! You need a runtime crate such as `bflb-rt` in order to configure
 //! interrupts given these numbers.
 
+use core::sync::atomic::{compiler_fence, Ordering};
 use core::future::Future;
 
 use riscv_hal::clic::{set_mintthresh, get_mintthresh};
@@ -31,10 +32,25 @@ impl Interrupts {
         CLIC.int(num).enable().get() != 0
     }
     
-    /// Enable or not the interrupt.
+    /// Enable or not the interrupt. The interrupt is guaranteed to
+    /// trigger or not after this function returns.
     #[inline(always)]
     pub fn set_enabled(&mut self, num: usize, enabled: bool) {
+
+        if enabled {
+            // When enabling, we don't want previous instructions to
+            // be reordered after interrupt is enabled.
+            compiler_fence(Ordering::SeqCst);
+        }
+
         CLIC.int(num).enable().set(enabled as _);
+
+        if !enabled {
+            // When disabling, we don't want future instructions to
+            // be reordered before interrupt is disabled.
+            compiler_fence(Ordering::SeqCst);
+        }
+
     }
     
     #[inline(always)]
@@ -191,8 +207,8 @@ pub enum InterruptTrigger {
 }
 
 
-/// Abstract trait implemented by a runtime to provide management of 
-/// the interrupts handlers, with async support.
+/// Abstract trait implemented by a runtime to provide asynchronous
+/// waiting of interrupts.
 pub trait AsyncInterrupts {
 
     /// The type of the future used for awaiting a single interrupt.

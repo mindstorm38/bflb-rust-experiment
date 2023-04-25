@@ -86,9 +86,7 @@ pub fn wait() {
             match future.poll(&mut context) {
                 Poll::Ready(()) => {
                     
-                    // TODO: The task has finished, we must remove it
-                    // from the slab.
-
+                    // TODO: The task has finished, we must remove it.
                     ready_tasks += 1;
 
                     // For now we set it pending to avoid polling it

@@ -12,6 +12,7 @@ riscv-hal = { path = "../riscv-hal", version = "0.1" }
 embedded-util = { path = "../embedded-util", version = "0.1" }
 
 slab = { version = "0.4", default-features = false }
+smallvec = { version = "1.10", features = ["const_new"] }
 static-alloc = "0.2"
 
 [features]

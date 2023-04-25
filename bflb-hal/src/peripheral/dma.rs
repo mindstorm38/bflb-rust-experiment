@@ -28,7 +28,7 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
     {
 
         let port_regs = get_port_regs::<PORT>();
-        let channel_regs = get_channel_regs::<PORT, CHANNEL>();
+        let channel_regs: dma::DmaChannel = get_channel_regs::<PORT, CHANNEL>();
 
         let src_config = src.configure();
         let dst_config = dst.configure();

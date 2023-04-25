@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+use bflb_hal::Peripherals;
+
 use bflb_hal::clock::{Clocks, XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
@@ -19,11 +21,10 @@ bflb_rt::entry!(main);
 
 fn main() {
 
-    let mut clocks = Clocks::take();
-    let mut cpu_control = CpuControl::take();
-
-    // CHIP.cpu().halt_d0();
-    // CHIP.cpu().halt_lp();
+    let peripherals = Peripherals::take();
+    let mut clocks = peripherals.clocks;
+    let mut cpu_control = peripherals.cpu_control;
+    let mut core_timer = peripherals.core_timer;
 
     clocks.set_d0_cpu_enable(false);
     cpu_control.reset_d0();
@@ -68,14 +69,15 @@ fn main() {
 
     // CONSOLE INIT
 
-    let uart_tx = PinAccess::<14>::take().into_alternate();
-    let uart_rx = PinAccess::<15>::take().into_alternate();
+    let uart_tx = peripherals.gpio.p14.into_alternate();
+    let uart_tx = peripherals.gpio.p15.into_alternate();
+
+    
 
     let (
         uart_tx, 
         mut uart_rx
-    ) = UartAccess::<0>::take()
-        .into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
+    ) = peripherals.uart.p0.into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
     // let adc_ch0 = AdcChannel::with_ground(
     //     PinAccess::<17>::take().into_alternate());
@@ -92,7 +94,7 @@ fn main() {
 
     // DMA
 
-    let (_, mut uart_tx, _) = DmaAccess::<0, 0>::take()
+    let (_, mut uart_tx, _) = peripherals.dma.p0.c0
         .into_transfer(DMA_MESSAGE, uart_tx)
         .wait_destruct();
     
@@ -101,11 +103,10 @@ fn main() {
     // let _ = writeln!(uart_tx, "ADC values: {}, {}", adc_channels.0.raw_value(), adc_channels.1.raw_value());
 
     // INTS
-
-    let mut timer = CoreTimer::take();
-    timer.init(&mut clocks);
-    timer.set_time(0);
-    timer.set_time_cmp(1_000_000);
+    
+    core_timer.init(&mut clocks);
+    core_timer.set_time(0);
+    core_timer.set_time_cmp(1_000_000);
     // timer.free();
 
     // let mut mtimer_int = Interrupt::<MACHINE_TIMER>::take();
@@ -115,12 +116,12 @@ fn main() {
 
     // GPIO
 
-    let mut d0 = PinAccess::<33>::take().into_output();
-    let mut d1 = PinAccess::<32>::take().into_output();
-    let mut d2 = PinAccess::<21>::take().into_output();
-    let mut d3 = PinAccess::<20>::take().into_output();
-    let mut sel0 = PinAccess::<23>::take().into_output();
-    let mut sel1 = PinAccess::<22>::take().into_output();
+    let mut d0 = peripherals.gpio.p33.into_output();
+    let mut d1 = peripherals.gpio.p32.into_output();
+    let mut d2 = peripherals.gpio.p21.into_output();
+    let mut d3 = peripherals.gpio.p20.into_output();
+    let mut sel0 = peripherals.gpio.p23.into_output();
+    let mut sel1 = peripherals.gpio.p22.into_output();
 
     d0.set_low();
     d1.set_low();
