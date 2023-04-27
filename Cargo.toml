@@ -2,8 +2,8 @@
 members = [
 	"embedded-util",
 	"riscv-hal",
-	"usb-hal",
 	"bflb-hal", "bflb-rt", 
+	"usb-hal",
 	"examples/*",
 ]
 

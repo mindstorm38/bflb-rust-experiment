@@ -136,7 +136,7 @@ embedded_util::reg! {
 
 #[inline(always)]
 pub fn set_mintthresh(threshold: u8) {
-    unsafe { core::arch::asm!("csrw 0x347, {}", in(reg) threshold) }
+    crate::csrw!(0x347, threshold);
 }
 
 #[inline(always)]

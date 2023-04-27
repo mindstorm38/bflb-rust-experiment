@@ -4,3 +4,4 @@
 
 pub mod clic;
 pub mod plic;
+pub mod csr;
