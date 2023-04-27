@@ -2,32 +2,18 @@
 //! for Control and Status Registers. This module only concerns the
 //! main specification's CSRs. Extensions' CSRs are defined in 
 //! specialized modules.
-
-
-#[macro_export]
-macro_rules! csrw {
-    ($addr:literal, $val:ident) => {
-        unsafe { core::arch::asm!(concat!("csrw ", $addr, "{}"), in(reg) $val) }
-    };
-}
-
-#[macro_export]
-macro_rules! csrr {
-    ($addr:literal) => {{
-        let val;
-        unsafe { core::arch::asm!(concat!("csrr {}, ", $addr), out(reg) val) }
-        val
-    }};
-}
+//! 
+//! Sources:
+//! - https://riscv.org/technical/specifications/
 
 
 /// Machine-privilege CSRs.
 pub mod machine {
 
-    pub const FS_VS_OFF: u32        = 0;
-    pub const FS_VS_INITIAL: u32    = 1;
-    pub const FS_VS_CLEAN: u32      = 2;
-    pub const FS_VS_DIRTY: u32      = 3;
+    pub const FS_VS_OFF: u8     = 0;
+    pub const FS_VS_INITIAL: u8 = 1;
+    pub const FS_VS_CLEAN: u8   = 2;
+    pub const FS_VS_DIRTY: u8   = 3;
 
     #[cfg(target_pointer_width = "64")]
     embedded_util::reg! {
@@ -243,4 +229,35 @@ pub mod machine {
 
     }
 
+}
+
+
+#[macro_export]
+macro_rules! csrw {
+    ($addr:literal, $val:ident) => {
+        unsafe { core::arch::asm!(concat!("csrw ", $addr, "{}"), in(reg) $val) }
+    };
+}
+
+#[macro_export]
+macro_rules! csrc {
+    ($addr:literal, $val:ident) => {
+        unsafe { core::arch::asm!(concat!("csrc ", $addr, "{}"), in(reg) $val) }
+    };
+}
+
+#[macro_export]
+macro_rules! csrs {
+    ($addr:literal, $val:ident) => {
+        unsafe { core::arch::asm!(concat!("csrs ", $addr, "{}"), in(reg) $val) }
+    };
+}
+
+#[macro_export]
+macro_rules! csrr {
+    ($addr:literal) => {{
+        let val;
+        unsafe { core::arch::asm!(concat!("csrr {}, ", $addr), out(reg) val) }
+        val
+    }};
 }
