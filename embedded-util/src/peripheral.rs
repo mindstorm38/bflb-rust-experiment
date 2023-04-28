@@ -21,6 +21,7 @@
 /// - `peripheral!(array: <var>[<start>..<end>])`, array mode has the same `new` 
 ///   function as the simple mode, however, the `taken` function returns a different
 ///   atomic variable depending on the given const generic `<var>` in the given range.
+#[deprecated = "no longer useful in hal, should be removed..."]
 #[macro_export]
 macro_rules! peripheral {
     () => {

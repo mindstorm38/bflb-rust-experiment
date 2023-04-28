@@ -4,7 +4,6 @@
 //! interrupts given these numbers.
 
 use core::sync::atomic::{compiler_fence, Ordering};
-use core::future::Future;
 
 use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
@@ -109,90 +108,6 @@ impl Interrupts {
 }
 
 
-// /// An exclusive access to the control of an interrupt.
-// pub struct Interrupt<const NUM: usize>(());
-
-// impl<const NUM: usize> Interrupt<NUM> {
-    
-//     peripheral!(array: NUM[0..(IRQ_COUNT)]);
-
-//     /// Return `true` if this interrupt is enabled.
-//     #[inline(always)]
-//     pub fn is_enabled(&self) -> bool {
-//         CLIC.int(NUM).enable().get() != 0
-//     }
-    
-//     /// Enable or not the interrupt.
-//     #[inline(always)]
-//     pub fn set_enabled(&mut self, enabled: bool) {
-//         CLIC.int(NUM).enable().set(enabled as _);
-//     }
-
-//     // TODO: Check if relevant
-//     #[inline(always)]
-//     pub fn without<F: FnOnce()>(&mut self, func: F) {
-//         let enabled = self.is_enabled();
-//         self.set_enabled(false);
-//         (func)();
-//         self.set_enabled(enabled);
-//     }
-    
-//     #[inline(always)]
-//     pub fn is_pending(&self) -> bool {
-//         CLIC.int(NUM).pending().get() != 0
-//     }
-    
-//     #[inline(always)]
-//     pub fn set_pending(&mut self, pending: bool) {
-//         // NB: Look at Read-only or Read/Write in "pending" doc.
-//         CLIC.int(NUM).pending().set(pending as _);
-//     }
-    
-//     #[inline(always)]
-//     pub fn get_level(&self) -> u8 {
-//         CLIC.int(NUM).control().get()
-//     }
-    
-//     #[inline(always)]
-//     pub fn set_level(&mut self, level: u8) {
-//         // NB: Read doc of "control" to understand that no all level are valid bit patterns.
-//         CLIC.int(NUM).control().set(level);
-//     }
-    
-//     #[inline(always)]
-//     pub fn get_trigger(&self) -> InterruptTrigger {
-//         let mut tmp = CLIC.int(NUM).attr().get();
-//         match (tmp.edge_triggered().get(), tmp.negative_edge().get()) {
-//             (0, 0) => InterruptTrigger::PositiveLevel,
-//             (0, 1) => InterruptTrigger::NegativeLevel,
-//             (1, 0) => InterruptTrigger::PositiveEdge,
-//             (1, 1) => InterruptTrigger::NegativeEdge,
-//             // Unreachable and should be optimized-out because only these patterns
-//             // are valid in the fields' range.
-//             _ => unreachable!()
-//         }
-//     }
-    
-//     #[inline(always)]
-//     pub fn set_trigger(&mut self, trigger: InterruptTrigger) {
-//         CLIC.int(NUM).attr().modify(|reg| {
-    
-//             let (edge, neg) = match trigger {
-//                 InterruptTrigger::PositiveLevel => (0, 0),
-//                 InterruptTrigger::NegativeLevel => (0, 1),
-//                 InterruptTrigger::PositiveEdge => (1, 0),
-//                 InterruptTrigger::NegativeEdge => (1, 1),
-//             };
-    
-//             reg.edge_triggered().set(edge);
-//             reg.negative_edge().set(neg);
-    
-//         });
-//     }
-
-// }
-
-
 /// Trigger mode that can be configured for a particular interrupt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InterruptTrigger {
@@ -207,21 +122,13 @@ pub enum InterruptTrigger {
 }
 
 
-/// Abstract trait implemented by a runtime to provide asynchronous
-/// waiting of interrupts.
-pub trait AsyncInterrupts {
-
-    /// The type of the future used for awaiting a single interrupt.
-    type Single: Future<Output = ()>;
-
-    /// This function registers an interrupt handler for the given
-    /// interrupt number, it then returns a future that can be awaited
-    /// for waiting for the interrupt.
-    fn wait(&self, num: usize) -> Self::Single;
-
-    fn wait_with(&self, num: usize, f: impl FnMut()) -> Self::Single;
-
-}
+/// This constant array can be used as a base interrupt vector to be
+/// used by the HAL and supported by the runtime.
+pub const VECTOR: [fn(usize); IRQ_COUNT] = {
+    let mut handlers: [fn(usize); IRQ_COUNT] = [|_code| {}; IRQ_COUNT];
+    handlers[MACHINE_TIMER] = super::time::mtimer_handler;
+    handlers
+};
 
 
 /// Internal macro for easier definition.

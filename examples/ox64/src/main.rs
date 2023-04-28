@@ -6,7 +6,7 @@ use bflb_hal::Peripherals;
 use bflb_hal::clock::{Clocks, XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use bflb_hal::cpu::CpuControl;
 use bflb_hal::uart::{UartAccess, UartConfig};
-use bflb_hal::time::CoreTimer;
+use bflb_hal::time::Timer;
 use bflb_hal::gpio::PinAccess;
 use bflb_hal::dma::DmaAccess;
 
@@ -24,7 +24,7 @@ fn main() {
     let peripherals = Peripherals::take();
     let mut clocks = peripherals.clocks;
     let mut cpu_control = peripherals.cpu_control;
-    let mut core_timer = peripherals.core_timer;
+    let mut core_timer = peripherals.timer;
 
     clocks.set_d0_cpu_enable(false);
     cpu_control.reset_d0();
@@ -103,10 +103,10 @@ fn main() {
     // let _ = writeln!(uart_tx, "ADC values: {}, {}", adc_channels.0.raw_value(), adc_channels.1.raw_value());
 
     // INTS
-    
     core_timer.init(&mut clocks);
     core_timer.set_time(0);
     core_timer.set_time_cmp(1_000_000);
+    
     // timer.free();
 
     // let mut mtimer_int = Interrupt::<MACHINE_TIMER>::take();

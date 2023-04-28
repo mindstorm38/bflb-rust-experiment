@@ -91,7 +91,7 @@ pub use trap::TrapHandler;
 pub use task::{spawn, wait};
 
 // Internal use.
-use hal::irq::{AsyncInterrupts, Interrupts, IRQ_COUNT};
+use hal::interrupt::{AsyncInterrupts, Interrupts, IRQ_COUNT};
 use trap::TrapHandlers;
 
 use static_alloc::Bump;

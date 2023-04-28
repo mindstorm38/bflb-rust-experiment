@@ -1,10 +1,12 @@
 //! Timer management on BL808.
 
+use core::future::Future;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+
 use crate::bl808::addr;
 
 use super::clock::Clocks;
-use super::irq::{AsyncInterrupts, MACHINE_TIMER};
-
 
 
 /// Providing access to the core's internal RTC timer. This timer is 
@@ -12,9 +14,9 @@ use super::irq::{AsyncInterrupts, MACHINE_TIMER};
 /// 
 /// **Note that** you have to be careful not to create this structure 
 /// multiple time, even if this is not inherently unsafe.
-pub struct CoreTimer(pub(crate) ());
+pub struct Timer(pub(crate) ());
 
-impl CoreTimer {
+impl Timer {
     
     /// The tick frequency of the core timer.
     pub const FREQ: u32 = 1_000_000;
@@ -88,28 +90,53 @@ impl CoreTimer {
     /// until the given duration has been waited. Prefer the async
     /// variant [`wait`].
     #[inline]
-    pub fn wait_sync(&self, duration: u64) {
+    pub fn wait_block(&self, duration: u64) {
         let start = self.get_time();
         while self.get_time() - start < duration {
             core::hint::spin_loop();
         }
     }
 
-    /// Asynchronous wait.
-    #[inline]
-    pub async fn wait(&mut self, duration: u64, ints: &impl AsyncInterrupts) {
-        
-        // Registering the interrupt handler here.
-        let int = ints.wait_with(MACHINE_TIMER, || {
-            // TODO: Reset the comparator to u64::MAX to avoid looping.
-        });
-
-        let start = self.get_time();
-        self.set_time_cmp(start + duration);
-
-        // Wait for the interrupt here.
-        int.await;
-
+    /// Asynchronous wait, this function should be used in an async
+    /// context and allows doing other tasks while waiting. Note that
+    /// this function take self by shared reference, no exclusive
+    /// access is required to wait, and you can wait on multiple 
+    /// tasks at once.
+    pub fn wait(&self, duration: u64) -> impl Future<Output = ()> + '_ {
+        WaitFuture {
+            timer,
+            target_time: self.get_time() + duration,
+        }
     }
 
+}
+
+
+/// Future implementing RTC wait.
+pub struct WaitFuture<'a> {
+    pub timer: &'a Timer,
+    pub target_time: u64,
+}
+
+impl Future for WaitFuture {
+
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.timer.get_time() >= self.target_time {
+            Poll::Ready(())
+        } else {
+            cx.waker().clone()
+            Poll::Pending
+        }
+    }
+
+}
+
+
+static WAKERS: () = ();
+
+
+pub(crate) fn mtimer_handler(_code: usize) {
+    // TODO: Use this handler for async functions.
 }

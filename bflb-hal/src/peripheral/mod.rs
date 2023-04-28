@@ -2,7 +2,7 @@
 //! feature-gated to some specific chips. The initial access to the
 //! peripheral is provided by 
 
-pub mod irq;
+pub mod interrupt;
 pub mod clock;
 pub mod time;
 pub mod cpu;
@@ -13,9 +13,9 @@ pub mod dma;
 pub mod adc;
 
 
-use irq::Interrupts;
+use interrupt::Interrupts;
 use clock::Clocks;
-use time::CoreTimer;
+use time::Timer;
 use cpu::CpuControl;
 
 use gpio::PinAccess;
@@ -23,18 +23,32 @@ use uart::UartAccess;
 use dma::DmaAccess;
 use adc::AdcAccess;
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
+
+/// We want the peripherals to be a ZST.
+const _: () = assert!(core::mem::size_of::<Peripherals>() == 0);
+
+/// Internal variable to know if peripherals structure is available.
+static TAKEN: AtomicBool = AtomicBool::new(false);
+
 
 /// Peripherals specific to the BuffaloLab chips, and specifically to
 /// the selected chip. The different peripherals are made public in
 /// order to be moved out of the structure, and maybe moved/shared to
-/// other threads or functions.
+/// other threads and functions.
+/// 
+/// Note that some fields in this structure are used to group many
+/// "sub" peripherals, like GPIO, UART or DMA which contains multiple
+/// ports/channels. These ports/channels can be owned and managed 
+/// individually.
 pub struct Peripherals {
     /// Handle to the interrupts manager.
     pub interrupts: Interrupts,
     /// The chip's clocks.
     pub clocks: Clocks,
-    /// The core real time clock.
-    pub core_timer: CoreTimer,
+    /// The core RTC timer.
+    pub timer: Timer,
     /// The core's CPU control 
     pub cpu_control: CpuControl,
     /// GPIO pins access.
@@ -49,13 +63,32 @@ pub struct Peripherals {
 
 impl Peripherals {
 
-    embedded_util::peripheral!(single);
+    /// Try taking ownership of the peripheral, returning `Some` peripheral
+    /// is not already taken.
+    pub fn try_take() -> Option<Self> {
+        TAKEN
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
+            .then_some(Self::new())
+    }
 
-    pub unsafe fn new() -> Self {
+    /// Try taking ownership of the peripheral, this function panics if not
+    /// possible.
+    pub fn take() -> Self {
+        Self::try_take().expect("peripheral was already taken")
+    }
+
+    /// Free ownership of the peripheral.
+    pub fn free(self) {
+        drop(self);
+        TAKEN.store(false, core::sync::atomic::Ordering::Release);
+    }
+
+    fn new() -> Self {
         Self {
             interrupts: Interrupts(()),
             clocks: Clocks(()),
-            core_timer: CoreTimer(()),
+            timer: Timer(()),
             cpu_control: CpuControl(()),
             gpio: Gpio {
                 p0: PinAccess(()),
