@@ -12,8 +12,9 @@ extern crate alloc;
 compile_error!("no runtime chip selected, use the crate features to select one chip");
 
 
-// The following chip-specific modules must provides the same set of
-// functions.
+// The following modules are imported as "chip" and should provide
+// the same set of standardized methods. These are used for chip
+// specific initialization.
 
 #[cfg(rt_chip = "bl808_m0")]
 mod bl808_m0;
@@ -91,16 +92,10 @@ pub use trap::TrapHandler;
 pub use task::{spawn, wait};
 
 // Internal use.
-use hal::interrupt::{AsyncInterrupts, Interrupts, IRQ_COUNT};
+use hal::interrupt::{IRQ_COUNT, VECTOR};
 use trap::TrapHandlers;
 
 use static_alloc::Bump;
-
-use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, Ordering};
-use core::task::{Context, Poll, Waker};
-use core::future::Future;
-use core::pin::Pin;
 
 
 /// The global bump allocator.
@@ -110,12 +105,9 @@ static ALLOCATOR: Bump<[u8; 4096]> = Bump::uninit();
 
 /// All exception (synchronous) handlers.
 static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
+
 /// All interrupt (asynchronous) handlers.
-static INTERRUPT_HANDLERS: TrapHandlers<IRQ_COUNT> = TrapHandlers::new();
-
-
-const INTERRUPT_ASYNC_ENTRY_DEFAULT: Option<NonNull<AsyncInterruptInner>> = None;
-static mut INTERRUPT_ASYNC_ENTRIES: [Option<NonNull<AsyncInterruptInner>>; IRQ_COUNT] = [INTERRUPT_ASYNC_ENTRY_DEFAULT; IRQ_COUNT];
+static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
 
 
 /// Use this macro a single time to define your application.
@@ -184,129 +176,14 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
     let interrupt = cause & INTERRUPT_MASK != 0;
 
     let handler = if interrupt {
-        INTERRUPT_HANDLERS.get(code, default_trap_handler)
+        INTERRUPT_VECTOR[code]
     } else {
         EXCEPTION_HANDLERS.get(code, default_trap_handler)
     };
 
     (handler)(code);
 
-    // FIXME: For now experimental and will require better synchronization.
-    if let Some(inner) = unsafe { INTERRUPT_ASYNC_ENTRIES[code].take() } {
-
-        let inner = unsafe { inner.as_ref() };
-
-        if let Some(waker) = &inner.waker {
-            waker.wake_by_ref();
-        }
-
-        inner.triggered.store(true, Ordering::Relaxed);
-
-    }
-
 }
-
-
-pub fn async_interrupts(inner: Interrupts) -> impl AsyncInterrupts {
-    AsyncInterruptsImpl {
-        inner,
-    }
-}
-
-
-struct AsyncInterruptsImpl {
-    inner: Interrupts,
-}
-
-impl AsyncInterrupts for AsyncInterruptsImpl {
-
-    type Single = AsyncInterrupt;
-
-    fn wait(&self, num: usize) -> Self::Single {
-
-        let mut entries = unsafe {
-            &mut INTERRUPT_ASYNC_ENTRIES[num]
-        };
-
-    }
-
-    fn wait_with(&self, num: usize, f: impl FnMut()) -> Self::Single {
-        todo!()
-    }
-
-}
-
-
-struct AsyncInterrupt {
-    inner: NonNull<AsyncInterruptInner>,
-}
-
-impl Future for AsyncInterrupt {
-
-    type Output = ();
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-
-        let inner = unsafe { self.inner.as_ref() };
-
-        if inner.triggered.load(Ordering::Relaxed) {
-            Poll::Ready(())
-        } else {
-
-            Poll::Pending
-        }
-
-    }
-
-}
-
-
-/// Inner data of [`AsyncInterrupt`], it is dynamically allocated and
-/// referenced both by the interrupt. **It should** only be accessed
-/// by shared reference.
-struct AsyncInterruptInner {
-    /// Atomically set to true when the interrupt is triggered. This
-    /// is used by the future if the interrupt has been triggered 
-    /// between it's registration and the first polling. It is 
-    /// initially set to false, and set to true only once by the 
-    /// interrupt handler.
-    triggered: AtomicBool,
-    /// The waker to be used when the interrupt is triggered, it's set
-    /// if the .
-    waker: Option<Waker>,
-}
-
-
-
-
-
-// /// A trait that extends the HAL `Interrupt` structure and add methods
-// /// for setting and getting the trap handler for this particular 
-// /// interrupt.
-// pub trait InterruptExt {
-
-//     /// Get the current trap handler for this interrupt.
-//     fn get_handler(&self) -> TrapHandler;
-
-//     /// Set the trap handler for this interrupt.
-//     /// 
-//     /// The given function will be called when an interrupt request is
-//     /// processed while the interrupt is enabled and has a sufficient 
-//     /// level compared to the global threshold.
-//     fn set_handler(&mut self, handler: TrapHandler);
-
-// }
-
-// impl<const NUM: usize> InterruptExt for Interrupt<NUM> {
-
-//     fn get_handler(&self) -> TrapHandler {
-//         INTERRUPT_HANDLERS.get(NUM, default_trap_handler)
-//     }
-
-//     fn set_handler(&mut self, handler: TrapHandler) {
-//         INTERRUPT_HANDLERS.set(NUM, handler);
-//     }
-// }
 
 
 /// The default trap handler, do nothing.
@@ -328,7 +205,7 @@ pub enum InterruptTrigger {
 /// This implementation of the panic handler will simply abort without 
 /// any message.
 #[panic_handler]
-#[cfg(feature = "panic_abort")]
+#[cfg(feature = "panic-abort")]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     // TODO: Instead of spin looping indefinitely, it might be possible 
     // to close clock gates and stop the core.

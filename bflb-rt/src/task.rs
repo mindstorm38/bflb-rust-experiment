@@ -1,7 +1,7 @@
 //! Asynchronous task executor for the runtime.
 //! 
-use core::sync::atomic::{AtomicBool, Ordering};
 use core::task::{Poll, Context, Waker, RawWaker, RawWakerVTable};
+use core::sync::atomic::{Ordering, AtomicU8};
 use core::future::Future;
 use core::pin::Pin;
 
@@ -54,11 +54,13 @@ pub fn wait() {
 
             let (
                 future,
-                pending,
+                state,
             ) = task.split();
 
-            // If the task is pending, don't poll it.
-            if pending.load(Ordering::Acquire) {
+            // If the task is not awake, don't poll it. If it's awake
+            // atomically set the state to polling.
+            if state.compare_exchange(STATE_AWAKE, STATE_POLLING, 
+                Ordering::Acquire, Ordering::Relaxed).is_err() {
                 break
             }
 
@@ -72,10 +74,10 @@ pub fn wait() {
             // SAFETY: This pointer to the pending boolean will be used
             // by waker. The pending boolean is stored inside a box,
             // which will not move until the end of the task.
-            let pending_ptr = pending as *const _ as *const ();
+            let state_ptr = state as *const _ as *const ();
 
             let waker = unsafe {
-                Waker::from_raw(RawWaker::new(pending_ptr, &WAKER_VTABLE))
+                Waker::from_raw(RawWaker::new(state_ptr, &WAKER_VTABLE))
             };
 
             let mut context = Context::from_waker(&waker);
@@ -85,17 +87,19 @@ pub fn wait() {
             // called from tasks.
             match future.poll(&mut context) {
                 Poll::Ready(()) => {
-                    
                     // TODO: The task has finished, we must remove it.
                     ready_tasks += 1;
-
-                    // For now we set it pending to avoid polling it
-                    // again, but it should not be woken up.
-                    pending.store(true, Ordering::Release);
-
+                    state.store(STATE_COMPLETE, Ordering::Release);
                 }
                 Poll::Pending => {
-                    pending.store(true, Ordering::Release);
+                    // NOTE that it's possible that the poll function 
+                    // is going to return Pending, but the waker's 
+                    // wake is being called before the function 
+                    // returns, in such case the state will not be
+                    // POLLING and we should keep the AWAKE state
+                    // as-is. This is why we compare/exchange.
+                    let _ = state.compare_exchange(STATE_POLLING, STATE_PENDING, 
+                        Ordering::Release, Ordering::Relaxed);
                 }
             }
 
@@ -126,6 +130,12 @@ static mut WAITING: bool = false;
 static mut NEW_TASKS: Vec<Box<dyn Task>> = Vec::new();
 
 
+const STATE_AWAKE: u8    = 0;
+const STATE_PENDING: u8  = 1;
+const STATE_POLLING: u8  = 2;
+const STATE_COMPLETE: u8 = 3;
+
+
 /// Internal trait used to dynamically store a task.
 trait Task {
 
@@ -134,7 +144,7 @@ trait Task {
     /// 
     /// This function should be the only way to get access to those
     /// components.
-    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicBool);
+    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicU8);
 
 }
 
@@ -143,10 +153,10 @@ trait Task {
 struct TaskImpl<F: Future> {
     /// The internal future of the task.
     future: F,
-    /// The boolean used to indicate that the task is pending or not,
-    /// we are using atomic here because the waker may be called from
+    /// The state atomic integer indicate the state of the task.
+    /// We are using atomic here because the waker may be called from
     /// interrupts or other threads, we don't know.
-    pending: AtomicBool,
+    state: AtomicU8,
 }
 
 impl<F: Future<Output = ()>> TaskImpl<F> {
@@ -155,7 +165,7 @@ impl<F: Future<Output = ()>> TaskImpl<F> {
     fn new(future: F) -> Self {
         Self {
             future,
-            pending: AtomicBool::new(false),
+            state: AtomicU8::new(STATE_AWAKE),
         }
     }
 
@@ -163,8 +173,8 @@ impl<F: Future<Output = ()>> TaskImpl<F> {
 
 impl<F: Future<Output = ()>> Task for TaskImpl<F> {
 
-    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicBool) {
-        (&mut self.future, &self.pending)
+    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicU8) {
+        (&mut self.future, &self.state)
     }
 
 }
@@ -176,14 +186,14 @@ unsafe fn waker_clone(data: *const ()) -> RawWaker {
 
 unsafe fn waker_wake(data: *const ()) {
     // SAFETY: TODO:
-    let pending = unsafe { &*(data as *const AtomicBool) };
-    pending.store(false, Ordering::Release);
+    let pending = unsafe { &*(data as *const AtomicU8) };
+    pending.store(STATE_AWAKE, Ordering::Release);
 }
 
 unsafe fn waker_wake_by_ref(data: *const ()) {
     // SAFETY: TODO:
-    let pending = unsafe { &*(data as *const AtomicBool) };
-    pending.store(false, Ordering::Release);
+    let pending = unsafe { &*(data as *const AtomicU8) };
+    pending.store(STATE_AWAKE, Ordering::Release);
 }
 
 unsafe fn waker_drop(data: *const ()) {

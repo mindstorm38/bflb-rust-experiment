@@ -8,8 +8,12 @@ edition = "2021"
 [dependencies]
 embedded-util = { path = "../embedded-util", version = "0.1" }
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
+critical-section = "1.1"
+heapless = "0.7"
+spin = "0.9"
 
 [features]
-bl808_m0 = []
-bl808_d0 = []
-bl808_lp = []
+bl-critical-section = ["critical-section/restore-state-bool"]
+bl808-m0 = []
+bl808-d0 = []
+bl808-lp = []

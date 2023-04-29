@@ -202,7 +202,7 @@ macro_rules! impl_adc_channel_ref_pin {
 }
 
 /// Implementation of [`AdcChannelRef`] on [`Pin`] for BL808.
-#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+#[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
 mod impl_adc_channel_ref_pin {
 
     use crate::gpio::{Pin, Alternate, PinFunction, PinDrive, PinConfig};

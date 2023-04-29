@@ -7,17 +7,15 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bflb-hal = { path = "../bflb-hal", version = "0.1" }
+bflb-hal = { path = "../bflb-hal", version = "0.1", features = ["bl-critical-section"] }
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
 embedded-util = { path = "../embedded-util", version = "0.1" }
 
-slab = { version = "0.4", default-features = false }
-smallvec = { version = "1.10", features = ["const_new"] }
 static-alloc = "0.2"
 
 [features]
 default = []
-bl808_m0 = ["bflb-hal/bl808_m0"]
-bl808_d0 = ["bflb-hal/bl808_d0"]
-bl808_lp = ["bflb-hal/bl808_lp"]
-panic_abort = []
+bl808-m0 = ["bflb-hal/bl808-m0"]
+bl808-d0 = ["bflb-hal/bl808-d0"]
+bl808-lp = ["bflb-hal/bl808-lp"]
+panic-abort = []

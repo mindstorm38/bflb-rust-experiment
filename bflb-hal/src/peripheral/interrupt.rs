@@ -131,6 +131,32 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
 };
 
 
+/// This internal module is used if the critical section feature is
+/// enabled, it provides implementation for the `critical_section` 
+/// crate.
+#[cfg(feature = "bl-critical-section")]
+mod critical_section {
+
+    use critical_section::{RawRestoreState, Impl};
+
+    struct BlCriticalSection;
+    critical_section::set_impl!(BlCriticalSection);
+
+    unsafe impl Impl for BlCriticalSection {
+
+        unsafe fn acquire() -> RawRestoreState {
+            todo!()
+        }
+
+        unsafe fn release(restore_state: RawRestoreState) {
+            todo!()
+        }
+        
+    }
+
+}
+
+
 /// Internal macro for easier definition.
 macro_rules! def_irq {
     (
@@ -161,7 +187,7 @@ def_irq! {
     MACHINE_EXTERNAL = 11;
 }
 
-#[cfg(any(feature = "bl808_m0", feature = "bl808_lp"))]
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 def_irq! {
     /// BMX bus error.
     BMX_MCU_BUS_ERR     = 16 + 0;
@@ -241,7 +267,7 @@ def_irq! {
     IRQ_COUNT           = 16 + 64;
 }
 
-#[cfg(feature = "bl808_d0")]
+#[cfg(feature = "bl808-d0")]
 def_irq! {
     /// BMX bus error.
     BMX_DSP_BUS_ERR     = 16 + 0;

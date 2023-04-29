@@ -52,11 +52,11 @@ impl Clocks {
 
     /// Get the machine timer RTC register for the current core.
     pub fn get_mtimer_rtc_reg(&self) -> PtrRw<CpuRtc> {
-        #[cfg(feature = "bl808_m0")]
+        #[cfg(feature = "bl808-m0")]
         { bl808::MCU_MISC.cpu_mtimer_rtc() }
-        #[cfg(feature = "bl808_d0")]
+        #[cfg(feature = "bl808-d0")]
         { bl808::MM_MISC.cpu_mtimer_rtc() }
-        #[cfg(feature = "bl808_lp")]
+        #[cfg(feature = "bl808-lp")]
         { bl808::PDS.cpu_mtimer_rtc() }
     }
 
@@ -84,11 +84,11 @@ impl Clocks {
     /// without RTC divider.
     /// To get the real frequency of the machine timer, use [`get_mtimer_freq`].
     pub fn get_mtimer_source_freq(&self) -> u32 {
-        #[cfg(feature = "bl808_m0")]
+        #[cfg(feature = "bl808-m0")]
         { self.get_m0_cpu_freq() }
-        #[cfg(feature = "bl808_d0")]
+        #[cfg(feature = "bl808-d0")]
         { todo!() }
-        #[cfg(feature = "bl808_lp")]
+        #[cfg(feature = "bl808-lp")]
         { todo!() }
     }
 

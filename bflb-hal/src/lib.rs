@@ -2,14 +2,12 @@
 
 #![no_std]
 
-// extern crate alloc;
-
-#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+#[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
 pub mod bl808;
 
 // Currently, only BL808 chip is implemented so we simplify feature gates by 
 // putting them here.
-#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+#[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
 mod peripheral;
-#[cfg(any(feature = "bl808_m0", feature = "bl808_d0", feature = "bl808_lp"))]
+#[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
 pub use peripheral::*;
