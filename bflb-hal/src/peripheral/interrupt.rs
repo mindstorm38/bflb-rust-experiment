@@ -3,8 +3,6 @@
 //! You need a runtime crate such as `bflb-rt` in order to configure
 //! interrupts given these numbers.
 
-use core::sync::atomic::{compiler_fence, Ordering};
-
 use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
 use crate::bl808::CLIC;
@@ -31,25 +29,11 @@ impl Interrupts {
         CLIC.int(num).enable().get() != 0
     }
     
-    /// Enable or not the interrupt. The interrupt is guaranteed to
-    /// trigger or not after this function returns.
+    /// Enable or not the interrupt. This function doesn't guarantee
+    /// any kind of synchronization and ordering.
     #[inline(always)]
     pub fn set_enabled(&mut self, num: usize, enabled: bool) {
-
-        if enabled {
-            // When enabling, we don't want previous instructions to
-            // be reordered after interrupt is enabled.
-            compiler_fence(Ordering::SeqCst);
-        }
-
         CLIC.int(num).enable().set(enabled as _);
-
-        if !enabled {
-            // When disabling, we don't want future instructions to
-            // be reordered before interrupt is disabled.
-            compiler_fence(Ordering::SeqCst);
-        }
-
     }
     
     #[inline(always)]
@@ -137,19 +121,29 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
 #[cfg(feature = "bl-critical-section")]
 mod critical_section {
 
+    use core::arch::asm;
+
     use critical_section::{RawRestoreState, Impl};
 
+    // Internal type to implement the critical section of BfLab.
     struct BlCriticalSection;
     critical_section::set_impl!(BlCriticalSection);
 
     unsafe impl Impl for BlCriticalSection {
 
         unsafe fn acquire() -> RawRestoreState {
-            todo!()
+            // Atomically clear the mstatus.mie bit.
+            let mut prev: u32;
+            asm!("csrrci {}, mstatus, 0b1000", out(reg) prev);
+            // Return true restore state if previous bit was 1.
+            (prev & 0b1000) != 0
         }
 
         unsafe fn release(restore_state: RawRestoreState) {
-            todo!()
+            // If we need to restore the interrupt to 1.
+            if restore_state {
+                asm!("csrsi mstatus, 0b1000");
+            }
         }
         
     }

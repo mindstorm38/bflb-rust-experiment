@@ -10,6 +10,7 @@ use hal::Peripherals;
 
 use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use hal::uart::UartConfig;
+use hal::interrupt::MACHINE_TIMER;
 
 
 #[link_section = ".data"] // Loaded in RAM
@@ -23,6 +24,7 @@ fn main() {
     let peripherals = Peripherals::take();
     let mut clocks = peripherals.clocks;
     let mut cpu_control = peripherals.cpu_control;
+    let mut interrupts = peripherals.interrupts;
     let timer = peripherals.timer;
 
     clocks.set_d0_cpu_enable(false);
@@ -57,8 +59,6 @@ fn main() {
     clocks.set_mm_xclk_sel(MmXclkSel::Xtal);
 
     // PERIPHERAL INIT
-    
-    timer.init(&mut clocks);
 
     clocks.set_dma_enable(true);
     
@@ -66,7 +66,11 @@ fn main() {
     clocks.set_mcu_uart0_enable(true);
     
     clocks.set_adc_dac_enable(true);
-    // clocks.setup_adc(sel, div, enable);
+    
+    // TIMER INIT
+    
+    timer.init(&mut clocks);
+    interrupts.set_enabled(MACHINE_TIMER, true);
 
     // CONSOLE INIT
 
@@ -90,13 +94,14 @@ fn main() {
         
         loop {
 
-            timer.wait(1_000_000).await;
             let _ = writeln!(uart_tx, "RTC time: {}", timer.get_time());
+            timer.wait(1_000_000).await;
 
         }
 
     });
 
+    // Run a wait for the end of spawned tasks (should not end).
     wait();
 
 }
