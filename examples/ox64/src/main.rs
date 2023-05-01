@@ -10,7 +10,7 @@ use hal::Peripherals;
 
 use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use hal::uart::UartConfig;
-use hal::interrupt::MACHINE_TIMER;
+use hal::interrupt;
 
 
 #[link_section = ".data"] // Loaded in RAM
@@ -67,10 +67,13 @@ fn main() {
     
     clocks.set_adc_dac_enable(true);
     
-    // TIMER INIT
-    
     timer.init(&mut clocks);
-    interrupts.set_enabled(MACHINE_TIMER, true);
+    
+    // INTERRUPT INIT
+    
+    interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
+    interrupts.set_enabled(interrupt::DMA0_ALL, true);
+    // interrupts.set_enabled(interrupt::DMA1_ALL, true);
 
     // CONSOLE INIT
 

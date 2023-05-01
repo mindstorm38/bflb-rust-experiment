@@ -309,6 +309,7 @@ where
 
     // Get the status and clear all status.
     let status = get_port_regs::<PORT>().int_tc_status().get();
+    get_port_regs::<PORT>().int_tc_clear().set(status);
 
     // SAFETY: We can spin lock the wakers because we are in an 
     // interrupt and we cannot be deadlocked by another interrupt.
