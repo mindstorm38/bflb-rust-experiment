@@ -2,22 +2,33 @@
 //! 
 //! Interesting post: https://blog.japaric.io/safe-dma/
 
+use core::task::{Poll, Context, Waker};
+use core::future::Future;
+use core::pin::Pin;
+
+use spin::Mutex;
+
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
 
 
-/// Represent an exclusive access to a DMA channel on a particular port.
+// TODO: Guard all access to the port registers to avoid concurrent
+// uses.
+
+
+/// Represent an exclusive access to a DMA channel on a particular DMA
+/// port. This can be used to initiate a transfer.
 pub struct DmaAccess<const PORT: u8, const CHANNEL: u8>(pub(crate) ());
 
 impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
-    /// Execute a new DMA transfer from the given source endpoint to the given
-    /// destination endpoint. Endpoints are generic, see implementors of 
-    /// [`DmaEndpoint`] for more information, note that supported peripherals
-    /// depends on the `PORT` used.
+    /// Execute a new DMA transfer from the given source endpoint to 
+    /// the given destination endpoint. Endpoints are generic, see 
+    /// implementors of [`DmaEndpoint`] for more information, note 
+    /// that supported peripherals depends on the `PORT` used.
     /// 
-    /// The returned [`DmaTransfer`] handle can be used to wait for result
-    /// and get back the source and destination endpoint in order to reuse 
-    /// them.
+    /// The returned [`DmaTransfer`] handle can be used to wait for 
+    /// result and get back the source and destination endpoint in 
+    /// order to reuse them.
     #[inline(never)]
     pub fn into_transfer<Src, Dst>(self, 
         mut src: Src,
@@ -28,7 +39,7 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
     {
 
         let port_regs = get_port_regs::<PORT>();
-        let channel_regs: dma::DmaChannel = get_channel_regs::<PORT, CHANNEL>();
+        let channel_regs = get_channel_regs::<PORT, CHANNEL>();
 
         let src_config = src.configure();
         let dst_config = dst.configure();
@@ -113,10 +124,10 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
         });
 
-        // Enable DMA error and terminal count interrupt.
+        // Enable DMA error and terminal count interrupts.
         channel_regs.config().modify(|reg| {
-            reg.int_error_mask().fill();
-            reg.int_tc_mask().fill();
+            reg.int_error_mask().clear();
+            reg.int_tc_mask().clear();
         });
 
         channel_regs.src_addr().set(unsafe { src.ptr() } as _);
@@ -140,9 +151,14 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 }
 
 
-/// Represent a running DMA transfer.
+/// Represent a running DMA transfer that is currently running or
+/// already finished. Once this transfer is done, it can be used to
+/// retrieve the original source and destination endpoints to reuse
+/// them.
 pub struct DmaTransfer<const PORT: u8, const CHANNEL: u8, Src, Dst> {
+    /// Source endpoint of the transfer.
     src: Src,
+    /// Destination endpoint of the transfer.
     dst: Dst,
 }
 
@@ -155,46 +171,223 @@ where
     /// Return true if the transfer is completed and can be destructured
     #[inline]
     pub fn completed(&self) -> bool {
-        get_port_regs::<PORT>().raw_int_tc_status().get().get(CHANNEL)
+        get_port_regs::<PORT>().int_tc_status().get().get(CHANNEL)
+    }
+
+    /// Internal function to destruct this transfer to its original
+    /// components. This function is unsafe because you must ensure
+    /// that the transfer is completed before destructing it. If it's
+    /// not the case, the destination endpoint may be aliases by the
+    /// DMA controller.
+    /// 
+    /// This function also release the endpoints and clear the
+    /// associated interrupt.
+    #[inline]
+    unsafe fn destruct(mut self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+        
+        get_port_regs::<PORT>().int_tc_clear()
+            .set_with(|port| port.set(CHANNEL, true));
+        
+        self.src.release();
+        self.dst.release();
+
+        (self.src, self.dst, DmaAccess(()))
+
     }
 
     /// Try destructuring this transfer into its original components.
     /// 
     /// This will only succeed if the DMA transfer is completed ([`completed`]).
-    pub fn try_destruct(self) -> Result<(Src, Dst, DmaAccess<PORT, CHANNEL>), Self> {
+    pub fn try_wait(self) -> Result<(Src, Dst, DmaAccess<PORT, CHANNEL>), Self> {
         if self.completed() {
-
-            // The structure is droppped here, it's safe to return back the ownership 
-            // of source and destination because we checked that the transfer has 
-            // completed.
-            let DmaTransfer { mut src, mut dst } = self;
-
-            // Some endpoints need to be unconfigured after DMA transfer is complete.
-            src.unconfigure();
-            dst.unconfigure();
-
-            // It's safe to create a DmaAccess because it has been consumed in order
-            // to create the transfer which ensured exclusive access to DMA channel.
-            Ok((src, dst, DmaAccess(())))
-
+            // SAFETY: This is safe because we know that the transfer
+            // is completed, so we can destruct.
+            Ok(unsafe { self.destruct() })
         } else {
             Err(self)
         }
     }
 
-    /// Indefinitly wait for completion of this DMA transfer and then destruct the
-    /// transfer into its original components. See [`try_destruct`].
-    pub fn wait_destruct(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
+    /// Indefinitely wait for completion of this DMA transfer and then 
+    /// destruct the transfer into its original components. 
+    /// See [`try_destruct`].
+    pub fn wait_block(self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
         let mut transfer = self;
         loop {
-            transfer = match transfer.try_destruct() {
+            transfer = match transfer.try_wait() {
                 Ok(fields) => return fields,
                 Err(transfer) => transfer,
             };
         }
     }
 
+    /// Wait for completion of this DMA transfer using a future, this
+    /// can be awaited in an async context.
+    /// 
+    /// *This method is only available on the CPU type that supports
+    /// interrupts for the current DMA port.*
+    /// 
+    /// This requires that source and destination endpoint are unpin,
+    /// because the 
+    pub fn wait(self) -> impl Future<Output = (Src, Dst, DmaAccess<PORT, CHANNEL>)>
+    where
+        Src: Unpin,
+        Dst: Unpin,
+        DmaPort<PORT>: DmaAsyncPort,
+    {
+        DmaTransferFuture {
+            inner: Some(self),
+        }
+    }
+
 }
+
+
+/// Future type used to await a DMA transfer in an async context.
+pub struct DmaTransferFuture<const PORT: u8, const CHANNEL: u8, Src, Dst> {
+    /// Inner transfer, used to destruct the transfer, when None it
+    /// cannot be polled again.
+    inner: Option<DmaTransfer<PORT, CHANNEL, Src, Dst>>,
+}
+
+impl<const PORT: u8, const CHANNEL: u8, Src, Dst> Future for DmaTransferFuture<PORT, CHANNEL, Src, Dst>
+where
+    Src: DmaEndpoint + Unpin,
+    Dst: DmaEndpoint + Unpin,
+    DmaPort<PORT>: DmaAsyncPort,
+{
+
+    type Output = (Src, Dst, DmaAccess<PORT, CHANNEL>);
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+
+        // We can unwrap because calling poll on an already-ready
+        // future should not happen.
+        if !self.inner.as_ref().unwrap().completed() {
+
+            critical_section::with(|_| {
+
+                // SAFETY: We use a critical section to spin lock the
+                // wakers to avoid dead locking in case of interrupts 
+                // while locking.
+                <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
+                    wakers[CHANNEL as usize] = Some(cx.waker().clone());
+                });
+
+                Poll::Pending
+                
+            })
+
+        } else {
+            // If this is completed.
+            Poll::Ready(unsafe { self.inner.take().unwrap().destruct() })
+        }
+        
+    }
+
+}
+
+
+/// Used to initialize the wakers arrays.
+const DMA_WAKER_INIT: Option<Waker> = None;
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+static DMA0_WAKERS: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+static DMA1_WAKERS: Mutex<[Option<Waker>; 4]> = Mutex::new([DMA_WAKER_INIT; 4]);
+
+#[cfg(feature = "bl808-d0")]
+static DMA2_WAKERS: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+
+/// Internal generic handler for DMA ports. This is internally only
+/// called from interrupt handlers.
+fn dma_handler<const PORT: u8>()
+where
+    DmaPort<PORT>: DmaAsyncPort,
+{
+
+    // Get the status and clear all status.
+    let status = get_port_regs::<PORT>().int_tc_status().get();
+
+    // SAFETY: We can spin lock the wakers because we are in an 
+    // interrupt and we cannot be deadlocked by another interrupt.
+    <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
+        for (i, waker) in wakers.iter_mut().enumerate() {
+            if status.get(i as u8) {
+                if let Some(waker) = waker.take() {
+                    waker.wake();
+                }
+            }
+        }
+    });
+
+}
+
+/// Interrupt handler for DMA0 interrupts on M0/LP.
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+pub(crate) fn dma0_handler(_code: usize) {
+    dma_handler::<0>();
+}
+
+/// Interrupt handler for DMA1 interrupts on M0/LP.
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+pub(crate) fn dma1_handler(_code: usize) {
+    dma_handler::<1>();
+}
+
+/// Interrupt handler for DMA1 interrupts on M0/LP.
+#[cfg(feature = "bl808-d0")]
+pub(crate) fn dma2_handler(_code: usize) {
+    dma_handler::<2>();
+}
+
+
+/// Internal module used for sealed traits.
+mod sealed {
+
+    use super::Waker;
+
+    /// Internal trait that allows modifying wakers of a particular port.
+    pub trait DmaAsyncPortWakers {
+        /// Spin lock the wakers for this port and run a function with the
+        /// wakers array, **you must** ensure that the spin lock is called
+        /// in a safe manner regarding interrupts.
+        fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T;
+    }
+
+}
+
+/// A trait internally used to constrain the possible DMA ports
+/// available for the currently selected chip.
+pub trait DmaAsyncPort: sealed::DmaAsyncPortWakers {}
+pub struct DmaPort<const PORT: u8>;
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+impl sealed::DmaAsyncPortWakers for DmaPort<0> {
+    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+        func(&mut DMA0_WAKERS.lock()[..])
+    }
+}
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+impl sealed::DmaAsyncPortWakers for DmaPort<1> {
+    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+        func(&mut DMA1_WAKERS.lock()[..])
+    }
+}
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+impl DmaAsyncPort for DmaPort<0> {}
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+impl DmaAsyncPort for DmaPort<1> {}
+
+#[cfg(feature = "bl808-d0")]
+impl sealed::DmaAsyncPortWakers for DmaPort<2> {
+    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+        func(&mut DMA2_WAKERS.lock()[..])
+    }
+}
+#[cfg(feature = "bl808-d0")]
+impl DmaAsyncPort for DmaPort<2> {}
 
 
 /// Structure describing how an endpoint should be configured.
@@ -244,9 +437,10 @@ pub trait DmaEndpoint {
     /// endpoint instance before configuration.
     fn configure(&mut self) -> DmaEndpointConfig;
 
-    /// Unconfigure this endpoint, this is called when the DMA transfer
-    /// is deconstructed and endpoints are released.
-    fn unconfigure(&mut self) {}
+    /// Release this endpoint from a DMA transfer, this is called when
+    /// the DMA transfer is deconstructed and both endpoints are 
+    /// released.
+    fn release(&mut self) {}
 
 }
 
@@ -289,7 +483,8 @@ pub trait DmaPrimitiveType {
 
 }
 
-/// Implementation for arrays.
+
+/// Implementation for array slices with compile-time length.
 impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for &'static [T; LEN] {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -309,7 +504,7 @@ unsafe impl<T: DmaPrimitiveType, const LEN: usize> DmaSrcEndpoint for &'static [
     }
 }
 
-/// Implementation for slices.
+/// Implementation for array slices with runtime length.
 impl<T: DmaPrimitiveType> DmaEndpoint for &'static [T] {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -329,7 +524,7 @@ unsafe impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
     }
 }
 
-/// Implementation for str slices.
+/// Implementation for string slices.
 impl DmaEndpoint for &'static str {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -355,56 +550,9 @@ unsafe impl DmaSrcEndpoint for &'static str {
 }
 
 
-// impl<T: DmaPrimitiveType> DmaEndpoint for Box<[T]> {
-
-//     #[inline]
-//     fn peripheral(&self) -> Option<DmaPeripheral> {
-//         None // Not a peripheral
-//     }
-
-//     #[inline]
-//     fn data_width(&self) -> DmaDataWidth {
-//         T::data_width()
-//     }
-
-//     #[inline]
-//     fn burst_size(&self) -> DmaBurstSize {
-//         T::burst_size()
-//     }
-
-//     #[inline]
-//     fn len(&self) -> DmaIncrement {
-//         DmaIncrement::Incr((&**self).len())
-//     }
-
-// }
-
-// impl<T: DmaPrimitiveType, const LEN: usize> DmaEndpoint for Box<[T; LEN]> {
-
-//     #[inline]
-//     fn peripheral(&self) -> Option<DmaPeripheral> {
-//         None // Not a peripheral
-//     }
-
-//     #[inline]
-//     fn data_width(&self) -> DmaDataWidth {
-//         T::data_width()
-//     }
-
-//     #[inline]
-//     fn burst_size(&self) -> DmaBurstSize {
-//         T::burst_size()
-//     }
-
-//     #[inline]
-//     fn len(&self) -> DmaIncrement {
-//         DmaIncrement::Incr(LEN)
-//     }
-
-// }    
-
-
-/// Define primitive implementations of `DmaEndpoint`.
+/// Internal macro used to define DMA primitive integer types, these
+/// are used to implement [`DmaEndpoint`] on generic arrays and slices
+/// for example.
 macro_rules! impl_primitive_type {
     ($($ty:ty),+ = $data_width:ident, $burst_size:ident) => {
         
@@ -447,7 +595,7 @@ pub enum DmaDataWidth {
 }
 
 /// DMA burst count. This represent the amount of data the can
-/// be transfered before released the memory bus. The values are
+/// be transferred before released the memory bus. The values are
 /// expressed in bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DmaBurstSize {
@@ -461,13 +609,18 @@ pub enum DmaBurstSize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DmaIncrement {
     /// The address doesn't change between transfers, the same address
-    /// is used but for an unknown count. The count must be determined
+    /// is used but for an unknown count. If an endpoint returns a
+    /// constant address, the opposite endpoint should specify a know
+    /// increment size.
     Const,
-    /// The address is incremented between the given number of transfers.
+    /// The DMA controller will increment the address of the endpoint
+    /// to run the given number of transfers. Each transfer has the
+    /// size of the configured [`DmaDataWidth`].
     Incr(usize),
 }
 
-/// DMA peripheral available for configuration of a channel.
+/// DMA peripheral available for configuration of a channel. Some
+/// peripherals are not possible for some DMA ports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DmaPeripheral {
     Uart0Rx,

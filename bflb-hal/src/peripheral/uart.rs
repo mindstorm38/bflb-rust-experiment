@@ -211,8 +211,7 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> Drop for UartRx<PORT, PIN, O>
 }
 
 
-// For DMA support
-
+/// DMA endpoint for UART TX lane, it can be used as destination.
 impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartTx<PORT, PIN, O> {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -234,7 +233,7 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartTx<PORT, 
 
     }
 
-    fn unconfigure(&mut self) {
+    fn release(&mut self) {
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_tx_en().clear());
     }
 
@@ -246,6 +245,7 @@ unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaDstEndpoint for Uar
     }
 }
 
+/// DMA endpoint for UART RX lane, it can be used as source.
 impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, PIN, O> {
 
     fn configure(&mut self) -> DmaEndpointConfig {
@@ -267,7 +267,7 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, 
 
     }
 
-    fn unconfigure(&mut self) {
+    fn release(&mut self) {
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_rx_en().clear());
     }
 
@@ -279,8 +279,9 @@ unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaSrcEndpoint for Uar
     }
 }
 
-// Utils
 
+/// Return the UART registers for the given port.
+#[inline]
 fn get_registers<const PORT: u8>() -> UartRegs {
     match PORT {
         0 => UART0,

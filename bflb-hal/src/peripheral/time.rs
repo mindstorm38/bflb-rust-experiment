@@ -146,7 +146,6 @@ pub(crate) fn mtimer_handler(_code: usize) {
 /// locking.
 static ASYNC_STATE: Mutex<AsyncState> = Mutex::new(AsyncState::new());
 
-
 /// Internal async state.
 struct AsyncState {
     wakers: Vec<Waker, 32>,

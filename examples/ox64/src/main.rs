@@ -86,7 +86,7 @@ fn main() {
 
     let (_, mut uart_tx, _) = peripherals.dma.p0.c0
         .into_transfer(DMA_MESSAGE, uart_tx)
-        .wait_destruct();
+        .wait_block();
     
     // LOOP
 

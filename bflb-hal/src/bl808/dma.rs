@@ -8,11 +8,11 @@ embedded_util::mmio! {
     pub struct Dma {
         /// Status of the DMA interrupt after masking.
         [0x000] ro int_status: DmaBitField,
-        /// Interrupt terminal count request status.
+        /// Interrupt terminal count request status, after masking.
         [0x004] ro int_tc_status: DmaBitField,
         /// Terminal count request clear.
         [0x008] wo int_tc_clear: DmaBitField,
-        /// Interrupt error status.
+        /// Interrupt error status, after masking.
         [0x00C] ro int_error_status: DmaBitField,
         /// Interrupt error clear.
         [0x010] wo int_error_clear: DmaBitField,
@@ -144,8 +144,16 @@ embedded_util::reg! {
         /// - 111 - Source peripheral-to-Destination peripheral (Source peripheral)
         [11..14] flow_control,
         /// Interrupt error mask.
+        /// - 0 - Errors on this channel will generate an associated
+        ///       interrupt and set the associated bit in `int_error_status`.
+        /// - 1 - No error interrupt, the associated bit is still set
+        ///       in `raw_int_error_status`.
         [14..15] int_error_mask,
         /// Terminal count interrupt mask.
+        /// - 0 - Terminal count on this channel will generate an associated
+        ///       interrupt and set the associated bit in `int_tc_status`.
+        /// - 1 - No error interrupt, the associated bit is still set
+        ///       in `raw_int_tc_status`.
         [15..16] int_tc_mask,
         /// Lock.
         [16..17] lock,

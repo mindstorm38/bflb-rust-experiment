@@ -261,7 +261,7 @@ pub struct Dma1 {
     pub c3: DmaAccess<1, 3>,
 }
 
-/// This peripheral structure wrap channels of DMA port 0.
+/// This peripheral structure wrap channels of DMA port 2.
 pub struct Dma2 {
     pub c0: DmaAccess<2, 0>,
     pub c1: DmaAccess<2, 1>,
