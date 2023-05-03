@@ -171,7 +171,7 @@ where
     /// Return true if the transfer is completed and can be destructured
     #[inline]
     pub fn completed(&self) -> bool {
-        get_port_regs::<PORT>().int_tc_status().get().get(CHANNEL)
+        get_port_regs::<PORT>().raw_int_tc_status().get().get(CHANNEL)
     }
 
     /// Internal function to destruct this transfer to its original
@@ -292,7 +292,7 @@ where
 const DMA_WAKER_INIT: Option<Waker> = None;
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-static DMA0_WAKERS: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+static DMA0_ASYNC: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 static DMA1_WAKERS: Mutex<[Option<Waker>; 4]> = Mutex::new([DMA_WAKER_INIT; 4]);
@@ -367,7 +367,7 @@ pub struct DmaPort<const PORT: u8>;
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 impl sealed::DmaAsyncPortWakers for DmaPort<0> {
     fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
-        func(&mut DMA0_WAKERS.lock()[..])
+        func(&mut DMA0_ASYNC.lock()[..])
     }
 }
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]

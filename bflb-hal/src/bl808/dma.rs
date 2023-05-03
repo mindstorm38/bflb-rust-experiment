@@ -9,10 +9,20 @@ embedded_util::mmio! {
         /// Status of the DMA interrupt after masking.
         [0x000] ro int_status: DmaBitField,
         /// Interrupt terminal count request status, after masking.
+        /// 
+        /// When this register is not equal to zero, a DMA interrupt 
+        /// will be raised for the current DMA port (or channel). You 
+        /// need to clear this register, using `int_tc_clear` register
+        /// to avoid spin interruption. 
         [0x004] ro int_tc_status: DmaBitField,
         /// Terminal count request clear.
         [0x008] wo int_tc_clear: DmaBitField,
         /// Interrupt error status, after masking.
+        /// 
+        /// When this register is not equal to zero, a DMA interrupt 
+        /// will be raised for the current DMA port (or channel). You 
+        /// need to clear this register, using `int_error_clear` 
+        /// register to avoid spin interruption.
         [0x00C] ro int_error_status: DmaBitField,
         /// Interrupt error clear.
         [0x010] wo int_error_clear: DmaBitField,
@@ -43,7 +53,8 @@ embedded_util::mmio! {
         [0x00] rw src_addr: u32,
         /// DMA Destination address.
         [0x04] rw dst_addr: u32,
-        /// LLI, First linked list item. Bits 0..2 must be 0 (aligned to 4 bytes).
+        /// LLI, First linked list item. Bits 0..2 must be 0 (so the
+        /// item must be memory-aligned to 4 bytes).
         [0x08] rw lli: u32,
         /// Control register for DMA channel.
         [0x0C] rw control: DmaChannelControl,
