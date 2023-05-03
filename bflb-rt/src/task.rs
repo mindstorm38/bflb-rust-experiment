@@ -2,11 +2,37 @@
 //! 
 use core::task::{Poll, Context, Waker, RawWaker, RawWakerVTable};
 use core::sync::atomic::{Ordering, AtomicU8};
+use core::marker::PhantomData;
 use core::future::Future;
 use core::pin::Pin;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+
+
+/// This atomic variable is internally used to track if [`wait`] is
+/// being called.
+/// 
+/// FIXME: In the future, these must be thread-local.
+static mut WAITING: bool = false;
+
+/// Indices of tasks that were recently spawned and not yet ran by
+/// the [`wait`] function. This vector also contains indices of tasks
+/// that has been wake up.
+/// 
+/// FIXME: In the future, these must be thread-local.
+static mut NEW_TASKS: Vec<Box<dyn Task>> = Vec::new();
+
+
+const STATE_AWAKE: u8    = 0;
+const STATE_PENDING: u8  = 1;
+const STATE_POLLING: u8  = 2;
+const STATE_COMPLETE: u8 = 3;
+
+
+/// Internal type alias for the atomic variable storing the state of
+/// a task.
+type AtomicState = AtomicU8;
 
 
 /// Spawn an asynchronous task for the current thread's executor. The
@@ -45,7 +71,7 @@ pub fn wait() {
 
     loop {
 
-        // SAFETY: The NEW_TASKS vector is manager either by 'spawn'
+        // SAFETY: The NEW_TASKS vector is managed either by 'spawn'
         // or 'wait' function, but because it's single-threaded, it
         // can't lead to data race, NEW_TASKS is then freed.
         tasks.extend(unsafe { NEW_TASKS.drain(..) });
@@ -116,26 +142,6 @@ pub fn wait() {
 }
 
 
-/// This atomic variable is internally used to track if [`wait`] is
-/// being called.
-/// 
-/// FIXME: In the future, these must be thread-local.
-static mut WAITING: bool = false;
-
-/// Indices of tasks that were recently spawned and not yet ran by
-/// the [`wait`] function. This vector also contains indices of tasks
-/// that has been wake up.
-/// 
-/// FIXME: In the future, these must be thread-local.
-static mut NEW_TASKS: Vec<Box<dyn Task>> = Vec::new();
-
-
-const STATE_AWAKE: u8    = 0;
-const STATE_PENDING: u8  = 1;
-const STATE_POLLING: u8  = 2;
-const STATE_COMPLETE: u8 = 3;
-
-
 /// Internal trait used to dynamically store a task.
 trait Task {
 
@@ -144,7 +150,7 @@ trait Task {
     /// 
     /// This function should be the only way to get access to those
     /// components.
-    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicU8);
+    fn split<'a>(&'a mut self) -> (&'a mut dyn Future<Output = ()>, &'a AtomicState);
 
 }
 
@@ -156,7 +162,7 @@ struct TaskImpl<F: Future> {
     /// The state atomic integer indicate the state of the task.
     /// We are using atomic here because the waker may be called from
     /// interrupts or other threads, we don't know.
-    state: AtomicU8,
+    state: AtomicState,
 }
 
 impl<F: Future<Output = ()>> TaskImpl<F> {
@@ -165,7 +171,7 @@ impl<F: Future<Output = ()>> TaskImpl<F> {
     fn new(future: F) -> Self {
         Self {
             future,
-            state: AtomicU8::new(STATE_AWAKE),
+            state: AtomicState::new(STATE_AWAKE),
         }
     }
 
@@ -185,14 +191,14 @@ unsafe fn waker_clone(data: *const ()) -> RawWaker {
 }
 
 unsafe fn waker_wake(data: *const ()) {
-    // SAFETY: TODO:
-    let pending = unsafe { &*(data as *const AtomicU8) };
+    // SAFETY: We know that the data is of type AtomicState.
+    let pending = unsafe { &*(data as *const AtomicState) };
     pending.store(STATE_AWAKE, Ordering::Release);
 }
 
 unsafe fn waker_wake_by_ref(data: *const ()) {
-    // SAFETY: TODO:
-    let pending = unsafe { &*(data as *const AtomicU8) };
+    // SAFETY: We know that the data is of type AtomicState.
+    let pending = unsafe { &*(data as *const AtomicState) };
     pending.store(STATE_AWAKE, Ordering::Release);
 }
 
@@ -208,3 +214,46 @@ static WAKER_VTABLE: RawWakerVTable = RawWakerVTable::new(
     waker_wake_by_ref,
     waker_drop,
 );
+
+
+/// Scope a group of task in the given closure's lifetime. This
+/// function will block until all the spawned tasks are done.
+/// 
+/// If this function is called from within a running task, the scope
+/// will only wait for the given task to be finished. But if the
+/// function is called from a root non-async context, it will start
+/// the asynchronous runtime.
+pub fn scope<'env, F>(func: F)
+where
+    F: for<'scope> FnOnce(&'scope Scope<'scope, 'env>),
+{
+    
+    let mut tasks = Vec::new();
+    let scope = Scope {
+        tasks: &mut tasks,
+        scope: PhantomData,
+        env: PhantomData,
+    };
+
+    func(&scope);
+
+}
+
+pub struct Scope<'scope, 'env: 'scope> {
+    tasks: &'scope mut Vec<Box<dyn Task + 'env>>,
+    scope: PhantomData<&'scope mut &'scope ()>,
+    env: PhantomData<&'env mut &'env ()>,
+}
+
+impl<'scope, 'env: 'scope> Scope<'scope, 'env> {
+
+    /// Spawn an asynchronous task for the current thread's executor. 
+    /// The thread executor will try to run every task cooperatively.
+    pub fn spawn<'a, F>(&'scope mut self, future: F) 
+    where
+        F: Future<Output = ()> + 'env,
+    {
+        self.tasks.push(Box::new(TaskImpl::new(future)));
+    }
+
+}
