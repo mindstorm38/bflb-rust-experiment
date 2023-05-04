@@ -116,20 +116,20 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
 
     #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
     {
-        handlers[DMA0_ALL] = super::dma::dma0_handler;
-        handlers[DMA1_ALL] = super::dma::dma1_handler;
+        // handlers[DMA0_ALL] = super::dma::dma0_handler;
+        // handlers[DMA1_ALL] = super::dma::dma1_handler;
     }
 
     #[cfg(feature = "bl808-d0")]
     {
-        handlers[DMA2_INT0] = super::dma::dma2_handler;
-        handlers[DMA2_INT1] = super::dma::dma2_handler;
-        handlers[DMA2_INT2] = super::dma::dma2_handler;
-        handlers[DMA2_INT3] = super::dma::dma2_handler;
-        handlers[DMA2_INT4] = super::dma::dma2_handler;
-        handlers[DMA2_INT5] = super::dma::dma2_handler;
-        handlers[DMA2_INT6] = super::dma::dma2_handler;
-        handlers[DMA2_INT7] = super::dma::dma2_handler;
+        // handlers[DMA2_INT0] = super::dma::dma2_handler;
+        // handlers[DMA2_INT1] = super::dma::dma2_handler;
+        // handlers[DMA2_INT2] = super::dma::dma2_handler;
+        // handlers[DMA2_INT3] = super::dma::dma2_handler;
+        // handlers[DMA2_INT4] = super::dma::dma2_handler;
+        // handlers[DMA2_INT5] = super::dma::dma2_handler;
+        // handlers[DMA2_INT6] = super::dma::dma2_handler;
+        // handlers[DMA2_INT7] = super::dma::dma2_handler;
     }
 
     handlers

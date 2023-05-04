@@ -2,11 +2,11 @@
 //! 
 //! Interesting post: https://blog.japaric.io/safe-dma/
 
-use core::task::{Poll, Context, Waker};
-use core::future::Future;
-use core::pin::Pin;
+// use core::task::{Poll, Context, Waker};
+// use core::future::Future;
+// use core::pin::Pin;
 
-use spin::Mutex;
+// use spin::Mutex;
 
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
 
@@ -124,10 +124,10 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
         });
 
-        // Enable DMA error and terminal count interrupts.
+        // Disable DMA error and terminal count interrupts.
         channel_regs.config().modify(|reg| {
-            reg.int_error_mask().clear();
-            reg.int_tc_mask().clear();
+            reg.int_error_mask().fill();
+            reg.int_tc_mask().fill();
         });
 
         channel_regs.src_addr().set(unsafe { src.ptr() } as _);
@@ -221,174 +221,169 @@ where
         }
     }
 
-    /// Wait for completion of this DMA transfer using a future, this
-    /// can be awaited in an async context.
-    /// 
-    /// *This method is only available on the CPU type that supports
-    /// interrupts for the current DMA port.*
-    /// 
-    /// This requires that source and destination endpoint are unpin,
-    /// because the 
-    pub fn wait(self) -> impl Future<Output = (Src, Dst, DmaAccess<PORT, CHANNEL>)>
-    where
-        Src: Unpin,
-        Dst: Unpin,
-        DmaPort<PORT>: DmaAsyncPort,
-    {
-        DmaTransferFuture {
-            inner: Some(self),
-        }
-    }
+    // /// Wait for completion of this DMA transfer using a future, this
+    // /// can be awaited in an async context.
+    // /// 
+    // /// *This method is only available on the CPU type that supports
+    // /// interrupts for the current DMA port.*
+    // /// 
+    // /// This requires that source and destination endpoint are unpin,
+    // /// because the 
+    // pub fn wait(self) -> impl Future<Output = (Src, Dst, DmaAccess<PORT, CHANNEL>)>
+    // where
+    //     Src: Unpin,
+    //     Dst: Unpin,
+    //     DmaPort<PORT>: DmaAsyncPort,
+    // {
+    //     DmaTransferFuture {
+    //         inner: Some(self),
+    //     }
+    // }
 
 }
 
 
-/// Future type used to await a DMA transfer in an async context.
-pub struct DmaTransferFuture<const PORT: u8, const CHANNEL: u8, Src, Dst> {
-    /// Inner transfer, used to destruct the transfer, when None it
-    /// cannot be polled again.
-    inner: Option<DmaTransfer<PORT, CHANNEL, Src, Dst>>,
-}
+// /// Future type used to await a DMA transfer in an async context.
+// pub struct DmaTransferFuture<const PORT: u8, const CHANNEL: u8, Src, Dst> {
+//     /// Inner transfer, used to destruct the transfer, when None it
+//     /// cannot be polled again.
+//     inner: Option<DmaTransfer<PORT, CHANNEL, Src, Dst>>,
+// }
 
-impl<const PORT: u8, const CHANNEL: u8, Src, Dst> Future for DmaTransferFuture<PORT, CHANNEL, Src, Dst>
-where
-    Src: DmaEndpoint + Unpin,
-    Dst: DmaEndpoint + Unpin,
-    DmaPort<PORT>: DmaAsyncPort,
-{
+// impl<const PORT: u8, const CHANNEL: u8, Src, Dst> Future for DmaTransferFuture<PORT, CHANNEL, Src, Dst>
+// where
+//     Src: DmaEndpoint + Unpin,
+//     Dst: DmaEndpoint + Unpin,
+//     DmaPort<PORT>: DmaAsyncPort,
+// {
 
-    type Output = (Src, Dst, DmaAccess<PORT, CHANNEL>);
+//     type Output = (Src, Dst, DmaAccess<PORT, CHANNEL>);
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+//     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
 
-        // We can unwrap because calling poll on an already-ready
-        // future should not happen.
-        if !self.inner.as_ref().unwrap().completed() {
+//         // We can unwrap because calling poll on an already-ready
+//         // future should not happen.
+//         if !self.inner.as_ref().unwrap().completed() {
 
-            critical_section::with(|_| {
+//             critical_section::with(|_| {
 
-                // SAFETY: We use a critical section to spin lock the
-                // wakers to avoid dead locking in case of interrupts 
-                // while locking.
-                <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
-                    wakers[CHANNEL as usize] = Some(cx.waker().clone());
-                });
+//                 // SAFETY: We use a critical section to spin lock the
+//                 // wakers to avoid dead locking in case of interrupts 
+//                 // while locking.
+//                 <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
+//                     wakers[CHANNEL as usize] = Some(cx.waker().clone());
+//                 });
 
-                Poll::Pending
+//                 Poll::Pending
                 
-            })
+//             })
 
-        } else {
-            // If this is completed.
-            Poll::Ready(unsafe { self.inner.take().unwrap().destruct() })
-        }
+//         } else {
+//             // If this is completed.
+//             Poll::Ready(unsafe { self.inner.take().unwrap().destruct() })
+//         }
         
-    }
+//     }
 
-}
+// }
 
+// /// Internal generic handler for DMA ports. This is internally only
+// /// called from interrupt handlers.
+// fn dma_handler<const PORT: u8>()
+// where
+//     DmaPort<PORT>: DmaAsyncPort,
+// {
 
-/// Used to initialize the wakers arrays.
-const DMA_WAKER_INIT: Option<Waker> = None;
+//     // Get the status and clear all status.
+//     let status = get_port_regs::<PORT>().int_tc_status().get();
+//     get_port_regs::<PORT>().int_tc_clear().set(status);
 
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-static DMA0_ASYNC: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+//     // SAFETY: We can spin lock the wakers because we are in an 
+//     // interrupt and we cannot be deadlocked by another interrupt.
+//     <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
+//         for (i, waker) in wakers.iter_mut().enumerate() {
+//             if status.get(i as u8) {
+//                 if let Some(waker) = waker.take() {
+//                     waker.wake();
+//                 }
+//             }
+//         }
+//     });
 
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-static DMA1_WAKERS: Mutex<[Option<Waker>; 4]> = Mutex::new([DMA_WAKER_INIT; 4]);
+// }
 
-#[cfg(feature = "bl808-d0")]
-static DMA2_WAKERS: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+// /// Interrupt handler for DMA0 interrupts on M0/LP.
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// pub(crate) fn dma0_handler(_code: usize) {
+//     dma_handler::<0>();
+// }
 
-/// Internal generic handler for DMA ports. This is internally only
-/// called from interrupt handlers.
-fn dma_handler<const PORT: u8>()
-where
-    DmaPort<PORT>: DmaAsyncPort,
-{
+// /// Interrupt handler for DMA1 interrupts on M0/LP.
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// pub(crate) fn dma1_handler(_code: usize) {
+//     dma_handler::<1>();
+// }
 
-    // Get the status and clear all status.
-    let status = get_port_regs::<PORT>().int_tc_status().get();
-    get_port_regs::<PORT>().int_tc_clear().set(status);
-
-    // SAFETY: We can spin lock the wakers because we are in an 
-    // interrupt and we cannot be deadlocked by another interrupt.
-    <DmaPort<PORT> as sealed::DmaAsyncPortWakers>::with_wakers(|wakers| {
-        for (i, waker) in wakers.iter_mut().enumerate() {
-            if status.get(i as u8) {
-                if let Some(waker) = waker.take() {
-                    waker.wake();
-                }
-            }
-        }
-    });
-
-}
-
-/// Interrupt handler for DMA0 interrupts on M0/LP.
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-pub(crate) fn dma0_handler(_code: usize) {
-    dma_handler::<0>();
-}
-
-/// Interrupt handler for DMA1 interrupts on M0/LP.
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-pub(crate) fn dma1_handler(_code: usize) {
-    dma_handler::<1>();
-}
-
-/// Interrupt handler for DMA1 interrupts on M0/LP.
-#[cfg(feature = "bl808-d0")]
-pub(crate) fn dma2_handler(_code: usize) {
-    dma_handler::<2>();
-}
+// /// Interrupt handler for DMA1 interrupts on M0/LP.
+// #[cfg(feature = "bl808-d0")]
+// pub(crate) fn dma2_handler(_code: usize) {
+//     dma_handler::<2>();
+// }
 
 
-/// Internal module used for sealed traits.
-mod sealed {
+// /// Internal module used for sealed traits.
+// mod sealed {
 
-    use super::Waker;
+//     use super::Waker;
 
-    /// Internal trait that allows modifying wakers of a particular port.
-    pub trait DmaAsyncPortWakers {
-        /// Spin lock the wakers for this port and run a function with the
-        /// wakers array, **you must** ensure that the spin lock is called
-        /// in a safe manner regarding interrupts.
-        fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T;
-    }
+//     /// Internal trait that allows modifying wakers of a particular port.
+//     pub trait DmaAsyncPortWakers {
+//         /// Spin lock the wakers for this port and run a function with the
+//         /// wakers array, **you must** ensure that the spin lock is called
+//         /// in a safe manner regarding interrupts.
+//         fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T;
+//     }
 
-}
+// }
 
-/// A trait internally used to constrain the possible DMA ports
-/// available for the currently selected chip.
-pub trait DmaAsyncPort: sealed::DmaAsyncPortWakers {}
-pub struct DmaPort<const PORT: u8>;
+// /// A trait internally used to constrain the possible DMA ports
+// /// available for the currently selected chip.
+// pub trait DmaAsyncPort: sealed::DmaAsyncPortWakers {}
+// pub struct DmaPort<const PORT: u8>;
 
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-impl sealed::DmaAsyncPortWakers for DmaPort<0> {
-    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
-        func(&mut DMA0_ASYNC.lock()[..])
-    }
-}
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-impl sealed::DmaAsyncPortWakers for DmaPort<1> {
-    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
-        func(&mut DMA1_WAKERS.lock()[..])
-    }
-}
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-impl DmaAsyncPort for DmaPort<0> {}
-#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-impl DmaAsyncPort for DmaPort<1> {}
+// /// Used to initialize the wakers arrays.
+// const DMA_WAKER_INIT: Option<Waker> = None;
 
-#[cfg(feature = "bl808-d0")]
-impl sealed::DmaAsyncPortWakers for DmaPort<2> {
-    fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
-        func(&mut DMA2_WAKERS.lock()[..])
-    }
-}
-#[cfg(feature = "bl808-d0")]
-impl DmaAsyncPort for DmaPort<2> {}
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// impl sealed::DmaAsyncPortWakers for DmaPort<0> {
+//     fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+//         static DMA0_ASYNC: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+//         func(&mut DMA0_ASYNC.lock()[..])
+//     }
+// }
+
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// impl sealed::DmaAsyncPortWakers for DmaPort<1> {
+//     fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+//         static DMA1_WAKERS: Mutex<[Option<Waker>; 4]> = Mutex::new([DMA_WAKER_INIT; 4]);
+//         func(&mut DMA1_WAKERS.lock()[..])
+//     }
+// }
+
+// #[cfg(feature = "bl808-d0")]
+// impl sealed::DmaAsyncPortWakers for DmaPort<2> {
+//     fn with_wakers<T, F: FnOnce(&mut [Option<Waker>]) -> T>(func: F) -> T {
+//         static DMA2_WAKERS: Mutex<[Option<Waker>; 8]> = Mutex::new([DMA_WAKER_INIT; 8]);
+//         func(&mut DMA2_WAKERS.lock()[..])
+//     }
+// }
+
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// impl DmaAsyncPort for DmaPort<0> {}
+// #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+// impl DmaAsyncPort for DmaPort<1> {}
+// #[cfg(feature = "bl808-d0")]
+// impl DmaAsyncPort for DmaPort<2> {}
 
 
 /// Structure describing how an endpoint should be configured.

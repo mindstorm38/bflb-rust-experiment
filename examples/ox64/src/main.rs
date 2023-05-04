@@ -72,7 +72,7 @@ fn main() {
     // INTERRUPT INIT
     
     interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
-    interrupts.set_enabled(interrupt::DMA0_ALL, true);
+    // interrupts.set_enabled(interrupt::DMA0_ALL, true);
     // interrupts.set_enabled(interrupt::DMA1_ALL, true);
 
     // CONSOLE INIT
