@@ -5,17 +5,25 @@
 
 CHIPS = {
     "bl808_m0": {
-        "arch": {
-            "name": "riscv",
-            "id": "rv32imafc",
-        },
+        "arch": "rv32imafc",
         "max_cores": 1,
     },
     "bl808_d0": {
-        "arch": {
-            "name": "riscv",
-            "id": "rv64imafcv",
-        },
+        "arch": "rv64imafcv",
         "max_cores": 1,
     }
 }
+
+
+def main(src_dir):
+    pass
+
+
+if __name__ == "__main__":  
+
+    import sys
+
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <src_dir>")
+    else:
+        main(sys.argv[1])

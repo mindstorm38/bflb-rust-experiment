@@ -31,13 +31,13 @@ Peripheral Access Crate (PAC), MMIO structures and bitfield registers.
 - [MIPI CSI-2]
 - [Linker Script]
 
-[MCU SDK]: https://github.com/bouffalolab/bouffalo_sdk
+[Bouffalo SDK]: https://github.com/bouffalolab/bouffalo_sdk
 [Sipeed SDK]: https://github.com/sipeed/M1s_BL808_SDK
 [BL808 RM]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_en_1.3.pdf
 [BL808 DS]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf
-[QSPI Flash W25Q128JW]: https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW
 [T-head C906]: https://github.com/T-head-Semi/openc906
 [BLDevCube Tutorial]: https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html
 [MIPI D-PHY]: http://www.jmrcubed.com/vr/ref_tech/mipi_d_phy_specification_v01-00-00.pdf
 [MIPI CSI-2]: https://caxapa.ru/thumbs/799244/MIPI_Alliance_Specification_for_Camera_S.pdf
 [Linker Script]: https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html
+[QSPI Flash W25Q128JW]: https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW

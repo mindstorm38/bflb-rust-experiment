@@ -54,6 +54,8 @@ pub mod mjpeg;
 pub use mjpeg::Mjpeg;
 pub mod csi;
 pub use csi::Csi;
+pub mod ipc;
+pub use ipc::Ipc;
 
 // Externally implemented.
 use riscv_hal::clic::Clic;
@@ -81,6 +83,11 @@ pub const CCI: Cci              = Cci(addr::CCI_BASE as _);
 pub const SF_CTRL: SfCtrl       = SfCtrl(addr::SF_CTRL_BASE as _);
 /// General Purpose ??
 pub const GPIP: Gpip            = Gpip(addr::GPIP_BASE as _);
+
+// IPC
+pub const IPC_M0: Ipc             = Ipc(addr::IPC0_BASE as _);
+pub const IPC_LP: Ipc             = Ipc(addr::IPC1_BASE as _);
+pub const IPC_D0: Ipc             = Ipc(addr::IPC2_BASE as _);
 
 // DMA
 pub const DMA0: Dma             = Dma(addr::DMA0_BASE as _);
