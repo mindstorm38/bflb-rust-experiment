@@ -5,7 +5,7 @@ an example binary crate.
 ## BouffaloLab HAL
 This is an HAL implementation for BouffaloLab chips. It currently only 
 support BL808 as it's my main goal for now. It can be considered as a 
-Rust port of the official [MCU SDK].
+Rust port of the official [Bouffalo SDK].
 
 ## BouffaloLab Runtime
 This crate provides small runtime for building and linking binaries 
@@ -19,8 +19,22 @@ peripherals and exclusive access to them. It aims to complete the
 official `embedded-hal` crate by providing a new way of defining 
 Peripheral Access Crate (PAC), MMIO structures and bitfield registers.
 
+## How to compile
+Two targets must be installed to support both RV32 and RV64:
+- `riscv32imac-unknown-none-elf`
+- `riscv64gc-unknown-none-elf`
+
+The following commands can be used to compile the examples:
+- `cargo build -p test-ox64-m0 --target riscv32imac-unknown-none-elf --release`
+- `cargo build -p test-ox64-d0 --target riscv64gc-unknown-none-elf --release`
+
+Get the binary file to flash:
+- `cargo objcopy -p test-ox64-m0 --target riscv32imac-unknown-none-elf --release -- -O binary test-m0.bin`
+- `cargo objcopy -p test-ox64-d0 --target riscv64gc-unknown-none-elf --release -- -O binary test-d0.bin`
+
+
 ## Documents
-- [MCU SDK]
+- [Bouffalo SDK]
 - [Sipeed SDK]
 - [BL808 RM]
 - [BL808 DS]

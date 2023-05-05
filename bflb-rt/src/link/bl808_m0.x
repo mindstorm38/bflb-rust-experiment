@@ -15,9 +15,8 @@ ENTRY(_start)
  */
 MEMORY {
     flash      (rx) : ORIGIN = 0x58000000, LENGTH = 32M
-    /* peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K */
     stack       (w) : ORIGIN = 0x62020000, LENGTH = 4K
-    ram         (w) : ORIGIN = 0x62021000, LENGTH = 160K + 64K - 4K
+    ram        (wx) : ORIGIN = 0x62021000, LENGTH = 160K + 64K - 4K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 

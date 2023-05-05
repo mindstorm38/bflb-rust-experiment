@@ -1,8 +1,5 @@
 //! Module for BL808 M0 core runtime.
 
-#[cfg(not(target_arch = "riscv32"))]
-compile_error!("bl808_m0 chip requires riscv32 target architecture");
-
 use bflb_hal::bl808::{GLB, CLIC};
 
 use crate::clic::ClicVectorTable;

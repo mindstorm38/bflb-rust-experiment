@@ -1,10 +1,10 @@
 [package]
-name = "example-bl808"
+name = "test-ox64-d0"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bflb-rt = { path = "../../bflb-rt", version = "0.1", features = ["bl808-m0", "panic-abort"] }
+bflb-rt = { path = "../../bflb-rt", version = "0.1", features = ["bl808-d0", "panic-abort"] }
 embedded-util = { path = "../../embedded-util", version = "0.1" }

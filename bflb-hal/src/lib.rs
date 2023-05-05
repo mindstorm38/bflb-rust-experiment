@@ -2,6 +2,16 @@
 
 #![no_std]
 
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+#[cfg(not(target_arch = "riscv32"))]
+compile_error!("bl808 m0 chip requires 'riscv32' target architecture");
+
+#[cfg(feature = "bl808-d0")]
+#[cfg(not(target_arch = "riscv64"))]
+compile_error!("bl808 d0 chip requires 'riscv64' target architecture");
+
+
 #[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
 pub mod bl808;
 
