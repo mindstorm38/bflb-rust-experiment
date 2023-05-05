@@ -14,7 +14,7 @@ ENTRY(_start)
  *   between DRAM and VRAM.
  */
 MEMORY {
-    flash      (rx) : ORIGIN = 0x58000000, LENGTH = 32M
+    flash      (rx) : ORIGIN = 0x58000000, LENGTH = 1M
     stack       (w) : ORIGIN = 0x62020000, LENGTH = 4K
     ram        (wx) : ORIGIN = 0x62021000, LENGTH = 160K + 64K - 4K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K

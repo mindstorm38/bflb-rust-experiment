@@ -12,3 +12,11 @@
 .equ MTVEC_DIRECT,          0
 .equ MTVEC_VECTORED,        1
 .equ MTVEC_CLIC,            3
+
+# Other CSRs
+.equ mtvt,          0x307
+.equ mnxti,         0x345
+.equ mintstatus,    0xFB1
+.equ mintthresh,    0x347
+.equ mscratchcsw,   0x348
+.equ mscratchcswl,  0x349

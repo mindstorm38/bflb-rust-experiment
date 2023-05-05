@@ -1,7 +1,7 @@
 //! # Platform-Level Interrupt Controller.
 //! 
 //! Sources:
-//! - https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc5.pdf
+//! - https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc6.pdf
 
 use embedded_util::PtrRw;
 

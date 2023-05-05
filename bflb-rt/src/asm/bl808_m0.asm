@@ -50,7 +50,7 @@ _start:
     jal _rust_init
 
     # Re-enable interrupts after startup.
-    csrsi mstatus, MSTATUS_MIE | MSTATUS_SIE
+    csrsi mstatus, MSTATUS_MIE
 
     # Enter the entry function.
     jal _rust_entry

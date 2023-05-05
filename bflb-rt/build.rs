@@ -14,11 +14,10 @@ fn main() {
 
     for (enable, chip) in chips {
         if enable {
-            if chip_selected.is_none() {
-                chip_selected = Some(chip);
+            if let Some(chip_selected) = chip_selected {
+                println!("cargo:warning=Chip feature {chip} will be ignored because {chip_selected} is already selected.");
             } else {
-                eprintln!("Chip feature {chip} will be ignored because a multiple ones are enabled.");
-                std::process::exit(1);
+                chip_selected = Some(chip);
             }
         }
     }
