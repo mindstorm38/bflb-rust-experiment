@@ -79,6 +79,11 @@ SECTIONS {
         *(.sdata .sdata.*) 
         *(.data .data.*)
         
+        /* This special section can be used to copy some text at
+         * the end of the data section, in RAM.
+         */
+        *(.ramtext)
+        
         . = ALIGN(4);
         _ld_data_end = .;
 

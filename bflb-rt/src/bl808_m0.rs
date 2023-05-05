@@ -6,8 +6,9 @@ use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;
 
 
-// Include global startup assembly.
+core::arch::global_asm!(include_str!("asm/common.asm"));
 core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
+core::arch::global_asm!(include_str!("asm/rv32imaf_trap.asm"));
 
 
 /// Machine Trap Vector Table.
