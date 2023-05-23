@@ -54,9 +54,10 @@ macro_rules! reg {
         impl core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 f.debug_struct(stringify!($name))
-                    $( 
-                    .field(stringify!($field_name), &$crate::Reg::get::<$field_start, $field_end>(self)) 
-                    )*
+                    $(.field(
+                        concat!('[', $field_start, "..", $field_end, "] ", stringify!($field_name)), 
+                        &$crate::Reg::get::<$field_start, $field_end>(self)
+                    ))*
                     .finish()
             }
         }

@@ -69,6 +69,10 @@ pub const SPI1_BASE: usize              = 0x30008000;
 pub const TIMER1_BASE: usize            = 0x30009000;
 pub const PSRAM_UHS_BASE: usize         = 0x3000f000;
 
+// DSP2
+pub const DSP2_MISC_BASE: usize         = 0x30010000;
+pub const DSP2_BASE: usize              = 0x30011000;
+
 // ISP_SUBSYS
 pub const ISP_MISC_BASE: usize          = 0x30010000;
 pub const ISP_BASE: usize               = 0x30011000;

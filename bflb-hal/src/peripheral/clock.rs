@@ -13,7 +13,7 @@
 //! - BCLK: Bus Block
 //! - PBCLK: Peripheral Bus Clock
 //! - HCLK: AHB Clock 
-//! - PLL: Phase-locked Loop
+//! - PLL: Phase-Locked Loop
 //! 
 //! Sources:
 //! - https://github.com/bouffalolab/bl_mcu_sdk/blob/master/drivers/soc/bl808/std/src/bl808_clock.c
@@ -27,11 +27,13 @@ mod analog;
 mod mcu;
 mod mm;
 mod uart;
+mod i2c;
 
 pub use analog::*;
 pub use mcu::*;
 pub use mm::*;
 pub use uart::*;
+pub use i2c::*;
 
 
 /// Clocks controller for BL808.

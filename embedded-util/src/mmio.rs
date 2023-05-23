@@ -53,7 +53,7 @@ macro_rules! mmio {
     ) => {
 
         $(#[$struct_meta])*
-        #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+        #[derive(Clone, Copy, Eq, PartialEq)]
         $vis struct $name(pub *mut u8);
         impl $name {
 
@@ -72,6 +72,17 @@ macro_rules! mmio {
                 );
             )*
 
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!($name))
+                    .field("@", &self.0)
+                    $( 
+                    .field(stringify!($field_name), &self.$field_name()) 
+                    )*
+                    .finish()
+            }
         }
 
         $crate::mmio! {
@@ -119,11 +130,13 @@ macro_rules! __mmio_field {
 }
 
 
-/// A read-only pointer to some value in an MMIO struct.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PtrRo<T>(pub *const T);
+use core::fmt::{self, Debug};
 
-impl<T> PtrRo<T> {
+/// A read-only pointer to some value in an MMIO struct.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct PtrRo<T: Debug + Copy>(pub *const T);
+
+impl<T: Debug + Copy> PtrRo<T> {
 
     /// Get the value referenced by the pointer.
     #[inline(always)]
@@ -133,12 +146,11 @@ impl<T> PtrRo<T> {
 
 }
 
-
 /// A write-only pointer to some value in an MMIO struct.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PtrWo<T>(pub *mut T);
+pub struct PtrWo<T: Debug + Copy>(pub *mut T);
 
-impl<T> PtrWo<T> {
+impl<T: Debug + Copy> PtrWo<T> {
 
     /// Set the value referenced by the pointer.
     #[inline(always)]
@@ -159,12 +171,11 @@ impl<T> PtrWo<T> {
 
 }
 
-
 /// A read/write pointer to some value in an MMIO struct.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PtrRw<T>(pub *mut T);
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct PtrRw<T: Debug + Copy>(pub *mut T);
 
-impl<T> PtrRw<T> {
+impl<T: Debug + Copy> PtrRw<T> {
 
     /// Get the value referenced by the pointer.
     #[inline(always)]
@@ -202,13 +213,22 @@ impl<T> PtrRw<T> {
     /// *Synchronization is obviously not guarenteed and race 
     /// modifications can happen depending on your case.*
     #[inline(always)]
-    pub fn modify<F: FnOnce(&mut T)>(self, func: F)
-    where 
-        Self: Copy 
-    {
+    pub fn modify<F: FnOnce(&mut T)>(self, func: F) {
         let mut val = self.get();
         func(&mut val);
         self.set(val);
     }
 
+}
+
+impl<T: Debug + Copy> Debug for PtrRo<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("PtrRo").field(&self.0).field(&self.get()).finish()
+    }
+}
+
+impl<T: Debug + Copy> Debug for PtrRw<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("PtrRw").field(&self.0).field(&self.get()).finish()
+    }
 }

@@ -107,6 +107,7 @@ impl Clocks {
         GLB.sys_cfg1().get().sts_bclk_prot_done().get() != 0
     }
 
+    #[doc(alias = "Clock_System_Clock_Get(BL_SYSTEM_CLOCK_MCU_PBCLK)")]
     pub fn get_mcu_pbclk_freq(&self) -> u32 {
         self.get_m0_cpu_freq() / self.get_mcu_pbclk_div()
     }

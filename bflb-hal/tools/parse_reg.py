@@ -201,8 +201,20 @@ STRUCTS = {
         "header": f"{BASE_BL808_URL}aon_reg.h",
         "name": "Aon",
         "prefix": "AON_",
-        "doc": ""
+        "doc": "Always On register."
     },
+    "dtsrc": {
+        "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/platform/soc/bl808/bl808_std/BL808_BSP_Driver/dsp2_reg/dtsrc_reg.h",
+        "name": "Dtsrc",
+        "prefix": "DTSRC_",
+        "doc": "DVP TSRC."
+    },
+    "dsp2_misc": {
+        "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/dsp2/dsp2_drv/dsp2_reg/dsp2_misc_reg.h",
+        "name": "Dsp2Misc",
+        "prefix": "DSP2_MISC_",
+        "doc": "DSP2 misc."
+    }
     # "vdo": {
     #     "header": "https://raw.githubusercontent.com/sipeed/M1s_BL808_SDK/master/components/stage/bl_mm/mm_drv/mm_reg/vdo_reg.h",
     #     "name": "Vdo",

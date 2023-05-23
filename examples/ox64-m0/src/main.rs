@@ -6,6 +6,7 @@ use core::fmt::Write;
 use bflb_rt::{spawn, wait};
 use bflb_rt::hal;
 
+use hal::bl808::{GLB, HBN, AON};
 use hal::Peripherals;
 
 use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
@@ -92,6 +93,10 @@ fn main() {
         .wait_block();
     
     // LOOP
+
+    let _ = writeln!(uart_tx, "GLB: {GLB:#?}");
+    let _ = writeln!(uart_tx, "HBN: {HBN:#?}");
+    let _ = writeln!(uart_tx, "AON: {AON:#?}");
 
     spawn(async move {
         

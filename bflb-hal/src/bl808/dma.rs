@@ -189,7 +189,7 @@ embedded_util::reg! {
 
 
 /// A bit fields where each bit is associated to a channel of a DMA controller.
-#[derive(Clone, Copy, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 #[repr(transparent)]
 pub struct DmaBitField(pub u32);
 

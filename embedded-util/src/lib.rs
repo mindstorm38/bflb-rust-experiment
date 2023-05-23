@@ -7,5 +7,3 @@ pub use reg::{Reg, RegPtr};
 
 mod mmio;
 pub use mmio::{PtrRo, PtrWo, PtrRw};
-
-mod peripheral;

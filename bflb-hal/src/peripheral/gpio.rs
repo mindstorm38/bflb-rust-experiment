@@ -1,10 +1,33 @@
-//! GPIO management on BL808.
+//! # GPIO.
+//! This module provides an abstract interface to configure and use
+//! GPIOs of BouffaloLab chips.
+//! 
+//! ## Notes on BL808
+//! The GPIO pins can be used for specific power domains, AON and PDS.
+//! These domains are relevant in HBN and PDS power modes. 
+//! In PDS 1/2/3 (not 7) the chip's MISC power domain is still powered
+//! so the GPIO can be controller by GLB register. After GLB register
+//! is powered off, the AON and PDS domains aquires control of their
+//! respective pins
+//! 
+//! ### AON domain
+//! The Always On domain is the domain of pins that remains usable up
+//! to HBN1. Comprised of GPIO 9-15 and 40-41.
+//! 
+//! Note that pins 40/41 are :
+//! - GPIO 40 is set by default to the input of XTAL32K.
+//! - GPIO 41 is set by default to the output of XTAL32K.
+//! 
+//! ### PDS domain
+//! The Power Down Sleep domain is split in 3 groups depending on
+//! physical location of the pin: GPIO 0-8 (left), 16-23 (right) and 
+//! 24-39 (top).
 
 use core::marker::PhantomData;
 
 use embedded_util::PtrRw;
 
-use crate::bl808::GLB;
+use crate::bl808::{GLB, HBN, PDS};
 use crate::bl808::glb::GlbGpioCfg0;
 
 
@@ -17,11 +40,6 @@ impl<const NUM: u8> PinAccess<NUM> {
 
     fn new_pin<M: Mode>() -> Pin<NUM, M> {
         Pin { _mode: PhantomData }
-    }
-
-    /// Erase generic types, this transfer checks to the runtime.
-    pub fn into_erased(self) -> PinErased {
-        PinErased { num: NUM }
     }
 
     /// Get a new input pin from this port.
@@ -110,11 +128,6 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     /// This can be used to free the peripheral.
     pub fn downgrade(self) -> PinAccess<NUM> {
         PinAccess(())
-    }
-
-    /// Erase generic types, this transfer checks to the runtime.
-    pub fn erase(self) -> PinErased {
-        self.downgrade().into_erased()
     }
 
     /// Internal function to get a read/write pointer to the 
@@ -457,19 +470,6 @@ impl PinConfig<Alternate> {
     pub fn set_output_enable(&mut self, enable: bool) {
         self.raw.gpio_0_oe().set(enable as _);
     }
-
-}
-
-
-/// A type-erased pin, checks are done at runtime.
-#[allow(unused)]
-pub struct PinErased {
-    num: u8,
-}
-
-impl PinErased {
-
-    // TODO:
 
 }
 

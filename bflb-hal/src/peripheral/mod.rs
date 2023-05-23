@@ -1,16 +1,19 @@
 //! Actual HAL modules, most are common to all chips and some are 
-//! feature-gated to some specific chips. The initial access to the
-//! peripheral is provided by 
+//! feature-gated to some specific chips.
 
 pub mod interrupt;
 pub mod clock;
+pub mod power;
 pub mod time;
 pub mod cpu;
 
 pub mod gpio;
 pub mod uart;
-pub mod dma;
+pub mod i2c;
 pub mod adc;
+
+pub mod dma;
+pub mod cam;
 
 
 use interrupt::Interrupts;

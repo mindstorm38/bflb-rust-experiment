@@ -23,11 +23,6 @@ pub struct UartAccess<const PORT: u8>(pub(crate) ());
 
 impl<const PORT: u8> UartAccess<PORT> {
 
-    /// Generic types erasing, this transfer checks to the runtime.
-    pub fn erase(self) -> ! {
-        todo!()
-    }
-
     /// Configure this UART port for duplex communications.
     pub fn into_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
         mut tx: Pin<TX_PIN, Alternate>,

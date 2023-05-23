@@ -1,4 +1,4 @@
-//! 
+//! Always On register.
 
 embedded_util::mmio! {
     pub struct Aon {
