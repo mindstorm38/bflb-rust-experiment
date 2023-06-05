@@ -11,7 +11,10 @@ bflb-hal = { path = "../bflb-hal", version = "0.1", features = ["bl-critical-sec
 riscv-hal = { path = "../riscv-hal", version = "0.1" }
 embedded-util = { path = "../embedded-util", version = "0.1" }
 
-static-alloc = "0.2"
+linked_list_allocator = "0.10.5"
+# critical-section = "1.1"
+heapless = "0.7"
+spin = "0.9"
 
 [features]
 default = []

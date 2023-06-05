@@ -41,10 +41,10 @@ _start:
     csrw 0x307, t0
 
     # Initialize stack pointer.
-    la sp, _ld_stack_top
+    # la sp, _ld_stack_top  FIXME: TODO:
 
     # The first function will copy runtime variables to RAM.
-    jal _rust_ram_load
+    jal _rust_mem_init
     
     # Init before entry point.
     jal _rust_init

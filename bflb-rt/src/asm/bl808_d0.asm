@@ -55,7 +55,7 @@ _start:
     la sp, _ld_stack_top
 
     # The first function will copy runtime variables to RAM.
-    jal _rust_ram_load
+    jal _rust_mem_init
     
     # Init before entry point.
     jal _rust_init

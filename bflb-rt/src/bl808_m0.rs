@@ -2,6 +2,7 @@
 
 core::arch::global_asm!(include_str!("asm/common.asm"));
 core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
+core::arch::global_asm!(include_str!("asm/rv32i_thread.asm"));
 core::arch::global_asm!(include_str!("asm/rv32imaf_trap.asm"));
 
 
@@ -11,13 +12,16 @@ use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;
 
 
+pub const HART_COUNT: usize = 1;
+
+
 /// Machine Trap Vector Table.
 #[no_mangle]
 #[link_section = ".text.vector"]
 static mut _rust_mtrap_tvt: ClicVectorTable<IRQ_COUNT> = ClicVectorTable::new(crate::sym::_mtrap_generic_handler);
 
 
-pub(crate) fn init() {
+pub fn init() {
 
     // We use all bits for interrupt level, no priority bit.
     CLIC.cfg().modify(|reg| reg.nlbits().set(8));

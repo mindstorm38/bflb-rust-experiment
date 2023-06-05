@@ -18,9 +18,8 @@ use hal::interrupt;
 static DMA_MESSAGE: &'static str = "Hello world from DMA!\n";
 
 
-bflb_rt::entry!(main);
-
-fn main() {
+#[no_mangle]
+pub fn main() {
 
     let peripherals = Peripherals::take();
     let mut clocks = peripherals.clocks;

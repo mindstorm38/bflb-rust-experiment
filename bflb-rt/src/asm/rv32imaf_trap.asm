@@ -2,16 +2,11 @@
 # - 32 bit GP registers.
 # - 32 bit FP registers.
 
-.equ MSTATUS_FS,            3 << 13
-.equ MSTATUS_FS_OFF,        0 << 13
-.equ MSTATUS_FS_INITIAL,    1 << 13
-.equ MSTATUS_FS_CLEAN,      2 << 13
-.equ MSTATUS_FS_DIRTY,      3 << 13
-
 .attribute arch, "rv32imaf"
 
 # Aligned to 64 bytes because of 'mtvec' with CLIC mode.
 .align 6
+.section .text
 .global _mtrap_generic_handler
 _mtrap_generic_handler:
 

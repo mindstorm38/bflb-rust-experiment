@@ -16,17 +16,10 @@ ENTRY(_start)
 MEMORY {
     flash      (rx) : ORIGIN = 0x58100000, LENGTH = 1M
     /* peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K */
-    stack       (w) : ORIGIN = 0x3EFF0000, LENGTH = 4K
-    ram         (w) : ORIGIN = 0x3EFF1000, LENGTH = 64K + 32K - 4K
+    ram         (w) : ORIGIN = 0x3EFF0000, LENGTH = 64K + 32K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 
-/*
- * text: executable code
- * data: initialized data
- * rodata: initialized data (read only)
- * bss: uninitialized data
- */
 SECTIONS {
 
     /*
@@ -47,21 +40,6 @@ SECTIONS {
 
     } >flash
 
-    /*
-     * The read only initialized data is kept in flash.
-     */
-    .rodata : {
-
-        . = ALIGN(4);
-        _ld_rodata_start = .;
-
-        *(.rodata .rodata.*)
-
-        . = ALIGN(4);
-        _ld_rodata_end = .;
-
-    } >flash
-
     /* 
      * Here we save the start address where the data will be 
      * initialy placed in flash. It will be later copied to
@@ -78,6 +56,9 @@ SECTIONS {
 
         *(.sdata .sdata.*) 
         *(.data .data.*)
+
+        /* Purposedly placed after data. */
+        *(.rodata .rodata.*)
         
         /* This special section can be used to copy some text at
          * the end of the data section, in RAM.
@@ -100,9 +81,16 @@ SECTIONS {
         . = ALIGN(4);
         _ld_bss_end = .;
 
-    } > ram
+    } >ram
 
-    _ld_stack_origin = ORIGIN(stack);
-    _ld_stack_top = _ld_stack_origin + LENGTH(stack);
+    .heap (NOLOAD) : {
+
+        . = ALIGN(4);
+        _ld_heap_start = .;
+
+        . = ORIGIN(ram) + LENGTH(ram);
+        _ld_heap_end = .;
+
+    } >ram
 
 }
