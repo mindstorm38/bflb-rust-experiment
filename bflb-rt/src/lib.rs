@@ -121,15 +121,18 @@ static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
 /// This is the entry function, note that this function is called from
 /// all hart. The first thread will be started on the first hart.
 #[no_mangle]
-extern "C" fn _rust_entry() {
+extern "C" fn _rust_entry() -> ! {
 
     extern "Rust" {
-        #[no_mangle]
         fn main();
     }
 
+    fn main_wrapper() {
+        unsafe { main() }
+    }
+
     if hart::hart_zero() {
-        thread::entry_process(unsafe { main }, thread::ThreadConfig::default());
+        thread::entry_process(main_wrapper, thread::ThreadConfig::default());
     } else {
         thread::entry_idle();
     }
@@ -138,9 +141,11 @@ extern "C" fn _rust_entry() {
 
 
 /// This function is responsible for loading mutable static variables 
-/// and zero-out uninitialized variables, all in RAM. This function is
-/// really important but will only trigger on hart 0, because memory
-/// should be initialized once.
+/// and zero-out uninitialized variables, all in RAM. 
+/// 
+/// **This function is really important but will only trigger on 
+/// hart 0, because memory should be initialized once, and most 
+/// importantly we have kernel stack only on hart 0.**
 /// 
 /// *This function should not access global variables or allocate
 /// memory.*
@@ -150,25 +155,21 @@ extern "C" fn _rust_entry() {
 #[no_mangle]
 unsafe extern "C" fn _rust_mem_init() {
 
-    if hart::hart_zero() {
+    // Copy RO/RW global variables to RAM.
+    let src: *mut u32 = &mut sym::_ld_data_load_start;
+    let dst: *mut u32 = &mut sym::_ld_data_start;
+    let dst_end: *mut u32 = &mut sym::_ld_data_end;
+    core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
 
-        // Copy RO/RW global variables to RAM.
-        let src: *mut u32 = &mut sym::_ld_data_load_start;
-        let dst: *mut u32 = &mut sym::_ld_data_start;
-        let dst_end: *mut u32 = &mut sym::_ld_data_end;
-        core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
+    // Zero BSS uninit variables.
+    let dst: *mut u32 = &mut sym::_ld_bss_start;
+    let dst_end: *mut u32 = &mut sym::_ld_bss_end;
+    core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
 
-        // Zero BSS uninit variables.
-        let dst: *mut u32 = &mut sym::_ld_bss_start;
-        let dst_end: *mut u32 = &mut sym::_ld_bss_end;
-        core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
-
-        // Init heap allocator.
-        let start: *mut u8 = &mut sym::_ld_heap_start;
-        let end: *mut u8 = &mut sym::_ld_heap_end;
-        ALLOCATOR.lock().init(start, end.offset_from(end) as _);
-
-    }
+    // Init heap allocator.
+    let start: *mut u8 = &mut sym::_ld_heap_start;
+    let end: *mut u8 = &mut sym::_ld_heap_end;
+    ALLOCATOR.lock().init(start, end.offset_from(end) as _);
 
 }
 

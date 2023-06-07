@@ -16,14 +16,13 @@ ENTRY(_start)
 MEMORY {
     flash      (rx) : ORIGIN = 0x58100000, LENGTH = 1M
     /* peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K */
-    ram         (w) : ORIGIN = 0x3EFF0000, LENGTH = 64K + 32K
+    ram        (wx) : ORIGIN = 0x3EFF0000, LENGTH = 64K + 32K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 
 SECTIONS {
 
-    /*
-     * Executable code section.
+    /* Executable code section.
      * Note that the init section is intentionnaly added first.
      */
     .text : {
@@ -40,14 +39,16 @@ SECTIONS {
 
     } >flash
 
-    /* 
-     * Here we save the start address where the data will be 
+    /* Here we save the start address where the data will be 
      * initialy placed in flash. It will be later copied to
      * read/write RAM.
      */
     . = ALIGN(4);
     _ld_data_load_start = .;
 
+    /* Data with initial value saved in Flash and dynamically loaded 
+     * in RAM. This also contains executable some ramtext.
+     */
     .data : AT(_ld_data_load_start) {
 
         . = ALIGN(4);
@@ -61,7 +62,8 @@ SECTIONS {
         *(.rodata .rodata.*)
         
         /* This special section can be used to copy some text at
-         * the end of the data section, in RAM.
+         * the end of the data section, in RAM. This is made for
+         * function that need to execute fast.
          */
         *(.ramtext)
         
@@ -70,6 +72,9 @@ SECTIONS {
 
     } >ram
 
+    /* Data without initial value, this RAM section will be written 
+     * with all zeros at startup.
+     */
     .bss (NOLOAD) : {
 
         . = ALIGN(4);
@@ -83,6 +88,8 @@ SECTIONS {
 
     } >ram
 
+    /* Heap space, taking the remaining space available in RAM.
+     */
     .heap (NOLOAD) : {
 
         . = ALIGN(4);

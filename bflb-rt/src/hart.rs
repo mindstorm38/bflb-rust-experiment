@@ -12,7 +12,7 @@ use crate::chip::HART_COUNT;
 
 
 /// Statically checks the hart count is valid.
-const _: () = assert_ne!(HART_COUNT, 0);
+const _: () = assert!(HART_COUNT != 0);
 
 /// The current number of started hart in the execution environment.
 /// Initialized to 1 because we already count the ID 0, which is 
@@ -73,14 +73,14 @@ pub fn hart() -> usize {
 /// this hart 0 will have the id 0 returned by `hart()` function.
 #[inline(always)]
 pub fn hart_zero() -> bool {
-    /// Only if 1 hart maximum is supported, we can optimize.
+    // Only if 1 hart maximum is supported, we can optimize.
     if HART_COUNT == 1 {
         true
     } else {
         unsafe {
             // Atomically clear the mstatus.mie bit.
             let mut id: usize;
-            asm!("csrr {}, mhartid", out(reg) prev);
+            asm!("csrr {}, mhartid", out(reg) id);
             // Return true restore state if previous bit was 1.
             id == 0
         }

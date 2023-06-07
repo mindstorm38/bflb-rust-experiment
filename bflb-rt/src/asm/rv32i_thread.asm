@@ -2,8 +2,9 @@
 
 .attribute arch, "rv32i"
 
-# pub fn _thread_switch(into: *mut Context, from: *const Context);
 .section .ramtext
+
+# pub fn _thread_switch(into: *mut Context, from: *const Context);
 .global _thread_switch
 _thread_switch:
 

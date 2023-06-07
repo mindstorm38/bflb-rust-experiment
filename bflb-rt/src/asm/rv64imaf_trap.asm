@@ -4,9 +4,10 @@
 
 .attribute arch, "rv64imaf"
 
+.section .text
+
 # Aligned to 64 bytes because of 'mtvec' with CLIC mode.
 .align 6
-.section .text
 .global _mtrap_generic_handler
 _mtrap_generic_handler:
 

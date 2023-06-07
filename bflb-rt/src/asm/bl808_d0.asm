@@ -1,8 +1,8 @@
 # Startup entry point for the os.
 
 .attribute arch, "rv64imafcv"
-
 .option norvc
+
 .section .text.init
 
 # The startup function, the first called on boot.
@@ -51,22 +51,4 @@ _start:
     ori t0, t0, MTVEC_DIRECT
     csrw mtvec, t0
 
-    # Initialize stack pointer.
-    la sp, _ld_stack_top
-
-    # The first function will copy runtime variables to RAM.
-    jal _rust_mem_init
-    
-    # Init before entry point.
-    jal _rust_init
-
-    # Re-enable interrupts after startup.
-    csrsi mstatus, MSTATUS_MIE
-
-    # Enter the entry function.
-    jal _rust_entry
-
-    # The processor ends here if the main function returns.
-exit:
-    wfi
-    j exit
+    j _start_common

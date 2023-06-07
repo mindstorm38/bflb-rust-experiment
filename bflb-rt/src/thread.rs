@@ -27,11 +27,6 @@ pub struct Thread {
     /// Thread unique ID counter, init process has ID 0. This field
     /// is read-only after initialization and can be freely accessed.
     id: usize,
-    /// Pointer to the parent process. This field is read-only after
-    /// initialization and can be freely accessed.
-    /// 
-    /// TODO: Maybe remove it??
-    parent: NonNull<Thread>,
     /// Pointer to the previous process.
     prev: NonNull<Thread>,
     /// Pointer to the next process to execute.
@@ -79,6 +74,25 @@ struct HartContext {
     /// interruption, therefore it's safe to mutate it inside non
     /// interrupt context, because it's single-hart.
     current: UnsafeCell<Option<NonNull<Thread>>>,
+}
+
+impl HartContext {
+
+    /// Get the current optional thread that is running, None if not
+    /// thread is running.
+    /// 
+    /// SAFETY: You must ensure that you call this function from a
+    /// regular context, not an interruption.
+    unsafe fn get_current(&self) -> &mut Option<NonNull<Thread>> {
+        &mut *self.current.get()
+    }
+
+    /// Same as `get_current` but panic if the function was not called
+    /// from a process (current is none).
+    unsafe fn expect_current(&self) -> NonNull<Thread> {
+        self.get_current().expect("not calling from process")
+    }
+
 }
 
 /// Used for aligning the stack allocation to 16 bytes, as specified
@@ -147,6 +161,9 @@ pub(crate) fn entry_idle() -> ! {
 /// At least one hart need to run this function to start a first 
 /// thread, but the runtime's entry actually start only one initial
 /// process on hart 0.
+/// 
+/// **This must not be called from a process, but only at runtime's
+/// entry.**
 pub(crate) fn entry_process(entry: fn(), config: ThreadConfig) -> ! {
 
     let thread = alloc_thread(entry, config);
@@ -157,42 +174,17 @@ pub(crate) fn entry_process(entry: fn(), config: ThreadConfig) -> ! {
 
     // Switch to the task, but do not save the current context.
     unsafe {
+
+        (*thread.as_ptr()).prev = thread;
+        (*thread.as_ptr()).next = thread;
+
         let from_context = addr_of!((*thread.as_ptr()).context);
         sym::_thread_switch(core::ptr::null_mut(), from_context);
-    }
-
-}
-
-
-/// Spawn a child thread of the current thread
-pub fn spawn(entry: fn(), config: ThreadConfig) {
-
-    let thread = alloc_thread(entry, config);
-    
-    // SAFETY: See field's documentation.
-    let current = unsafe { &mut *CONTEXT.current.get() };
-
-    if let Some(current) = current {
-
-        // Insert the new process in the chain, between the 
-        // current process and the next one.
-        unsafe {
-            (*thread.as_ptr()).parent = *current;
-            (*thread.as_ptr()).prev = *current;
-            (*thread.as_ptr()).next = (*current.as_ptr()).next;
-            (*current.as_ptr()).next = thread;
-        }
-
-    } else {
-
-        // First process is its own parent and cycle to itself.
-        unsafe { 
-            (*thread.as_ptr()).parent = thread;
-            (*thread.as_ptr()).prev = thread;
-            (*thread.as_ptr()).next = thread;
-        }
 
     }
+
+    // This should never be reached.
+    loop { spin_loop() }
 
 }
 
@@ -212,7 +204,6 @@ fn alloc_thread(entry: fn(), config: ThreadConfig) -> NonNull<Thread> {
 
     let thread = Box::new(Thread {
         id: THREAD_COUNTER.fetch_add(1, Ordering::Relaxed),
-        parent: NonNull::dangling(),
         prev: NonNull::dangling(),
         next: NonNull::dangling(),
         stack,
@@ -226,6 +217,24 @@ fn alloc_thread(entry: fn(), config: ThreadConfig) -> NonNull<Thread> {
     // SAFETY: Box::into_raw states that returned pointer != null.
     unsafe {
         NonNull::new_unchecked(Box::into_raw(thread))
+    }
+
+}
+
+/// Spawn a child thread of the current thread
+pub fn spawn(entry: fn(), config: ThreadConfig) {
+    
+    // SAFETY: See field's documentation.
+    let current = unsafe { &mut *CONTEXT.current.get() };
+    let current = current.expect("this function should be called from a process");
+
+    let thread = alloc_thread(entry, config);
+
+    // Insert the new process in the linked list.
+    unsafe {
+        (*thread.as_ptr()).prev = current;
+        (*thread.as_ptr()).next = (*current.as_ptr()).next;
+        (*current.as_ptr()).next = thread;
     }
 
 }
