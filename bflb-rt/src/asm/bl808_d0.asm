@@ -51,4 +51,20 @@ _start:
     ori t0, t0, MTVEC_DIRECT
     csrw mtvec, t0
 
-    j _start_common
+    # Initialize stack pointer.
+    la sp, _ld_stack_top
+
+    # The first function will copy runtime variables to RAM.
+    # This will also copy .ramtext sections that contains the 
+    # interrupt handler, this is mostly why interrupts are disable
+    # while manipulating this.
+    jal _rust_mem_init
+    
+    # Init before entry point.
+    jal _rust_init
+
+    # Re-enable interrupts after startup.
+    csrsi mstatus, MSTATUS_MIE
+
+    # Enter the entry function.
+    jal _rust_entry
