@@ -40,13 +40,7 @@ pub use bflb_hal as hal;
 
 // These modules are intentionally internal.
 mod clic;
-mod task;
-
 mod hart;
-mod thread;
-
-/// Re-exports
-pub use task::{spawn, wait};
 
 // Internal use.
 use hal::interrupt::{IRQ_COUNT, VECTOR};
@@ -56,8 +50,6 @@ use linked_list_allocator::LockedHeap;
 /// Module providing externally linked symbols, defined either by 
 /// assembly or link script.
 pub mod sym {
-
-    use crate::thread::Context;
 
     extern "C" {
 
@@ -94,16 +86,6 @@ pub mod sym {
         /// use this as the symbol.***
         pub fn _mtrap_generic_handler() -> !;
 
-        /// Save the current execution context into the given `into`
-        /// context. After saving, the `from` context must be 
-        /// restored. **The first parameter** is not required, in 
-        /// order to make an initial switch.
-        /// 
-        /// **This is the only function that should be used for 
-        /// context switching, in order to reduce code complexity
-        /// and potential bugs.**
-        pub fn _thread_switch(into: *mut Context, from: *const Context);
-
     }
 
 }
@@ -116,28 +98,6 @@ static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 /// All interrupt (asynchronous) handlers.
 static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
-
-
-/// This is the entry function, note that this function is called from
-/// all hart. The first thread will be started on the first hart.
-#[no_mangle]
-extern "C" fn _rust_entry() -> ! {
-
-    extern "Rust" {
-        fn main();
-    }
-
-    fn main_wrapper() {
-        unsafe { main() }
-    }
-
-    if hart::hart_zero() {
-        thread::entry_process(main_wrapper, thread::ThreadConfig::default());
-    } else {
-        thread::entry_idle();
-    }
-
-}
 
 
 /// This function is responsible for loading mutable static variables 
@@ -185,6 +145,26 @@ extern "C" fn _rust_init() {
 
     if hart::hart_zero() {
         chip::init();
+    }
+
+}
+
+
+/// This is the entry function, note that this function is called from
+/// all hart. The first thread will be started on the first hart.
+#[no_mangle]
+extern "C" fn _rust_entry() -> ! {
+
+    extern "Rust" {
+        fn main();
+    }
+
+    if hart::hart_zero() {
+        unsafe { main() };
+    }
+
+    loop {
+        hart::spin_loop();
     }
 
 }

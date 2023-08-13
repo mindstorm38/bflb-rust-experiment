@@ -16,7 +16,7 @@ const _: () = assert!(HART_COUNT != 0);
 
 /// The current number of started hart in the execution environment.
 /// Initialized to 1 because we already count the ID 0, which is 
-/// reserved for hardware hart 0.
+/// reserved for hardware hart 0. Unused when only hart 0.
 static HART_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 

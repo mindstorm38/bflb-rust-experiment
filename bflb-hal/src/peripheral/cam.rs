@@ -321,8 +321,8 @@ fn cam_mipi_csi_init() {
     // GLB_CSI_Config_MIPIPLL(2, 0x21000);
     // GLB_CSI_Power_Up_MIPIPLL();
     // GLB_Set_DSP_DSP2_CLK(ENABLE, GLB_DSP_DSP2_CLK_MUXPLL_160M, 1);
-    let fifo_threshold = (DSP2_USE_CLOCK - PIX_USE_CLOCK) as u16 / 1000 * MIPI_WIDTH / (DSP2_USE_CLOCK / 1000) as u16 + 10;
-    dtsrc.set_sensor_input(fifo_threshold, false, false);
+    let fifo_threshold = (DSP2_USE_CLOCK - PIX_USE_CLOCK) / 1000 * MIPI_WIDTH as u32 / (DSP2_USE_CLOCK / 1000) + 10;
+    dtsrc.set_sensor_input(fifo_threshold as u16, false, false);
     dsp2.set_dvp_tsrc_source(DvpTsrcSource::Csi);
 
     csi.disable();
