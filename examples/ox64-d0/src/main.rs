@@ -83,13 +83,13 @@ fn main() {
     let (
         uart_tx, 
         _uart_rx
-    ) = peripherals.uart.p0.into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
+    ) = peripherals.uart.p0.init_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
 
     // DMA
 
     let (_, mut uart_tx, _) = peripherals.dma.p0.c0
         .into_transfer(DMA_MESSAGE, uart_tx)
-        .wait_block();
+        .wait();
     
     // LOOP
 

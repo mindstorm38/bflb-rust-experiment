@@ -1,6 +1,5 @@
 //! Serial I/O management on BL808.
 
-use core::marker::PhantomData;
 use core::ptr::addr_of;
 use core::fmt;
 
@@ -8,10 +7,35 @@ use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
 use crate::bl808::uart::UartBitPrd;
 
 use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
-use crate::dma::{DmaEndpoint, DmaSrcEndpoint, DmaDstEndpoint, 
-    DmaEndpointConfig, DmaPeripheral, DmaDataWidth, DmaBurstSize, 
-    DmaIncrement};
+use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 
+    DmaPeripheral, DmaDataWidth, DmaBurstSize, DmaIncrement};
+use crate::sealed::Sealed;
 use crate::clock::Clocks;
+
+
+/// Abstract definition of a UART port with write access.
+pub trait UartTxDev {
+    
+    /// Synchronously write a single byte of data to the UART TX lane.
+    fn write_byte(&mut self, byte: u8);
+
+    /// Synchronously write a bunch a data to the UART TX lane. 
+    /// Default implementation just sequentially call [`write_byte`].
+    fn write(&mut self, data: &[u8]) {
+        for &byte in data {
+            self.write_byte(byte)
+        }
+    }
+
+}
+
+/// Abstract definition of UART port with read access.
+pub trait UartRxDev {
+    
+    /// Synchronously read a single byte of data from the UART RX, if available.
+    fn read_byte(&mut self) -> Option<u8>;
+
+}
 
 
 /// Definition of an exclusive access to a UART port. This port need 
@@ -24,161 +48,140 @@ pub struct UartAccess<const PORT: u8>(pub(crate) ());
 impl<const PORT: u8> UartAccess<PORT> {
 
     /// Configure this UART port for duplex communications.
-    pub fn into_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
-        mut tx: Pin<TX_PIN, Alternate>,
-        mut rx: Pin<RX_PIN, Alternate>,
+    pub fn init_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
+        tx: impl Into<Pin<TX_PIN, Alternate>>,
+        rx: impl Into<Pin<RX_PIN, Alternate>>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> (UartTx<PORT, TX_PIN, Duplex>, UartRx<PORT, RX_PIN, Duplex>) {
-
-        attach_pin(&mut tx, match PORT {
-            0 => UartFunction::Uart0Tx,
-            1 => UartFunction::Uart1Tx,
-            2 => UartFunction::Uart2Tx,
-            _ => unreachable!()
-        });
-
-        attach_pin(&mut rx, match PORT {
-            0 => UartFunction::Uart0Rx,
-            1 => UartFunction::Uart1Rx,
-            2 => UartFunction::Uart2Rx,
-            _ => unreachable!()
-        });
-
+    ) -> Uart<PORT, Pin<TX_PIN, Alternate>, Pin<RX_PIN, Alternate>> {
+        let mut tx = tx.into();
+        let mut rx = rx.into();
+        attach_pin(&mut tx, Self::port_tx_function());
+        attach_pin(&mut rx, Self::port_rx_function());
         init::<PORT>(config, clocks, true, true);
-
-        (
-            UartTx { pin: tx, _origin: PhantomData }, 
-            UartRx { pin: rx, _origin: PhantomData },
-        )
-
+        Uart { tx, rx }
     }
 
     /// Configure this UART port for TX-only communications.
-    pub fn into_tx<const TX_PIN: u8>(self, 
-        mut tx: Pin<TX_PIN, Alternate>,
+    pub fn init_simplex_transmit<const TX_PIN: u8>(self, 
+        tx: impl Into<Pin<TX_PIN, Alternate>>,
         config: &UartConfig, 
         clocks: &Clocks
-    ) -> UartTx<PORT, TX_PIN, SingleTx> {
+    ) -> Uart<PORT, Pin<TX_PIN, Alternate>, ()> {
+        let mut tx = tx.into();
+        attach_pin(&mut tx, Self::port_tx_function());
+        init::<PORT>(config, clocks, true, false);
+        Uart { tx, rx: () }
+    }
 
-        attach_pin(&mut tx, match PORT {
+    /// Configure this UART port for RX-only communications.
+    pub fn init_simplex_receive<const RX_PIN: u8>(self, 
+        rx: impl Into<Pin<RX_PIN, Alternate>>,
+        config: &UartConfig, 
+        clocks: &Clocks
+    ) -> Uart<PORT, (), Pin<RX_PIN, Alternate>> {
+        let mut rx = rx.into();
+        attach_pin(&mut rx, Self::port_rx_function());
+        init::<PORT>(config, clocks, false, true);
+        Uart { tx: (), rx }
+    }
+
+    fn port_tx_function() -> UartFunction {
+        match PORT {
             0 => UartFunction::Uart0Tx,
             1 => UartFunction::Uart1Tx,
             2 => UartFunction::Uart2Tx,
             _ => unreachable!()
-        });
-
-        init::<PORT>(config, clocks, true, false);
-        UartTx { pin: tx, _origin: PhantomData }
-
+        }
     }
 
-    /// Configure this UART port for RX-only communications.
-    pub fn into_rx<const RX_PIN: u8>(self, 
-        mut rx: Pin<RX_PIN, Alternate>,
-        config: &UartConfig, 
-        clocks: &Clocks
-    ) -> UartRx<PORT, RX_PIN, SingleRx> {
-
-        attach_pin(&mut rx, match PORT {
+    fn port_rx_function() -> UartFunction {
+        match PORT {
             0 => UartFunction::Uart0Rx,
             1 => UartFunction::Uart1Rx,
             2 => UartFunction::Uart2Rx,
             _ => unreachable!()
-        });
-
-        init::<PORT>(config, clocks, false, true);
-        UartRx { pin: rx, _origin: PhantomData }
-
-    }
-
-    /// Reconstruct a UART access from a single TX lane.
-    pub fn from_tx<const TX_PIN: u8>(
-        tx: UartTx<PORT, TX_PIN, SingleTx>
-    ) -> (Self, Pin<TX_PIN, Alternate>) {
-
-        // FIXME: These fixes using read are actually valid since the Pin structure is not
-        // read in the drop implementation of UartTx (also ZST), so we kind of move it 
-        // before drop. I really need to come with a clearer way of doing this, without
-        // runtime overhead.
-        (Self(()), unsafe { addr_of!(tx.pin).read() })
-
-    }
-
-    /// Reconstruct a UART access from a single RX lane.
-    pub fn from_rx<const RX_PIN: u8>(
-        rx: UartRx<PORT, RX_PIN, SingleRx>
-    ) -> (Self, Pin<RX_PIN, Alternate>) {
-        (Self(()), unsafe { addr_of!(rx.pin).read() })
-    }
-
-    /// Reconstruct a UART access from duplex lanes.
-    pub fn from_duplex<const TX_PIN: u8, const RX_PIN: u8>(
-        tx: UartTx<PORT, TX_PIN, Duplex>,
-        rx: UartRx<PORT, RX_PIN, Duplex>,
-    ) -> (Self, Pin<TX_PIN, Alternate>, Pin<RX_PIN, Alternate>) {
-        (Self(()), unsafe { addr_of!(tx.pin).read() }, unsafe { addr_of!(rx.pin).read() })
+        }
     }
 
 }
 
 
-/// Define the UART Tx, transmission lane. It typically provides write methods
-/// and implement DMA destination endpoint.
-pub struct UartTx<const PORT: u8, const PIN: u8, O: UartOrigin> {
-    pin: Pin<PIN, Alternate>,
-    _origin: PhantomData<O>
+/// Internal trait used to dynamically know if a pin is present or not.
+pub trait UartPin: Sealed {
+    /// Return the pin number, if present.
+    fn pin() -> Option<u8>;
 }
 
-/// Define the UART Rx, receiving lane. It typically provides read methods and
-/// implement DMA source endpoint.
-pub struct UartRx<const PORT: u8, const PIN: u8, O: UartOrigin> {
-    pin: Pin<PIN, Alternate>,
-    _origin: PhantomData<O>
+/// Internal marker trait used to statically know if a pin is present.
+pub trait UartPresentPin: UartPin {}
+
+impl UartPin for () {
+    #[inline]
+    fn pin() -> Option<u8> {
+        None
+    }
 }
 
+impl<const NUM: u8> UartPin for Pin<NUM, Alternate> {
+    #[inline]
+    fn pin() -> Option<u8> {
+        Some(NUM)
+    }
+}
 
-/// Marker trait specifying origin of UART lanes, used when reconstructing.
-pub trait UartOrigin {}
-
-pub struct Duplex;
-pub struct SingleTx;
-pub struct SingleRx;
-impl UartOrigin for Duplex {}
-impl UartOrigin for SingleTx {}
-impl UartOrigin for SingleRx {}
+impl<const NUM: u8> UartPresentPin for Pin<NUM, Alternate> {}
 
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> UartTx<PORT, PIN, O> {
+/// An initialized access to a UART port.
+pub struct Uart<const PORT: u8, Tx: UartPin, Rx: UartPin> {
+    tx: Tx,
+    rx: Rx,
+}
 
-    /// Simplest function to write a single byte of data to the UART TX.
-    #[inline(never)]
-    pub fn write_byte(&mut self, byte: u8) {
+impl<const PORT: u8, Tx: UartPin, Rx: UartPin> Uart<PORT, Tx, Rx> {
+
+    /// Downgrade this UART port and disable it. 
+    pub fn downgrade(self) -> (UartAccess<PORT>, Tx, Rx) {
+        // Drop will be called at the end, effectively closing the port.
+        unsafe { (UartAccess(()), addr_of!(self.tx).read(), addr_of!(self.rx).read()) }
+    }
+
+}
+
+impl<const PORT: u8, Tx: UartPin, Rx: UartPin> Drop for Uart<PORT, Tx, Rx> {
+
+    fn drop(&mut self) {
+        let regs = get_registers::<PORT>();
+        regs.utx_cfg().modify(|reg| reg.en().clear());
+        regs.urx_cfg().modify(|reg| reg.en().clear());
+        Tx::pin().map(detach_pin);
+        Rx::pin().map(detach_pin);
+    }
+
+}
+
+impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> UartTxDev for Uart<PORT, Tx, Rx> {
+
+    fn write_byte(&mut self, byte: u8) {
         let regs = get_registers::<PORT>();
         while regs.fifo_cfg1().get().tx_fifo_count().get() == 0 {}
         regs.fifo_wdata().set(byte);
     }
-    
+
 }
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> fmt::Write for UartTx<PORT, PIN, O> {
-
-    #[inline(never)]
+/// Default implementation of write.
+impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> fmt::Write for Uart<PORT, Tx, Rx> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for &byte in s.as_bytes() {
-            self.write_byte(byte);
-        }
+        self.write(s.as_bytes());
         Ok(())
     }
-
 }
 
+impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> UartRxDev for Uart<PORT, Tx, Rx> {
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> UartRx<PORT, PIN, O> {
-
-    /// Simplest function to read a single byte, if available.
-    #[inline(never)]
-    pub fn read_byte(&mut self) -> Option<u8> {
+    fn read_byte(&mut self) -> Option<u8> {
         let regs = get_registers::<PORT>();
         if regs.fifo_cfg1().get().rx_fifo_count().get() != 0 {
             Some(regs.fifo_rdata().get())
@@ -189,30 +192,13 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> UartRx<PORT, PIN, O> {
 
 }
 
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> Drop for UartTx<PORT, PIN, O> {
-    fn drop(&mut self) {
-        let regs = get_registers::<PORT>();
-        regs.utx_cfg().modify(|reg| reg.en().clear());
-        detach_pin(PIN);
-    }
-}
-
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> Drop for UartRx<PORT, PIN, O> {
-    fn drop(&mut self) {
-        let regs = get_registers::<PORT>();
-        regs.urx_cfg().modify(|reg| reg.en().clear());
-        detach_pin(PIN);
-    }
-}
-
-
-/// DMA endpoint for UART TX lane, it can be used as destination.
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartTx<PORT, PIN, O> {
-
-    fn configure(&mut self) -> DmaEndpointConfig {
-
+impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> DmaSrcEndpoint for Uart<PORT, Tx, Rx> {
+    
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+        
         // We configure the port to enable DMA for TX.
-        get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_tx_en().fill());
+        let regs = get_registers::<PORT>();
+        regs.fifo_cfg0().modify(|reg| reg.dma_tx_en().fill());
 
         DmaEndpointConfig {
             peripheral: Some(match PORT {
@@ -224,29 +210,24 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartTx<PORT, 
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::Incr1,
             increment: DmaIncrement::Const,
+            address: regs.fifo_wdata().0 as _
         }
 
     }
 
-    fn release(&mut self) {
+    fn close(&mut self) {
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_tx_en().clear());
     }
 
 }
 
-unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaDstEndpoint for UartTx<PORT, PIN, O> {
-    unsafe fn ptr(&self) -> *mut () {
-        get_registers::<PORT>().fifo_wdata().0 as _
-    }
-}
-
-/// DMA endpoint for UART RX lane, it can be used as source.
-impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, PIN, O> {
-
-    fn configure(&mut self) -> DmaEndpointConfig {
-
+impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> DmaDstEndpoint for Uart<PORT, Tx, Rx> {
+    
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+        
         // We configure the port to enable DMA for RX.
-        get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_rx_en().fill());
+        let regs = get_registers::<PORT>();
+        regs.fifo_cfg0().modify(|reg| reg.dma_rx_en().fill());
 
         DmaEndpointConfig {
             peripheral: Some(match PORT {
@@ -258,22 +239,16 @@ impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaEndpoint for UartRx<PORT, 
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::Incr1,
             increment: DmaIncrement::Const,
+            address: regs.fifo_rdata().0 as _
         }
 
     }
 
-    fn release(&mut self) {
+    fn close(&mut self) {
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_rx_en().clear());
     }
 
 }
-
-unsafe impl<const PORT: u8, const PIN: u8, O: UartOrigin> DmaSrcEndpoint for UartRx<PORT, PIN, O> {
-    unsafe fn ptr(&self) -> *const () {
-        get_registers::<PORT>().fifo_rdata().0 as _
-    }
-}
-
 
 /// Return the UART registers for the given port.
 #[inline]
@@ -287,13 +262,13 @@ fn get_registers<const PORT: u8>() -> UartRegs {
 }
 
 /// Get the UART MMIO registers structure associated to the given port.
-fn init<const PORT: u8>(config: &UartConfig, clocks: &Clocks, tx: bool, rx: bool) {
-    init_internal(get_registers::<PORT>(), config, clocks, tx, rx);
+fn init<const PORT: u8>(config: &UartConfig, clocks: &Clocks, enable_tx: bool, enable_rx: bool) {
+    init_internal(get_registers::<PORT>(), config, clocks, enable_tx, enable_rx);
 }
 
 /// Internal function used to initialize the I/O given a configuration and clocks.
 #[inline(never)]
-fn init_internal(regs: UartRegs, config: &UartConfig, clocks: &Clocks, tx: bool, rx: bool) {
+fn init_internal(regs: UartRegs, config: &UartConfig, clocks: &Clocks, enable_tx: bool, enable_rx: bool) {
 
     // Calculate the baudrate divisor from UART frequency.
     let uart_freq = clocks.get_mcu_uart_freq();
@@ -376,12 +351,12 @@ fn init_internal(regs: UartRegs, config: &UartConfig, clocks: &Clocks, tx: bool,
     regs.int_mask().set(0xFFF);
 
     // Enable TX if a pin is attached.
-    if tx {
+    if enable_tx {
         regs.utx_cfg().modify(|reg| reg.en().fill());
     }
 
     // Enable RX if a pin is attached.
-    if rx {
+    if enable_rx {
         regs.urx_cfg().modify(|reg| reg.en().fill());
     }
 

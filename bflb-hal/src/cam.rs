@@ -4,6 +4,25 @@ use crate::bl808::{CSI, DVP_TSRC0, DVP_TSRC1, DSP2_MISC};
 use crate::bl808::dtsrc::Dtsrc;
 
 
+pub mod imx477;
+
+
+/// Abstract trait for implementing some camera controller.
+pub trait CameraController {
+
+}
+
+/// Abstract trait for implementing some camera bus, where images are received.
+pub trait CameraBus {
+
+}
+
+// /// Represent a concrete camera interface, composed of a controller and a bus.
+// pub struct Camera<C: CameraController, B: CameraBus> {
+
+// }
+
+
 /// DVP TSRC controller.
 pub struct DvpTsrc<const PORT: u8>(pub(crate) ());
 

@@ -5,12 +5,12 @@ use core::fmt::Write;
 
 use bflb_rt::hal;
 
-use hal::bl808::{GLB, HBN, AON};
 use hal::Peripherals;
 
 use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use hal::uart::UartConfig;
 use hal::interrupt;
+use hal::time;
 
 
 #[link_section = ".data"] // Loaded in RAM
@@ -75,39 +75,39 @@ pub fn main() {
     // interrupts.set_enabled(interrupt::DMA1_ALL, true);
 
     // CONSOLE INIT
+    let mut uart = peripherals.uart.p0.init_duplex(
+        peripherals.gpio.p14, 
+        peripherals.gpio.p15, 
+        &UartConfig::new(115200), 
+        &clocks
+    );
 
-    let uart_tx = peripherals.gpio.p14.into_alternate();
-    let uart_rx = peripherals.gpio.p15.into_alternate();
-
-    let (
-        uart_tx, 
-        _uart_rx
-    ) = peripherals.uart.p0.into_duplex(uart_tx, uart_rx, &UartConfig::new(115200), &clocks);
-
-    // DMA
-
-    let (_, mut uart_tx, _) = peripherals.dma.p0.c0
-        .into_transfer(DMA_MESSAGE, uart_tx)
-        .wait_block();
+    let _ = writeln!(uart, "RTC time: {}", time::get_time());
+    let _ = writeln!(uart, "Heap: {:p} -> {:p}", 
+        unsafe { &bflb_rt::sym::_ld_heap_start }, 
+        unsafe { &bflb_rt::sym::_ld_heap_end });
     
-    // LOOP
-
-    // let _ = writeln!(uart_tx, "GLB: {GLB:#?}");
-    // let _ = writeln!(uart_tx, "HBN: {HBN:#?}");
-    // let _ = writeln!(uart_tx, "AON: {AON:#?}");
-
-    // spawn(async move {
-        
-    //     loop {
-
-    //         let _ = writeln!(uart_tx, "RTC time: {}", timer.get_time());
-    //         timer.wait(1_000_000).await;
-
-    //     }
-
+    // // LOOP
+    // time::wait_callback(0, move || {
+    //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
+    //     Some(1_000_000)
     // });
 
-    // // Run a wait for the end of spawned tasks (should not end).
-    // wait();
+    loop {
+        hal::hart::spin_loop();
+    }
 
+    // // DMA
+    // peripherals.dma.p0.c0
+    //     .into_transfer(DMA_MESSAGE, uart)
+    //     .wait_callback(move |_, mut uart, _| {
+
+    //         // LOOP
+    //         time::wait_callback(0, move || {
+    //             let _ = writeln!(uart, "RTC time: {}", time::get_time());
+    //             Some(1_000_000)
+    //         });
+
+    //     });
+    
 }

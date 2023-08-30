@@ -15,7 +15,7 @@ ENTRY(_start)
  */
 MEMORY {
     flash      (rx) : ORIGIN = 0x58000000, LENGTH = 1M
-    ram        (wx) : ORIGIN = 0x62020000, LENGTH = 160K + 64K
+    ram        (wx) : ORIGIN = 0x62020000, LENGTH = 160K /* + 64K */
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 
@@ -92,8 +92,10 @@ SECTIONS {
     .heap (NOLOAD) : {
 
         . = ALIGN(4);
-        _ld_heap_start = .;
+        _ld_stack_start = .;
+        _ld_stack_end = . + 4096;
 
+        _ld_heap_start = _ld_stack_end;
         . = ORIGIN(ram) + LENGTH(ram);
         _ld_heap_end = .;
 

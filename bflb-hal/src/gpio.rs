@@ -27,8 +27,8 @@ use core::marker::PhantomData;
 
 use embedded_util::PtrRw;
 
-use crate::bl808::{GLB, HBN, PDS};
 use crate::bl808::glb::GlbGpioCfg0;
+use crate::bl808::GLB;
 
 
 /// An exclusive access to a GPIO pin on a particular port.
@@ -56,9 +56,7 @@ impl<const NUM: u8> PinAccess<NUM> {
         pin
     }
 
-    /// Get a new alternate pin from this port. This requires an
-    /// initial function to be given, even if this can be modified
-    /// later.
+    /// Get a new alternate pin from this port.
     pub fn into_alternate(self) -> Pin<NUM, Alternate> {
         let mut pin = Self::new_pin();
         pin.set_config(PinConfig::default());
@@ -98,33 +96,33 @@ pub trait Mode {}
 
 /// This trait is implemented by [`Input`] and [`Alternate`] pin
 /// modes. It's used for implementations of specific functions.
-pub trait InputLike: Mode {}
+pub trait InputMode: Mode {}
 
 /// This trait is implemented by [`Output`] and [`Alternate`] pin
 /// modes. It's used for implementations of specific functions.
-pub trait OutputLike: Mode {}
+pub trait OutputMode: Mode {}
 
 /// Input pin mode.
-pub struct Input {}
+pub struct Input(());
 impl Mode for Input {}
-impl InputLike for Input {}
+impl InputMode for Input {}
 
 /// Input pin mode.
-pub struct Output {}
+pub struct Output(());
 impl Mode for Output {}
-impl OutputLike for Output {}
+impl OutputMode for Output {}
 
 /// Alternate function pin mode. This mode basically allow to do
 /// anything on the pin because alternate function may need unusual
 /// configuration sequences.
-pub struct Alternate {}
+pub struct Alternate(());
 impl Mode for Alternate {}
-impl InputLike for Alternate {}
-impl OutputLike for Alternate {}
+impl InputMode for Alternate {}
+impl OutputMode for Alternate {}
 
 impl<const NUM: u8, M: Mode> Pin<NUM, M> {
     
-    /// Get back the port associated bith this pin.
+    /// Get back the port associated bit this pin.
     /// This can be used to free the peripheral.
     pub fn downgrade(self) -> PinAccess<NUM> {
         PinAccess(())
@@ -186,7 +184,7 @@ impl<const NUM: u8, M: Mode> Pin<NUM, M> {
 
 }
 
-impl<const NUM: u8, M: InputLike> Pin<NUM, M> {
+impl<const NUM: u8, M: InputMode> Pin<NUM, M> {
 
     /// Return true of Shmitt trigger mode is enabled for this pin.
     #[inline]
@@ -202,7 +200,7 @@ impl<const NUM: u8, M: InputLike> Pin<NUM, M> {
 
 }
 
-impl<const NUM: u8, M: OutputLike> Pin<NUM, M> {
+impl<const NUM: u8, M: OutputMode> Pin<NUM, M> {
 
     /// Get the drive mode for an output pin.
     #[inline]
@@ -395,7 +393,7 @@ impl<M: Mode> PinConfig<M> {
 
 }
 
-impl<M: InputLike> PinConfig<M> {
+impl<M: InputMode> PinConfig<M> {
 
     /// Return true of Shmitt trigger mode is enabled for this pin.
     #[inline]
@@ -411,7 +409,7 @@ impl<M: InputLike> PinConfig<M> {
 
 }
 
-impl<M: OutputLike> PinConfig<M> {
+impl<M: OutputMode> PinConfig<M> {
 
     /// Get the drive mode for an output pin.
     #[inline]

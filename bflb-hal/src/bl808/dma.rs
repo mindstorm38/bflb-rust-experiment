@@ -69,7 +69,7 @@ embedded_util::mmio! {
 impl Dma {
 
     /// Custom function to get the registers for configuring a specific
-    /// DMA channel. Maximum channel number may varry depending on the
+    /// DMA channel. Maximum channel number may vary depending on the
     /// DMA controller.
     #[must_use]
     #[inline(always)]
@@ -222,7 +222,7 @@ pub struct DmaChannelLli {
     pub src_addr: u32,
     /// Destination address of the transfer.
     pub dst_addr: u32,
-    /// Adddress of the next DMA LLI.
+    /// Address of the next DMA LLI.
     pub next_lli_addr: u32,
     /// Control register, it manages configuration of source and destination 
     /// and the terminal count interrupt.

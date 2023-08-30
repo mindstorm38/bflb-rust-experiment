@@ -1,25 +1,45 @@
 //! Base I2C peripheral.
 
+use core::ptr::addr_of;
+
 use crate::bl808::{I2c as I2cRegs, I2C0, I2C1, I2C2, I2C3};
 use crate::bl808::i2c;
 
+// use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 
+//     DmaPeripheral, DmaDataWidth, DmaBurstSize, DmaIncrement};
 use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
 use crate::clock::Clocks;
+use crate::sealed::Sealed;
 
 
-/// Base structure for accessing I2C controller of a specific port.
+/// A generic I²C port trait, used to abstract complexity of the underlying 
+/// type if you don't care, providing ways to read and write slave registers.
+pub trait I2cDev {
+
+    /// Blocking read of an I²C slave on the bus.
+    fn read(&mut self, slave_addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &mut [u8]) -> bool;
+    
+    /// Blocking write to an I²C slave on the bus.
+    fn write(&mut self, slave_addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &[u8]) -> bool;
+
+}
+
+
+/// Base structure for accessing I²C controller of a specific port.
 pub struct I2cAccess<const PORT: u8>(pub(crate) ());
 
 impl<const PORT: u8> I2cAccess<PORT> {
 
-    /// Initialize the I2C port and return an initialized port to run
-    /// transactions on.
+    /// Initialize the I²C port and return an initialized port to run transactions on. 
+    /// Note that only **odd** pin numbers are accepted as SCL signal, and only **even**
+    /// pin numbers are accepted as SDA signal. Both numbers must be between 0 and 41 
+    /// included.
     pub fn init<const SCL_PIN: u8, const SDA_PIN: u8>(
-        mut scl: Pin<SCL_PIN, Alternate>,
-        mut sda: Pin<SDA_PIN, Alternate>,
-        clocks: &Clocks,
+        scl: impl Into<Pin<SCL_PIN, Alternate>>,
+        sda: impl Into<Pin<SDA_PIN, Alternate>>,
         config: &I2cConfig,
-    ) -> I2c<PORT, SCL_PIN, SDA_PIN> {
+        clocks: &Clocks,
+    ) -> I2c<PORT, Pin<SCL_PIN, Alternate>, Pin<SDA_PIN, Alternate>> {
 
         // Valid SCL pins are ODD in range 0..=41
         // Valid SDA pins are EVEN in range 0..=41
@@ -44,6 +64,9 @@ impl<const PORT: u8> I2cAccess<PORT> {
             3 => clocks.get_mm_i2c1_freq(),
             _ => unreachable!()
         };
+
+        let mut scl = scl.into();
+        let mut sda = sda.into();
 
         scl.modify_config(|config| {
             config.set_function(func);
@@ -71,7 +94,16 @@ impl<const PORT: u8> I2cAccess<PORT> {
 
         // Setup registers
         let regs = get_registers::<PORT>();
-        regs.config().modify(|reg| reg.m_en().clear());
+        
+        regs.config().modify(|reg| {
+            reg.m_en().clear();
+            reg.scl_sync_en().set(config.scl_sync as _);
+            reg.deg_en().set((config.de_glitch_count != 0) as _);
+            if config.de_glitch_count != 0 {
+                reg.deg_cnt().set(config.de_glitch_count as u32 - 1);
+            }
+        });
+
         regs.int_sts().modify(|reg| {
             reg.end_mask().fill();
             reg.txf_mask().fill();
@@ -102,89 +134,30 @@ impl<const PORT: u8> I2cAccess<PORT> {
 
 }
 
+/// Internal marker trait to denote a valid I²C pin.
+pub trait I2cPin: Sealed { }
+impl<const NUM: u8> I2cPin for Pin<NUM, Alternate> {}
 
-pub struct I2c<const PORT: u8, const SCL_PIN: u8, const SDA_PIN: u8> {
-    scl: Pin<SCL_PIN, Alternate>,
-    sda: Pin<SDA_PIN, Alternate>,
+/// An initialized access to an I²C controller, used for read/write 
+pub struct I2c<const PORT: u8, Scl: I2cPin, Sda: I2cPin> {
+    /// The bus SCL pin (clock).
+    scl: Scl,
+    /// The bus SDA pin (data).
+    sda: Sda,
 }
 
-impl<const PORT: u8, const SCL_PIN: u8, const SDA_PIN: u8> I2c<PORT, SCL_PIN, SDA_PIN> {
+impl<const PORT: u8, Scl: I2cPin, Sda: I2cPin> I2c<PORT, Scl, Sda> {
 
-    /// Blocking read of an I2C slave on the bus.
-    pub fn read(&mut self, addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &mut [u8]) -> bool {
-
-        assert!(data.len() <= 256);
-        Self::init_transfer(addr, sub_addr, I2cDirection::Read, 0);
-
-        Self::enable();
-
-        let regs = get_registers::<PORT>();
-
-        for chunk in data.chunks_mut(4) {
-
-            while regs.fifo_config_1().get().rx_fifo_cnt().get() == 0 {
-                if Self::is_nak() {
-                    return false
-                }
-            }
-
-            let data = regs.fifo_rdata().get().to_le_bytes();
-            chunk.copy_from_slice(&data[..chunk.len()]);
-
-        }
-
-        while Self::is_busy() || !Self::is_end() {
-            if Self::is_nak() {
-                return false
-            }
-        }
-
-        Self::disable();
-        !Self::is_nak()
-
+    /// Downgrade and close this I²C port, returning its original components.
+    pub fn downgrade(self) -> (I2cAccess<PORT>, Scl, Sda) {
+        // Self is dropped at the end, this effectively disable the controller.        
+        unsafe { (I2cAccess(()), addr_of!(self.scl).read(), addr_of!(self.sda).read()) }
     }
 
-    /// Blocking write to an I2C slave on the bus.
-    pub fn write(&mut self, addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &[u8]) -> bool {
-
-        assert!(data.len() <= 256);
-        Self::init_transfer(addr, sub_addr, I2cDirection::Write, data.len());
-        
-        let regs = get_registers::<PORT>();
-        
-        for chunk in data.chunks(4) {
-
-            while regs.fifo_config_1().get().tx_fifo_cnt().get() == 0 {
-                if Self::is_nak() {
-                    return false
-                }
-            }
-            
-            let mut chunk_padded = [0; 4];
-            chunk_padded[..chunk.len()].copy_from_slice(chunk);
-            regs.fifo_wdata().set(u32::from_le_bytes(chunk_padded));
-
-            if !Self::is_enabled() {
-                Self::enable();
-            }
-
-        }
-
-        while Self::is_busy() || !Self::is_end() {
-            if Self::is_nak() {
-                return false
-            }
-        }
-        
-        Self::disable();
-        !Self::is_nak()
-
-    }
-
-    /// Internal function used to setup transfer for I2C read or write
+    /// Internal function used to setup transfer for I²C read or write
     /// transaction.
     #[inline(never)]
-    fn init_transfer(addr: I2cAddr, sub_addr: Option<I2cSubAddr>, dir: I2cDirection, data_len: usize) {
+    fn init_transfer(slave_addr: I2cAddr, sub_addr: Option<I2cSubAddr>, dir: I2cDirection, data_len: usize) {
 
         let regs = get_registers::<PORT>();
 
@@ -203,8 +176,8 @@ impl<const PORT: u8, const SCL_PIN: u8, const SDA_PIN: u8> I2c<PORT, SCL_PIN, SD
                 reg.sub_addr_en().clear();
             }
 
-            reg.slv_10b_addr_en().set(addr.wide() as _);
-            reg.slv_addr().set(addr.addr() as _);
+            reg.slv_10b_addr_en().set(slave_addr.wide() as _);
+            reg.slv_addr().set(slave_addr.addr() as _);
 
             reg.pkt_len().set((data_len - 1) as _);
             
@@ -229,11 +202,13 @@ impl<const PORT: u8, const SCL_PIN: u8, const SDA_PIN: u8> I2c<PORT, SCL_PIN, SD
 
     }
 
-    #[inline]
+    /// Internal function to enable this I²C port.
     fn enable() {
         get_registers::<PORT>().config().modify(|reg| reg.m_en().fill());
     }
 
+    /// Internal function disable this I²C port, this also clears FIFO queues and
+    /// clear interrupts.
     fn disable() {
         let regs = get_registers::<PORT>();
         regs.config().modify(|reg| reg.m_en().clear());
@@ -270,11 +245,118 @@ impl<const PORT: u8, const SCL_PIN: u8, const SDA_PIN: u8> I2c<PORT, SCL_PIN, SD
 
 }
 
+impl<const PORT: u8, Scl: I2cPin, Sda: I2cPin> I2cDev for I2c<PORT, Scl, Sda> {
 
+    fn read(&mut self, slave_addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &mut [u8]) -> bool {
+
+        assert!(data.len() <= 256);
+        Self::init_transfer(slave_addr, sub_addr, I2cDirection::Read, 1);
+
+        Self::enable();
+
+        let regs = get_registers::<PORT>();
+
+        for chunk in data.chunks_mut(4) {
+
+            while regs.fifo_config_1().get().rx_fifo_cnt().get() == 0 {
+                if Self::is_nak() {
+                    return false
+                }
+            }
+
+            let data = regs.fifo_rdata().get().to_le_bytes();
+            chunk.copy_from_slice(&data[..chunk.len()]);
+
+        }
+
+        while Self::is_busy() || !Self::is_end() {
+            if Self::is_nak() {
+                return false
+            }
+        }
+
+        Self::disable();
+        !Self::is_nak()
+
+    }
+
+    fn write(&mut self, slave_addr: I2cAddr, sub_addr: Option<I2cSubAddr>, data: &[u8]) -> bool {
+
+        assert!(data.len() <= 256);
+        Self::init_transfer(slave_addr, sub_addr, I2cDirection::Write, data.len());
+        
+        let regs = get_registers::<PORT>();
+        
+        for chunk in data.chunks(4) {
+
+            while regs.fifo_config_1().get().tx_fifo_cnt().get() == 0 {
+                if Self::is_nak() {
+                    return false
+                }
+            }
+            
+            let mut chunk_padded = [0; 4];
+            chunk_padded[..chunk.len()].copy_from_slice(chunk);
+            regs.fifo_wdata().set(u32::from_le_bytes(chunk_padded));
+
+            if !Self::is_enabled() {
+                Self::enable();
+            }
+
+        }
+
+        while Self::is_busy() || !Self::is_end() {
+            if Self::is_nak() {
+                return false
+            }
+        }
+        
+        Self::disable();
+        !Self::is_nak()
+
+    }
+
+}
+
+impl<const PORT: u8, Scl: I2cPin, Sda: I2cPin> Drop for I2c<PORT, Scl, Sda> {
+    fn drop(&mut self) {
+        Self::disable();
+        get_registers::<PORT>().int_sts().modify(|reg| {
+            reg.end_mask().fill();
+            reg.txf_mask().fill();
+            reg.rxf_mask().fill();
+            reg.nak_mask().fill();
+            reg.arb_mask().fill();
+            reg.fer_mask().fill();
+        });
+    }
+}
+
+
+/// Represent the initial configuration of the I²C controller. The most common defaults
+/// are available using the [`Default`] implementation.
 #[derive(Debug)]
 pub struct I2cConfig {
-    /// Frequency of the I2C bus.
+    /// Frequency of the I²C bus.
     pub frequency: u32,
+    /// Enable signal of I²C SCL synchronization, should be enabled to support 
+    /// Multi-Master and Clock-Stretching (Normally should not be turned-off).
+    pub scl_sync: bool,
+    /// De-glitch function cycle count (default to 0).
+    pub de_glitch_count: u8,
+}
+
+impl I2cConfig {
+
+    /// Create a new default config for the given frequency.
+    pub const fn new(frequency: u32) -> Self {
+        Self { 
+            frequency,
+            scl_sync: true, 
+            de_glitch_count: 0,
+        }
+    }
+    
 }
 
 /// Direction of the communication **from the master**.
@@ -284,7 +366,7 @@ pub enum I2cDirection {
     Write,
 }
 
-/// Describe an I2C slave address, optional wide address (10-bit).
+/// Describe an I²C slave address, optional wide address (10-bit).
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct I2cAddr(u16);
 
@@ -318,7 +400,6 @@ impl I2cAddr {
 
 }
 
-
 /// Different size for sub addresses.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
@@ -329,8 +410,7 @@ pub enum I2cSubAddr {
     Size4(u32) = 3,
 }
 
-
-/// Return the I2C registers for the given port.
+/// Return the I²C registers for the given port.
 #[inline]
 fn get_registers<const PORT: u8>() -> I2cRegs {
     match PORT {

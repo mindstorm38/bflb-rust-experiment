@@ -40,7 +40,6 @@ pub use bflb_hal as hal;
 
 // These modules are intentionally internal.
 mod clic;
-mod hart;
 
 // Internal use.
 use hal::interrupt::{IRQ_COUNT, VECTOR};
@@ -126,10 +125,10 @@ unsafe extern "C" fn _rust_mem_init() {
     let dst_end: *mut u32 = &mut sym::_ld_bss_end;
     core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
 
-    // Init heap allocator.
-    let start: *mut u8 = &mut sym::_ld_heap_start;
-    let end: *mut u8 = &mut sym::_ld_heap_end;
-    ALLOCATOR.lock().init(start, end.offset_from(end) as _);
+    // // Init heap allocator.
+    // let start: *mut u8 = &mut sym::_ld_heap_start;
+    // let end: *mut u8 = &mut sym::_ld_heap_end;
+    // ALLOCATOR.lock().init(start, end.offset_from(end) as _);
 
 }
 
@@ -141,9 +140,9 @@ unsafe extern "C" fn _rust_mem_init() {
 #[no_mangle]
 extern "C" fn _rust_init() {
     
-    hart::init();
+    hal::hart::init();
 
-    if hart::hart_zero() {
+    if hal::hart::hart_zero() {
         chip::init();
     }
 
@@ -159,12 +158,12 @@ extern "C" fn _rust_entry() -> ! {
         fn main();
     }
 
-    if hart::hart_zero() {
+    if hal::hart::hart_zero() {
         unsafe { main() };
     }
 
     loop {
-        hart::spin_loop();
+        hal::hart::spin_loop();
     }
 
 }
@@ -211,5 +210,5 @@ pub fn default_trap_handler(code: usize) {
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     // TODO: Instead of spin looping indefinitely, it might be possible 
     // to close clock gates and stop the core.
-    loop { hart::spin_loop() }
+    loop { hal::hart::spin_loop() }
 }

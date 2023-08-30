@@ -8,8 +8,9 @@ use core::sync::atomic::{Ordering, AtomicUsize};
 use core::ops::Deref;
 use core::arch::asm;
 
-use crate::chip::HART_COUNT;
 
+/// All supported CPUs (BL808) have one hart.
+const HART_COUNT: usize = 1;
 
 /// Statically checks the hart count is valid.
 const _: () = assert!(HART_COUNT != 0);
@@ -119,6 +120,15 @@ pub fn release_interrupt(restore: bool) {
             asm!("csrsi mstatus, 0b1000");
         }
     }
+}
+
+/// Execute the given closure in an interrupt-free context.
+#[inline(always)]
+pub fn without_interrupt<T>(func: impl FnOnce() -> T) -> T {
+    let restore = acquire_interrupt();
+    let ret = func();
+    release_interrupt(restore);
+    ret
 }
 
 

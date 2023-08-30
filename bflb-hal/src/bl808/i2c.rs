@@ -107,7 +107,7 @@ embedded_util::reg! {
 }
 
 embedded_util::reg! {
-    /// Length of START condition phases.
+    /// Description of START/STOP condition phases.
     pub struct I2cPrd: u32 {
         [00..08] phase_0,
         [08..16] phase_1,

@@ -93,8 +93,10 @@ SECTIONS {
     .heap (NOLOAD) : {
 
         . = ALIGN(4);
-        _ld_heap_start = .;
+        _ld_stack_start = .;
+        _ld_stack_end = . + 4K;
 
+        _ld_heap_start = _ld_stack_end;
         . = ORIGIN(ram) + LENGTH(ram);
         _ld_heap_end = .;
 

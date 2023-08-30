@@ -40,8 +40,8 @@ _start:
     la t0, _rust_mtrap_tvt
     csrw 0x307, t0
 
-    # # Initialize stack pointer.
-    # la sp, _ld_stack_top
+    # Initialize stack pointer.
+    la sp, _ld_stack_end
 
     # The first function will copy runtime variables to RAM.
     # This will also copy .ramtext sections that contains the 

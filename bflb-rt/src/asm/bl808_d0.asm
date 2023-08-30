@@ -52,7 +52,7 @@ _start:
     csrw mtvec, t0
 
     # Initialize stack pointer.
-    la sp, _ld_stack_top
+    la sp, _ld_stack_end
 
     # The first function will copy runtime variables to RAM.
     # This will also copy .ramtext sections that contains the 

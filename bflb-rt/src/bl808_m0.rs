@@ -11,9 +11,6 @@ use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;
 
 
-pub const HART_COUNT: usize = 1;
-
-
 /// Machine Trap Vector Table.
 #[no_mangle]
 #[link_section = ".text.vector"]

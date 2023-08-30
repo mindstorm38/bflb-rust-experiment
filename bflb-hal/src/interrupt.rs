@@ -112,24 +112,24 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
 
     let mut handlers: [fn(usize); IRQ_COUNT] = [|_code| {}; IRQ_COUNT];
 
-    handlers[MACHINE_TIMER] = super::time::mtimer_handler;
+    handlers[MACHINE_TIMER] = crate::time::mtimer_handler;
 
     #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
     {
-        // handlers[DMA0_ALL] = super::dma::dma0_handler;
-        // handlers[DMA1_ALL] = super::dma::dma1_handler;
+        handlers[DMA0_ALL] = super::dma::dma0_handler;
+        handlers[DMA1_ALL] = super::dma::dma1_handler;
     }
 
     #[cfg(feature = "bl808-d0")]
     {
-        // handlers[DMA2_INT0] = super::dma::dma2_handler;
-        // handlers[DMA2_INT1] = super::dma::dma2_handler;
-        // handlers[DMA2_INT2] = super::dma::dma2_handler;
-        // handlers[DMA2_INT3] = super::dma::dma2_handler;
-        // handlers[DMA2_INT4] = super::dma::dma2_handler;
-        // handlers[DMA2_INT5] = super::dma::dma2_handler;
-        // handlers[DMA2_INT6] = super::dma::dma2_handler;
-        // handlers[DMA2_INT7] = super::dma::dma2_handler;
+        handlers[DMA2_INT0] = super::dma::dma2_handler;
+        handlers[DMA2_INT1] = super::dma::dma2_handler;
+        handlers[DMA2_INT2] = super::dma::dma2_handler;
+        handlers[DMA2_INT3] = super::dma::dma2_handler;
+        handlers[DMA2_INT4] = super::dma::dma2_handler;
+        handlers[DMA2_INT5] = super::dma::dma2_handler;
+        handlers[DMA2_INT6] = super::dma::dma2_handler;
+        handlers[DMA2_INT7] = super::dma::dma2_handler;
     }
 
     handlers
@@ -143,8 +143,6 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
 #[cfg(feature = "bl-critical-section")]
 mod critical_section {
 
-    use core::arch::asm;
-
     use critical_section::{RawRestoreState, Impl};
 
     // Internal type to implement the critical section of BfLab.
@@ -153,19 +151,14 @@ mod critical_section {
 
     unsafe impl Impl for BlCriticalSection {
 
+        #[inline]
         unsafe fn acquire() -> RawRestoreState {
-            // Atomically clear the mstatus.mie bit.
-            let mut prev: u32;
-            asm!("csrrci {}, mstatus, 0b1000", out(reg) prev);
-            // Return true restore state if previous bit was 1.
-            (prev & 0b1000) != 0
+            crate::hart::acquire_interrupt()
         }
 
+        #[inline]
         unsafe fn release(restore_state: RawRestoreState) {
-            // If we need to restore the interrupt to 1.
-            if restore_state {
-                asm!("csrsi mstatus, 0b1000");
-            }
+            crate::hart::release_interrupt(restore_state)
         }
         
     }
