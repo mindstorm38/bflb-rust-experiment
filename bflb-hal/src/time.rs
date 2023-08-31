@@ -1,12 +1,13 @@
 //! Timer management on BL808.
 
+use core::cell::UnsafeCell;
 use alloc::collections::VecDeque;
 use alloc::boxed::Box;
 
 use smallvec::SmallVec;
 use spin::Mutex;
 
-use crate::hart::without_interrupt;
+use crate::hart::{HartLocal, without_interrupt};
 use crate::clock::Clocks;
 use crate::bl808::addr;
 
@@ -159,8 +160,8 @@ where
 
 }
 
-/// Ordered queue of callbacks.
-static CALLBACK_QUEUE: Mutex<VecDeque<Box<dyn TimerCallback>>> = Mutex::new(VecDeque::new());
+/// The ordered queue of callbacks. It's hart local because timer interrupts are.
+static CALLBACK_QUEUE: HartLocal<UnsafeCell<VecDeque<Box<dyn TimerCallback>>>> = HartLocal::new(UnsafeCell::new(VecDeque::new()));
 
 /// Internal function to insert the given callback into the queue. **This function 
 /// requires to be executed in an interrupt-free context to avoid deadlocking.**
@@ -207,11 +208,15 @@ where
     F: Send + 'static
 {
     without_interrupt(|| {
-        let mut queue = CALLBACK_QUEUE.lock();
+        
+        // SAFETY: Hart local, accessed only when interrupts are disabled.
+        let mut queue = unsafe { &mut *CALLBACK_QUEUE.get() };
+        
         insert_callback(&mut queue, Box::new(TimerCallbackImpl {
             target_time: get_time() + duration,
             callback,
         }))
+
     });
 }
 
@@ -219,7 +224,8 @@ where
 /// This handler is called when the core time reaches the time cmp register.
 pub(crate) fn mtimer_handler(_code: usize) {
 
-    let mut queue = CALLBACK_QUEUE.lock();
+    // SAFETY: Hart local, accessed only when interrupts are disabled.
+    let mut queue = unsafe { &mut *CALLBACK_QUEUE.get() };
     let time = get_time();
 
     // Temporary array of updated callbacks.
