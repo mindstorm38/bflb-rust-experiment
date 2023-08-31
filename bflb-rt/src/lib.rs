@@ -44,7 +44,7 @@ mod clic;
 
 // Internal use.
 use hal::interrupt::{IRQ_COUNT, VECTOR};
-use static_alloc::Bump;
+use linked_list_allocator::LockedHeap;
 
 
 /// Module providing externally linked symbols, defined either by 
@@ -80,12 +80,14 @@ pub mod sym {
         pub static mut _ld_bss_end: u32;
 
         /// First word of the stack.
-        pub static mut _ld_stack_start: u32;
+        pub static mut _ld_stack_start: u8;
         /// First word **after** the stack.
-        pub static mut _ld_stack_end: u32;
+        pub static mut _ld_stack_end: u8;
         
-        pub static mut _ld_heap_start: u32;
-        pub static mut _ld_heap_end: u32;
+        /// First word of the heap.
+        pub static mut _ld_heap_start: u8;
+        /// First word **after** the heap.
+        pub static mut _ld_heap_end: u8;
 
         /// The default Machine Trap Generic Handler that is implemented
         /// in assembly and handles context saving and handling via
@@ -104,34 +106,10 @@ pub mod sym {
 
 /// The global bump allocator.
 #[global_allocator]
-static ALLOCATOR: Bump<[u8; 4096]> = Bump::uninit();
-
-
-// /// All exception (synchronous) handlers.
-// static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
+static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 /// All interrupt (asynchronous) handlers.
 static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
-
-
-/// Entry point function, called from assembly.
-/// It never returns, so the assembly just don't have to do anything after it.
-#[no_mangle]
-extern "C" fn _rust_entry() -> ! {
-
-    extern "Rust" {
-        /// Externally-defined main function, this should be implemented by the binary.
-        fn main();
-    }
-
-    unsafe { main(); }
-
-    // This function should no return: spin loop.
-    loop {
-        hal::hart::spin_loop();
-    }
-
-}
 
 
 /// This function is responsible for loading mutable static variables 
@@ -164,6 +142,11 @@ extern "C" fn _rust_mem_init() {
             let dst_end: *mut u32 = &mut sym::_ld_bss_end;
             core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
 
+            // Init heap allocator.
+            let start: *mut u8 = &mut sym::_ld_heap_start;
+            let end: *mut u8 = &mut sym::_ld_heap_end;
+            ALLOCATOR.lock().init(start, end.offset_from(start) as _);
+
         }
     } else {
         // FIXME: Other harts needs to wait until hart zero finished synchronization.
@@ -185,6 +168,26 @@ extern "C" fn _rust_init() {
     // Only hart zero actually initialize chip-specific things.
     if hal::hart::hart_zero() {
         chip::init();
+    }
+
+}
+
+
+/// Entry point function, called from assembly.
+/// It never returns, so the assembly just don't have to do anything after it.
+#[no_mangle]
+extern "C" fn _rust_entry() -> ! {
+
+    extern "Rust" {
+        /// Externally-defined main function, this should be implemented by the binary.
+        fn main();
+    }
+
+    unsafe { main(); }
+
+    // This function should no return: spin loop.
+    loop {
+        hal::hart::spin_loop();
     }
 
 }
