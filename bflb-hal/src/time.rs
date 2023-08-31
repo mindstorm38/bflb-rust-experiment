@@ -103,6 +103,7 @@ fn set_time_cmp(cmp: u64) {
 
 
 /// State of the callback after being called or not.
+#[derive(Debug, Clone, Copy)]
 enum TimerCallbackState {
     /// The callback has been consumed and should be removed from the queue.
     Consumed,
@@ -163,9 +164,8 @@ static CALLBACK_QUEUE: Mutex<VecDeque<Box<dyn TimerCallback>>> = Mutex::new(VecD
 
 /// Internal function to insert the given callback into the queue. **This function 
 /// requires to be executed in an interrupt-free context to avoid deadlocking.**
-fn insert_callback(callback: Box<dyn TimerCallback>) {
+fn insert_callback(queue: &mut VecDeque<Box<dyn TimerCallback>>, callback: Box<dyn TimerCallback>) {
     
-    let mut queue = CALLBACK_QUEUE.lock();
     let target_time = callback.target_time();
     
     // Search for the index to insert at.
@@ -192,7 +192,8 @@ fn insert_callback(callback: Box<dyn TimerCallback>) {
 pub fn wait(duration: u64) {
     let start = get_time();
     while get_time() - start < duration {
-        crate::hart::spin_loop();
+        // crate::hart::spin_loop();
+        // TODO: No spin loop for now because it wait for never-arriving interrupts.
     }
 }
 
@@ -205,10 +206,13 @@ where
     F: FnMut() -> Option<u64>,
     F: Send + 'static
 {
-    without_interrupt(|| insert_callback(Box::new(TimerCallbackImpl {
-        target_time: get_time() + duration,
-        callback,
-    })));
+    without_interrupt(|| {
+        let mut queue = CALLBACK_QUEUE.lock();
+        insert_callback(&mut queue, Box::new(TimerCallbackImpl {
+            target_time: get_time() + duration,
+            callback,
+        }))
+    });
 }
 
 
@@ -238,7 +242,7 @@ pub(crate) fn mtimer_handler(_code: usize) {
 
     // Consume the update callbacks vector and insert them again.
     for update_callback in updated_callbacks {
-        insert_callback(update_callback);
+        insert_callback(&mut queue, update_callback);
     }
 
     // Then we get the front to update time compare register to the next callback,
