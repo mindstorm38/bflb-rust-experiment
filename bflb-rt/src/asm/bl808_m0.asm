@@ -1,19 +1,8 @@
 # Startup entry point for the os.
 
-.equ MSTATUS_MIE,           1 << 3
-.equ MSTATUS_SIE,           1 << 1
-.equ MSTATUS_FS,            3 << 13
-.equ MSTATUS_FS_OFF,        0 << 13
-.equ MSTATUS_FS_INITIAL,    1 << 13
-.equ MSTATUS_FS_CLEAN,      2 << 13
-.equ MSTATUS_FS_DIRTY,      3 << 13
-.equ MTVEC_DIRECT,          0
-.equ MTVEC_VECTORED,        1
-.equ MTVEC_CLIC,            3
-
 .attribute arch, "rv32imafc"
-
 .option norvc
+
 .section .text.init
 
 # The startup function, the first called on boot.
@@ -55,13 +44,13 @@ _start:
     la sp, _ld_stack_top
 
     # The first function will copy runtime variables to RAM.
-    jal _rust_ram_load
+    jal _rust_mem_init
     
     # Init before entry point.
     jal _rust_init
 
     # Re-enable interrupts after startup.
-    csrsi mstatus, MSTATUS_MIE | MSTATUS_SIE
+    csrsi mstatus, MSTATUS_MIE
 
     # Enter the entry function.
     jal _rust_entry

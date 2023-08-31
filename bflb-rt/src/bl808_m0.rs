@@ -1,16 +1,13 @@
 //! Module for BL808 M0 core runtime.
 
-#[cfg(not(target_arch = "riscv32"))]
-compile_error!("bl808_m0 chip requires riscv32 target architecture");
+core::arch::global_asm!(include_str!("asm/common.asm"));
+core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
+
 
 use bflb_hal::bl808::{GLB, CLIC};
 
 use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;
-
-
-// Include global startup assembly.
-core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
 
 
 /// Machine Trap Vector Table.

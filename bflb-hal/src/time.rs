@@ -5,7 +5,6 @@ use alloc::collections::VecDeque;
 use alloc::boxed::Box;
 
 use smallvec::SmallVec;
-use spin::Mutex;
 
 use crate::hart::{HartLocal, without_interrupt};
 use crate::clock::Clocks;

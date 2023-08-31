@@ -13,19 +13,38 @@ extern crate alloc;
 compile_error!("no runtime chip selected, use the crate features to select one chip");
 
 
-// The following modules are imported as "chip" and should provide
-// the same set of standardized methods. These are used for chip
-// specific initialization.
+/// Macro used to import the chip specific rust and assembly code
+/// depending on the selected runtime chip. These modules should 
+/// define the following standard functions, variables and constants:
+/// - `pub fn init()`, this function is called prior to entry and 
+///   should run chip specific initialization.
+/// - `pub const HART_COUNT: usize`, a constant that define the
+///   architectural maximum number of hart that can run on the chip.
+///   This number may be greater than the actual number of activated
+///   harts, but should not be under estimated because overflow harts
+///   will panic.
+macro_rules! use_chip {
+    ($id:ident) => {
+        mod $id;
+        use crate::$id as chip;
+    };
+}
 
 #[cfg(rt_chip = "bl808_m0")]
-mod bl808_m0;
-#[cfg(rt_chip = "bl808_m0")]
-use crate::bl808_m0 as chip;
+use_chip!(bl808_m0);
+#[cfg(rt_chip = "bl808_d0")]
+use_chip!(bl808_d0);
 
-#[cfg(rt_chip = "bl808_d0")]
-mod bl808_d0;
-#[cfg(rt_chip = "bl808_d0")]
-use crate::bl808_d0 as chip;
+
+// Re-export HAL.
+pub use bflb_hal as hal;
+
+// These modules are intentionally internal.
+mod clic;
+
+// Internal use.
+use hal::interrupt::{IRQ_COUNT, VECTOR};
+use static_alloc::Bump;
 
 
 /// Module providing externally linked symbols, defined either by 
@@ -80,18 +99,6 @@ pub mod sym {
 }
 
 
-// Re-export HAL.
-pub use bflb_hal as hal;
-
-// These modules are intentionally internal.
-mod clic;
-
-// Internal use.
-use hal::interrupt::{IRQ_COUNT, VECTOR};
-
-use static_alloc::Bump;
-
-
 /// The global bump allocator.
 #[global_allocator]
 static ALLOCATOR: Bump<[u8; 4096]> = Bump::uninit();
@@ -127,33 +134,56 @@ extern "C" fn _rust_entry() -> ! {
 /// This function is responsible for loading mutable static variables 
 /// and zero-out uninitialized variables, all in RAM. 
 /// 
-/// *It is called just before entry by the assembly.*
+/// **This function is really important but will only trigger on 
+/// hart 0, because memory should be initialized once, and most 
+/// importantly we have kernel stack only on hart 0.**
+/// 
+/// *This function should not access global variables or allocate
+/// memory.*
+/// 
+/// *It is called just before entry by the assembly and should not be
+/// called from elsewhere because **it will break the program**.*
 #[no_mangle]
-extern "C" fn _rust_ram_load() {
+extern "C" fn _rust_mem_init() {
 
-    unsafe {
+    // Only hart zero initialize the memory.
+    if hal::hart::hart_zero() {
+        unsafe {
 
-        // Copy mutable global variables to RAM.
-        let src: *mut u32 = &mut sym::_ld_data_load_start;
-        let dst: *mut u32 = &mut sym::_ld_data_start;
-        let dst_end: *mut u32 = &mut sym::_ld_data_end;
-        core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
+            // Copy mutable global variables to RAM.
+            let src: *mut u32 = &mut sym::_ld_data_load_start;
+            let dst: *mut u32 = &mut sym::_ld_data_start;
+            let dst_end: *mut u32 = &mut sym::_ld_data_end;
+            core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
 
-        // Zero BSS uninit variables.
-        let dst: *mut u32 = &mut sym::_ld_bss_start;
-        let dst_end: *mut u32 = &mut sym::_ld_bss_end;
-        core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
+            // Zero BSS uninit variables.
+            let dst: *mut u32 = &mut sym::_ld_bss_start;
+            let dst_end: *mut u32 = &mut sym::_ld_bss_end;
+            core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
 
+        }
+    } else {
+        // FIXME: Other harts needs to wait until hart zero finished synchronization.
     }
 
 }
 
 
 /// This function is responsible for initializing the system before
-/// calling the entry point.
+/// calling the entry point. This function internally initialize the
+/// hart (with its unique ID, used for HartLocal variables) and the
+/// chip **only on hart 0**.
 #[no_mangle]
 extern "C" fn _rust_init() {
-    chip::init();
+
+    // All hart are initialized.
+    hal::hart::init();
+
+    // Only hart zero actually initialize chip-specific things.
+    if hal::hart::hart_zero() {
+        chip::init();
+    }
+
 }
 
 

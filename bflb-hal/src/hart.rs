@@ -31,7 +31,7 @@ pub fn init() {
     if hart_zero() {
         id = 0;
     } else {
-        id = HART_COUNTER.fetch_add(1, Ordering::Relaxed)
+        id = HART_COUNTER.fetch_add(1, Ordering::Relaxed);
     }
 
     // If the id is greater or equal to architectural maximum defined
@@ -43,9 +43,13 @@ pub fn init() {
         // HartLocal variable.
         loop { spin_loop() }
     }
-    
-    unsafe {
-        asm!("csrw mscratch, {}", in(reg) id);
+
+    // Only use the mscratch register if there is more than one hart.
+    if HART_COUNT > 1 {
+        // FIXME: This happened to crash sometimes??
+        unsafe {
+            asm!("csrw mscratch, {}", in(reg) id);
+        }
     }
 
 }
@@ -72,6 +76,8 @@ pub fn hart() -> usize {
 /// responsible of most startup tasks. The specification states that
 /// exactly one hart must have this ID. This runtime also ensures that
 /// this hart 0 will have the id 0 returned by `hart()` function.
+/// 
+/// This function doesn't need `init` before being called.
 #[inline(always)]
 pub fn hart_zero() -> bool {
     // Only if 1 hart maximum is supported, we can optimize.
@@ -79,7 +85,6 @@ pub fn hart_zero() -> bool {
         true
     } else {
         unsafe {
-            // Atomically clear the mstatus.mie bit.
             let mut id: usize;
             asm!("csrr {}, mhartid", out(reg) id);
             // Return true restore state if previous bit was 1.
