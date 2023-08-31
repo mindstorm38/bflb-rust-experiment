@@ -80,9 +80,12 @@ pub mod sym {
         pub static mut _ld_bss_end: u32;
 
         /// First word of the stack.
-        pub static mut _ld_stack_origin: u32;
+        pub static mut _ld_stack_start: u32;
         /// First word **after** the stack.
-        pub static mut _ld_stack_top: u32;
+        pub static mut _ld_stack_end: u32;
+        
+        pub static mut _ld_heap_start: u32;
+        pub static mut _ld_heap_end: u32;
 
         /// The default Machine Trap Generic Handler that is implemented
         /// in assembly and handles context saving and handling via

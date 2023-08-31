@@ -21,10 +21,15 @@ _start:
 .option pop
 
     # Disable interruptions for startup.
-    li t0, MSTATUS_MIE | MSTATUS_SIE
+    csrci mstatus, MSTATUS_MIE | MSTATUS_SIE
+ 
+    # Initialize floating point unit.
+    li t0, MSTATUS_FS
     csrc mstatus, t0
+    li t0, MSTATUS_FS_INITIAL
+    csrs mstatus, t0
 
-    # mapbaddr
+    # mapbaddr (APB bus base addr)
     # Clear PLIC ?
     csrr t1, 0xFC1
     li   t2, 0x00200004
@@ -40,16 +45,6 @@ _start:
     csrw mie, zero
     csrw mip, zero
 
-    # Reset cycles and retired instructions counters.
-    csrw mcycle, zero
-    csrw minstret, zero
-
-    # Initialize floating point unit.
-    li t0, MSTATUS_FS
-    csrc mstatus, t0
-    li t0, MSTATUS_FS_INITIAL
-    csrs mstatus, t0
-
     # Initialize the trap-vector base address.
     # Use "direct" mode.
     la t0, _mtrap_generic_handler
@@ -57,19 +52,19 @@ _start:
     csrw mtvec, t0
 
     # Initialize stack pointer.
-    la sp, _ld_stack_top
+    la sp, _ld_stack_end
 
     # The first function will copy runtime variables to RAM.
+    # This will also copy .ramtext sections that contains the 
+    # interrupt handler, this is mostly why interrupts are disable
+    # while manipulating this.
     jal _rust_mem_init
-
+    
     # Init before entry point.
     jal _rust_init
 
-    # Before entering main, we re-enable interrupts.
-    # We also enable machine timer/external interrupts.
+    # Re-enable interrupts after startup.
     csrsi mstatus, MSTATUS_MIE
-    li t0, (1 << 7) | (1 << 11)
-    csrs mie, t0
 
     # Enter the entry function.
     jal _rust_entry
