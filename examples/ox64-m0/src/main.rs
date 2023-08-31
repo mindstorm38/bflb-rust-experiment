@@ -83,15 +83,15 @@ pub fn main() {
     );
 
     let _ = writeln!(uart, "RTC time: {}", time::get_time());
-    let _ = writeln!(uart, "Heap: {:p} -> {:p}", 
-        unsafe { &bflb_rt::sym::_ld_heap_start }, 
-        unsafe { &bflb_rt::sym::_ld_heap_end });
+    // let _ = writeln!(uart, "Heap: {:p} -> {:p}", 
+    //     unsafe { &bflb_rt::sym::_ld_heap_start }, 
+    //     unsafe { &bflb_rt::sym::_ld_heap_end });
     
-    // // LOOP
-    // time::wait_callback(0, move || {
-    //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
-    //     Some(1_000_000)
-    // });
+    // LOOP
+    time::wait_callback(0, move || {
+        let _ = writeln!(uart, "RTC time: {}", time::get_time());
+        Some(1_000_000)
+    });
 
     loop {
         hal::hart::spin_loop();

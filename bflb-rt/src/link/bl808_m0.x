@@ -14,14 +14,23 @@ ENTRY(_start)
  *   between DRAM and VRAM.
  */
 MEMORY {
-    flash      (rx) : ORIGIN = 0x58000000, LENGTH = 1M
-    ram        (wx) : ORIGIN = 0x62020000, LENGTH = 160K /* + 64K */
+    flash      (rx) : ORIGIN = 0x58000000, LENGTH = 32M
+    /* peripheral (rx) : ORIGIN = 0x3EF80000, LENGTH = 448K */
+    stack       (w) : ORIGIN = 0x62020000, LENGTH = 4K
+    ram         (w) : ORIGIN = 0x62021000, LENGTH = 160K + 64K - 4K
     xram        (w) : ORIGIN = 0x40000000, LENGTH = 16K
 }
 
+/*
+ * text: executable code
+ * data: initialized data
+ * rodata: initialized data (read only)
+ * bss: uninitialized data
+ */
 SECTIONS {
 
-    /* Executable code section.
+    /*
+     * Executable code section.
      * Note that the init section is intentionnaly added first.
      */
     .text : {
@@ -38,16 +47,29 @@ SECTIONS {
 
     } >flash
 
-    /* Here we save the start address where the data will be 
+    /*
+     * The read only initialized data is kept in flash.
+     */
+    .rodata : {
+
+        . = ALIGN(4);
+        _ld_rodata_start = .;
+
+        *(.rodata .rodata.*)
+
+        . = ALIGN(4);
+        _ld_rodata_end = .;
+
+    } >flash
+
+    /* 
+     * Here we save the start address where the data will be 
      * initialy placed in flash. It will be later copied to
      * read/write RAM.
      */
     . = ALIGN(4);
     _ld_data_load_start = .;
 
-    /* Data with initial value saved in Flash and dynamically loaded 
-     * in RAM. This also contains executable some ramtext.
-     */
     .data : AT(_ld_data_load_start) {
 
         . = ALIGN(4);
@@ -56,24 +78,12 @@ SECTIONS {
 
         *(.sdata .sdata.*) 
         *(.data .data.*)
-
-        /* Purposedly placed after data. */
-        *(.rodata .rodata.*)
-        
-        /* This special section can be used to copy some text at
-         * the end of the data section, in RAM. This is made for
-         * function that need to execute fast.
-         */
-        *(.ramtext)
         
         . = ALIGN(4);
         _ld_data_end = .;
 
     } >ram
 
-    /* Data without initial value, this RAM section will be written 
-     * with all zeros at startup.
-     */
     .bss (NOLOAD) : {
 
         . = ALIGN(4);
@@ -85,20 +95,9 @@ SECTIONS {
         . = ALIGN(4);
         _ld_bss_end = .;
 
-    } >ram
+    } > ram
 
-    /* Heap space, taking the remaining space available in RAM.
-     */
-    .heap (NOLOAD) : {
-
-        . = ALIGN(4);
-        _ld_stack_start = .;
-        _ld_stack_end = . + 4096;
-
-        _ld_heap_start = _ld_stack_end;
-        . = ORIGIN(ram) + LENGTH(ram);
-        _ld_heap_end = .;
-
-    } >ram
+    _ld_stack_origin = ORIGIN(stack);
+    _ld_stack_top = _ld_stack_origin + LENGTH(stack);
 
 }

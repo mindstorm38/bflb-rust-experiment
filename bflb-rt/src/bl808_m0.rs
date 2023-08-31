@@ -1,14 +1,16 @@
 //! Module for BL808 M0 core runtime.
 
-core::arch::global_asm!(include_str!("asm/common.asm"));
-core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
-core::arch::global_asm!(include_str!("asm/rv32imaf_trap.asm"));
-
+#[cfg(not(target_arch = "riscv32"))]
+compile_error!("bl808_m0 chip requires riscv32 target architecture");
 
 use bflb_hal::bl808::{GLB, CLIC};
 
 use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;
+
+
+// Include global startup assembly.
+core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
 
 
 /// Machine Trap Vector Table.
@@ -17,7 +19,7 @@ use crate::IRQ_COUNT;
 static mut _rust_mtrap_tvt: ClicVectorTable<IRQ_COUNT> = ClicVectorTable::new(crate::sym::_mtrap_generic_handler);
 
 
-pub fn init() {
+pub(crate) fn init() {
 
     // We use all bits for interrupt level, no priority bit.
     CLIC.cfg().modify(|reg| reg.nlbits().set(8));

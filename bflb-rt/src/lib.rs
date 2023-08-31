@@ -3,6 +3,7 @@
 #![no_std]
 #![no_main]
 #![crate_type = "rlib"]
+#![deny(unsafe_op_in_unsafe_fn)]
 
 // Our crate provides a global allocator usable by alloc.
 extern crate alloc;
@@ -12,50 +13,39 @@ extern crate alloc;
 compile_error!("no runtime chip selected, use the crate features to select one chip");
 
 
-/// Macro used to import the chip specific rust and assembly code
-/// depending on the selected runtime chip. These modules should 
-/// define the following standard functions, variables and constants:
-/// - `pub fn init()`, this function is called prior to entry and 
-///   should run chip specific initialization.
-/// - `pub const HART_COUNT: usize`, a constant that define the
-///   architectural maximum number of hart that can run on the chip.
-///   This number may be greater than the actual number of activated
-///   harts, but should not be under estimated because overflow harts
-///   will panic.
-macro_rules! use_chip {
-    ($id:ident) => {
-        mod $id;
-        use crate::$id as chip;
-    };
-}
+// The following modules are imported as "chip" and should provide
+// the same set of standardized methods. These are used for chip
+// specific initialization.
 
 #[cfg(rt_chip = "bl808_m0")]
-use_chip!(bl808_m0);
+mod bl808_m0;
+#[cfg(rt_chip = "bl808_m0")]
+use crate::bl808_m0 as chip;
+
 #[cfg(rt_chip = "bl808_d0")]
-use_chip!(bl808_d0);
-
-
-// Re-export HAL.
-pub use bflb_hal as hal;
-
-// These modules are intentionally internal.
-mod clic;
-
-// Internal use.
-use hal::interrupt::{IRQ_COUNT, VECTOR};
-use linked_list_allocator::LockedHeap;
+mod bl808_d0;
+#[cfg(rt_chip = "bl808_d0")]
+use crate::bl808_d0 as chip;
 
 
 /// Module providing externally linked symbols, defined either by 
 /// assembly or link script.
 pub mod sym {
 
+    // Here we define all linker script symbols.
+    // Note that we can define all symbols as "u32", because the linker 
+    // script forces alignments to 4 bytes.
     extern "C" {
 
         /// First word of the text section.
         pub static mut _ld_text_start: u32;
         /// First word **after** the text section.
         pub static mut _ld_text_end: u32;
+
+        /// First word of the read-only data section.
+        pub static mut _ld_rodata_start: u32;
+        /// First word **after** the read-only section.
+        pub static mut _ld_rodata_end: u32;
 
         /// First word of the data section in Flash that
         /// should be copied to RAM.
@@ -70,15 +60,15 @@ pub mod sym {
         /// First word **after** the read/write uninit data section.
         pub static mut _ld_bss_end: u32;
 
-        /// First word of the heap.
-        pub static mut _ld_heap_start: u8;
-        /// First word **after** the heap.
-        pub static mut _ld_heap_end: u8;
+        /// First word of the stack.
+        pub static mut _ld_stack_origin: u32;
+        /// First word **after** the stack.
+        pub static mut _ld_stack_top: u32;
 
-        /// The default Machine Trap Generic Handler that is 
-        /// implemented in assembly and handles context saving and 
-        /// handling via exception/interrupt handlers that can be 
-        /// registered using [`register_exception_handler`] and 
+        /// The default Machine Trap Generic Handler that is implemented
+        /// in assembly and handles context saving and handling via
+        /// exception/interrupt handlers that can be registered using
+        /// [`register_exception_handler`] and 
         /// [`register_interrupt_handler`].
         /// 
         /// ***It should only be called by hardware on interrupt, only 
@@ -90,82 +80,80 @@ pub mod sym {
 }
 
 
+// Re-export HAL.
+pub use bflb_hal as hal;
+
+// These modules are intentionally internal.
+mod clic;
+
+// Internal use.
+use hal::interrupt::{IRQ_COUNT, VECTOR};
+
+use static_alloc::Bump;
+
+
 /// The global bump allocator.
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Bump<[u8; 4096]> = Bump::uninit();
 
+
+// /// All exception (synchronous) handlers.
+// static EXCEPTION_HANDLERS: TrapHandlers<32> = TrapHandlers::new();
 
 /// All interrupt (asynchronous) handlers.
 static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
 
 
+/// Entry point function, called from assembly.
+/// It never returns, so the assembly just don't have to do anything after it.
+#[no_mangle]
+extern "C" fn _rust_entry() -> ! {
+
+    extern "Rust" {
+        /// Externally-defined main function, this should be implemented by the binary.
+        fn main();
+    }
+
+    unsafe { main(); }
+
+    // This function should no return: spin loop.
+    loop {
+        hal::hart::spin_loop();
+    }
+
+}
+
+
 /// This function is responsible for loading mutable static variables 
 /// and zero-out uninitialized variables, all in RAM. 
 /// 
-/// **This function is really important but will only trigger on 
-/// hart 0, because memory should be initialized once, and most 
-/// importantly we have kernel stack only on hart 0.**
-/// 
-/// *This function should not access global variables or allocate
-/// memory.*
-/// 
-/// *It is called just before entry by the assembly and should not be
-/// called from elsewhere because **it will break the program**.*
+/// *It is called just before entry by the assembly.*
 #[no_mangle]
-unsafe extern "C" fn _rust_mem_init() {
+extern "C" fn _rust_ram_load() {
 
-    // Copy RO/RW global variables to RAM.
-    let src: *mut u32 = &mut sym::_ld_data_load_start;
-    let dst: *mut u32 = &mut sym::_ld_data_start;
-    let dst_end: *mut u32 = &mut sym::_ld_data_end;
-    core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
+    unsafe {
 
-    // Zero BSS uninit variables.
-    let dst: *mut u32 = &mut sym::_ld_bss_start;
-    let dst_end: *mut u32 = &mut sym::_ld_bss_end;
-    core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
+        // Copy mutable global variables to RAM.
+        let src: *mut u32 = &mut sym::_ld_data_load_start;
+        let dst: *mut u32 = &mut sym::_ld_data_start;
+        let dst_end: *mut u32 = &mut sym::_ld_data_end;
+        core::ptr::copy(src, dst, dst_end.offset_from(dst) as _);
 
-    // // Init heap allocator.
-    // let start: *mut u8 = &mut sym::_ld_heap_start;
-    // let end: *mut u8 = &mut sym::_ld_heap_end;
-    // ALLOCATOR.lock().init(start, end.offset_from(end) as _);
+        // Zero BSS uninit variables.
+        let dst: *mut u32 = &mut sym::_ld_bss_start;
+        let dst_end: *mut u32 = &mut sym::_ld_bss_end;
+        core::ptr::write_bytes(dst, 0, dst_end.offset_from(dst) as _);
+
+    }
 
 }
 
 
 /// This function is responsible for initializing the system before
-/// calling the entry point. This function internally initialize the
-/// hart (with its unique ID, used for HartLocal variables) and the
-/// chip **only on hart 0**.
+/// calling the entry point.
 #[no_mangle]
 extern "C" fn _rust_init() {
-    
-    hal::hart::init();
-
-    if hal::hart::hart_zero() {
-        chip::init();
-    }
-
-}
-
-
-/// This is the entry function, note that this function is called from
-/// all hart. The first thread will be started on the first hart.
-#[no_mangle]
-extern "C" fn _rust_entry() -> ! {
-
-    extern "Rust" {
-        fn main();
-    }
-
-    if hal::hart::hart_zero() {
-        unsafe { main() };
-    }
-
-    loop {
-        hal::hart::spin_loop();
-    }
-
+    chip::init();
 }
 
 
@@ -187,9 +175,8 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
     let handler = if interrupt {
         INTERRUPT_VECTOR[code]
     } else {
-        // TODO:
         // EXCEPTION_HANDLERS.get(code, default_trap_handler)
-        return
+        return;
     };
 
     (handler)(code);
@@ -203,6 +190,16 @@ pub fn default_trap_handler(code: usize) {
 }
 
 
+/// Trigger mode that can be configured for a particular interrupt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InterruptTrigger {
+    PositiveLevel,
+    NegativeLevel,
+    PositiveEdge,
+    NegativeEdge,
+}
+
+
 /// This implementation of the panic handler will simply abort without 
 /// any message.
 #[panic_handler]
@@ -210,5 +207,5 @@ pub fn default_trap_handler(code: usize) {
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     // TODO: Instead of spin looping indefinitely, it might be possible 
     // to close clock gates and stop the core.
-    loop { hal::hart::spin_loop() }
+    loop { core::hint::spin_loop() }
 }
