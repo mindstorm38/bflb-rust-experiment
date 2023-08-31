@@ -226,16 +226,6 @@ pub fn default_trap_handler(code: usize) {
 }
 
 
-/// Trigger mode that can be configured for a particular interrupt.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InterruptTrigger {
-    PositiveLevel,
-    NegativeLevel,
-    PositiveEdge,
-    NegativeEdge,
-}
-
-
 /// This implementation of the panic handler will simply abort without 
 /// any message.
 #[panic_handler]
