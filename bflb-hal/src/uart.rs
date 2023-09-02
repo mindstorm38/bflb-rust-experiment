@@ -192,40 +192,11 @@ impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> UartRxDev for Uart<PORT, T
 
 }
 
-impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> DmaSrcEndpoint for Uart<PORT, Tx, Rx> {
+impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> DmaSrcEndpoint for Uart<PORT, Tx, Rx> {
     
     unsafe fn configure(&mut self) -> DmaEndpointConfig {
         
         // We configure the port to enable DMA for TX.
-        let regs = get_registers::<PORT>();
-        regs.fifo_cfg0().modify(|reg| reg.dma_tx_en().fill());
-
-        DmaEndpointConfig {
-            peripheral: Some(match PORT {
-                0 => DmaPeripheral::Uart0Tx,
-                1 => DmaPeripheral::Uart1Tx,
-                2 => DmaPeripheral::Uart2Tx,
-                _ => unreachable!()
-            }),
-            data_width: DmaDataWidth::Byte,
-            burst_size: DmaBurstSize::Incr1,
-            increment: DmaIncrement::Const,
-            address: regs.fifo_wdata().0 as _
-        }
-
-    }
-
-    fn close(&mut self) {
-        get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_tx_en().clear());
-    }
-
-}
-
-impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> DmaDstEndpoint for Uart<PORT, Tx, Rx> {
-    
-    unsafe fn configure(&mut self) -> DmaEndpointConfig {
-        
-        // We configure the port to enable DMA for RX.
         let regs = get_registers::<PORT>();
         regs.fifo_cfg0().modify(|reg| reg.dma_rx_en().fill());
 
@@ -246,6 +217,35 @@ impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> DmaDstEndpoint for Uart<PO
 
     fn close(&mut self) {
         get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_rx_en().clear());
+    }
+
+}
+
+impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> DmaDstEndpoint for Uart<PORT, Tx, Rx> {
+    
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+        
+        // We configure the port to enable DMA for RX.
+        let regs = get_registers::<PORT>();
+        regs.fifo_cfg0().modify(|reg| reg.dma_tx_en().fill());
+
+        DmaEndpointConfig {
+            peripheral: Some(match PORT {
+                0 => DmaPeripheral::Uart0Tx,
+                1 => DmaPeripheral::Uart1Tx,
+                2 => DmaPeripheral::Uart2Tx,
+                _ => unreachable!()
+            }),
+            data_width: DmaDataWidth::Byte,
+            burst_size: DmaBurstSize::Incr1,
+            increment: DmaIncrement::Const,
+            address: regs.fifo_wdata().0 as _
+        }
+
+    }
+
+    fn close(&mut self) {
+        get_registers::<PORT>().fifo_cfg0().modify(|reg| reg.dma_tx_en().clear());
     }
 
 }

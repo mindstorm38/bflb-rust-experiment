@@ -163,7 +163,7 @@ embedded_util::reg! {
         /// Terminal count interrupt mask.
         /// - 0 - Terminal count on this channel will generate an associated
         ///       interrupt and set the associated bit in `int_tc_status`.
-        /// - 1 - No error interrupt, the associated bit is still set
+        /// - 1 - No terminal count interrupt, the associated bit is still set
         ///       in `raw_int_tc_status`.
         [15..16] int_tc_mask,
         /// Lock.

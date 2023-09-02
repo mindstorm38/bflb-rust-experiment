@@ -235,3 +235,6 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     // to close clock gates and stop the core.
     loop { core::hint::spin_loop() }
 }
+
+
+// TODO: Implement a panic with message to UART.

@@ -258,10 +258,15 @@ where
     /// associated interrupt.
     #[inline]
     unsafe fn destruct(mut self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
-        
+
         get_port_regs::<PORT>().int_tc_clear()
             .set_with(|port| port.set(CHANNEL, true));
-        
+
+        get_channel_regs::<PORT, CHANNEL>()
+            .config().modify(|reg| {
+                reg.enable().clear();
+            });
+
         self.src.close();
         self.dst.close();
 
@@ -390,13 +395,14 @@ fn dma_handler<const PORT: u8>(callbacks: &mut [Option<DmaCallback>]) {
 
     // Get the status and clear all status.
     let status = get_port_regs::<PORT>().int_tc_status().get();
-    get_port_regs::<PORT>().int_tc_clear().set(status);
+    // get_port_regs::<PORT>().int_tc_clear().set(status);
 
     // Iterate over all callbacks and check if the corresponding interrupt bit has been
     // set, then we remove the callback and call it.
     for (i, callback) in callbacks.iter_mut().enumerate() {
         if status.get(i as u8) {
             if let Some(mut callback) = callback.take() {
+                // The interrupt bit should be cleared by the callback.
                 callback();
             }
         }

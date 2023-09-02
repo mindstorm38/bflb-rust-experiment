@@ -71,26 +71,34 @@ pub fn main() {
     // INTERRUPT INIT
     
     interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
-    // interrupts.set_enabled(interrupt::DMA0_ALL, true);
-    // interrupts.set_enabled(interrupt::DMA1_ALL, true);
+    interrupts.set_enabled(interrupt::DMA0_ALL, true);
+    interrupts.set_enabled(interrupt::DMA1_ALL, true);
 
     // CONSOLE INIT
-    let mut uart = peripherals.uart.p0.init_duplex(
+    let uart = peripherals.uart.p0.init_duplex(
         peripherals.gpio.p14, 
         peripherals.gpio.p15, 
         &UartConfig::new(115200), 
         &clocks
     );
 
+    let (_, uart, dma) = peripherals.dma.p0.c0
+        .into_transfer(DMA_MESSAGE, uart)
+        .wait();
+
+    let (_, mut uart, _) = dma
+        .into_transfer(DMA_MESSAGE, uart)
+        .wait();
+
+        // .wait_callback(|_, mut uart, _| {
+        //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
+        // });
+
     // LOOP
     time::wait_callback(0, move || {
         let _ = writeln!(uart, "RTC time: {}", time::get_time());
         Some(1_000_000)
     });
-
-    loop {
-        hal::hart::spin_loop();
-    }
 
     // // DMA
     // peripherals.dma.p0.c0
