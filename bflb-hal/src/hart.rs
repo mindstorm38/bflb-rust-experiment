@@ -5,8 +5,11 @@
 //! contiguous.
 
 use core::sync::atomic::{Ordering, AtomicUsize};
+use core::cell::{RefCell, Ref, RefMut};
 use core::ops::Deref;
 use core::arch::asm;
+
+use critical_section::{Mutex, CriticalSection};
 
 
 /// All supported CPUs (BL808) have one hart.
@@ -105,7 +108,7 @@ pub fn spin_loop() {
 /// Disable interrupts on the current hart if needed, and returns 
 /// true if the interrupt was enabled.
 #[inline(always)]
-pub fn acquire_interrupt() -> bool {
+fn acquire_interrupt() -> bool {
     unsafe {
         // Atomically clear the mstatus.mie bit.
         let mut prev: u32;
@@ -118,7 +121,7 @@ pub fn acquire_interrupt() -> bool {
 /// Enable interrupts if it was previously the case, depending on
 /// the restore argument.
 #[inline(always)]
-pub fn release_interrupt(restore: bool) {
+fn release_interrupt(restore: bool) {
     // If we need to restore the interrupt to 1.
     if restore {
         unsafe {
@@ -127,19 +130,36 @@ pub fn release_interrupt(restore: bool) {
     }
 }
 
-/// Execute the given closure in an interrupt-free context.
-#[inline(always)]
-pub fn without_interrupt<T>(func: impl FnOnce() -> T) -> T {
-    let restore = acquire_interrupt();
-    let ret = func();
-    release_interrupt(restore);
-    ret
+/// This internal module is used if the critical section feature is
+/// enabled, it provides implementation for the `critical_section` 
+/// crate.
+#[cfg(feature = "bl-critical-section")]
+mod bl_critical_section {
+
+    use critical_section::{RawRestoreState, Impl};
+
+    // Internal type to implement the critical section of BfLab.
+    struct BlCriticalSection;
+    critical_section::set_impl!(BlCriticalSection);
+
+    unsafe impl Impl for BlCriticalSection {
+
+        #[inline]
+        unsafe fn acquire() -> RawRestoreState {
+            super::acquire_interrupt()
+        }
+
+        #[inline]
+        unsafe fn release(restore_state: RawRestoreState) {
+            super::release_interrupt(restore_state)
+        }
+        
+    }
+
 }
 
-
-/// Special type that allows defining static hart-local variables. It
-/// however does not provide interior mutability, so only const deref
-/// is implemented.
+/// Special type that allows defining static hart-local variables. It however does not 
+/// provide interior mutability, so only const deref is implemented.
 pub struct HartLocal<T> {
     /// Internal array containing instances of the value for each 
     /// hart.
@@ -148,8 +168,7 @@ pub struct HartLocal<T> {
 
 impl<T> HartLocal<T> {
 
-    /// Create a new hart-local variable, initialized to the given
-    /// value.
+    /// Create a new hart-local variable, initialized to the given value.
     pub const fn new(value: T) -> Self {
         Self {
             inner: [value; HART_COUNT]
@@ -172,6 +191,51 @@ impl<T> Deref for HartLocal<T> {
         // the case the hart spin loops, so they can't get here 
         // because no hart local variable is accessed.
         unsafe { self.inner.get_unchecked(hart()) }
+    }
+
+}
+
+/// Type alias for making a hart local with interrupt-safe mutex.
+pub type HartLocalMutex<T> = HartLocal<Mutex<T>>;
+
+impl<T> HartLocalMutex<T> {
+
+    /// Create a new hart-local with interrupt-safe mutex for accessing underlying value.
+    pub const fn new_mutex(value: T) -> Self {
+        Self::new(Mutex::new(value))
+    }
+
+
+    #[inline]
+    pub fn borrow<'cs>(&'cs self, cs: CriticalSection<'cs>) -> &'cs T {
+        (**self).borrow(cs)
+    }
+
+}
+
+/// Type alias for making a hart local with an interrupt-safe cell.
+pub type HartLocalCell<T> = HartLocal<Mutex<RefCell<T>>>;
+
+impl<T> HartLocalCell<T> {
+
+    /// Create a new hart-local with interrupt-safe cell for accessing underlying value.
+    pub const fn new_cell(value: T) -> Self {
+        Self::new(Mutex::new(RefCell::new(value)))
+    }
+
+    /// Borrow the internal ref cell while guaranteeing that caller is in critical 
+    /// section. Being in critical section is required to avoid "dead-locking" (not
+    /// really a dead-lock because borrowing will panic).
+    #[inline]
+    pub fn borrow_ref<'cs>(&'cs self, cs: CriticalSection<'cs>) -> Ref<'cs, T> {
+        (**self).borrow_ref(cs)
+    }
+
+    /// Borrow the internal ref cell mutably while guaranteeing that caller is in critical 
+    /// section. Read [`borrow`] method.
+    #[inline]
+    pub fn borrow_ref_mut<'cs>(&'cs self, cs: CriticalSection<'cs>) -> RefMut<'cs, T> {
+        (**self).borrow_ref_mut(cs)
     }
 
 }

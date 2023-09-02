@@ -7,6 +7,8 @@ use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
 use crate::bl808::CLIC;
 
+use critical_section::CriticalSection;
+
 
 /// Exclusive access to global control of the interrupts.
 pub struct Interrupts(pub(crate) ());
@@ -105,12 +107,15 @@ pub enum InterruptTrigger {
     NegativeEdge,
 }
 
+/// Type alias for interrupt handler function pointer.
+pub type InterruptHandler = fn(usize, CriticalSection);
 
-/// This constant array can be used as a base interrupt vector to be
-/// used by the HAL and supported by the runtime.
-pub const VECTOR: [fn(usize); IRQ_COUNT] = {
+/// This constant array can be used as a base interrupt vector to be used by the HAL and 
+/// supported by the runtime. Each handle takes a critical section token for proving that
+/// the handler is effectively running with interrupts disabled.
+pub const VECTOR: [InterruptHandler; IRQ_COUNT] = {
 
-    let mut handlers: [fn(usize); IRQ_COUNT] = [|_code| {}; IRQ_COUNT];
+    let mut handlers: [InterruptHandler; IRQ_COUNT] = [|_, _| {}; IRQ_COUNT];
 
     handlers[MACHINE_TIMER] = crate::time::mtimer_handler;
 
@@ -135,35 +140,6 @@ pub const VECTOR: [fn(usize); IRQ_COUNT] = {
     handlers
 
 };
-
-
-/// This internal module is used if the critical section feature is
-/// enabled, it provides implementation for the `critical_section` 
-/// crate.
-#[cfg(feature = "bl-critical-section")]
-mod critical_section {
-
-    use critical_section::{RawRestoreState, Impl};
-
-    // Internal type to implement the critical section of BfLab.
-    struct BlCriticalSection;
-    critical_section::set_impl!(BlCriticalSection);
-
-    unsafe impl Impl for BlCriticalSection {
-
-        #[inline]
-        unsafe fn acquire() -> RawRestoreState {
-            crate::hart::acquire_interrupt()
-        }
-
-        #[inline]
-        unsafe fn release(restore_state: RawRestoreState) {
-            crate::hart::release_interrupt(restore_state)
-        }
-        
-    }
-
-}
 
 
 /// Internal macro for easier definition.

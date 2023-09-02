@@ -5,11 +5,12 @@
 //!  TODO: Guard all access to the port registers to avoid concurrent
 //! uses.
 
+use core::cell::RefCell;
 use alloc::boxed::Box;
-use spin::Mutex;
+
+use critical_section::{Mutex, CriticalSection};
 
 use crate::bl808::{DMA0, DMA1, DMA2, dma};
-use crate::hart::without_interrupt;
 
 
 /// This peripheral structure wraps all DMA ports available.
@@ -115,9 +116,6 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
         let src_config = unsafe { src.configure() };
         let dst_config = unsafe { dst.configure() };
 
-        let port_regs = get_port_regs::<PORT>();
-        let channel_regs = get_channel_regs::<PORT, CHANNEL>();
-
         let transfer_len;
         let mut src_incr = false;
         let mut dst_incr = false;
@@ -145,6 +143,9 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
         // TODO: Support for LLI transfers.
         assert!(transfer_len <= 4064, "doing more than 4064 transfers is currently not supported");
 
+        let port_regs = get_port_regs::<PORT>();
+        let channel_regs = get_channel_regs::<PORT, CHANNEL>();
+
         // TODO: Guard this for concurrent calls.
         port_regs.config().modify(|reg| {
             reg.smdma_enable().fill();
@@ -168,15 +169,16 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
             reg.dst_add_mode().clear();
             reg.dst_minus_mode().clear();
 
-            reg.tc_int_enable().fill();
             reg.transfer_size().set(transfer_len as _);
+
+            reg.tc_int_enable().fill();
 
         });
 
         channel_regs.config().modify(|reg| {
 
             if let Some(src) = src_config.peripheral {
-                reg.dst_peripheral().set(get_peripheral_id::<PORT>(src));
+                reg.src_peripheral().set(get_peripheral_id::<PORT>(src));
             } else {
                 reg.src_peripheral().clear();
             }
@@ -198,7 +200,8 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
 
         });
 
-        // Disable DMA error and terminal count interrupts.
+        // Interrupts are masked by default because we are in manual waiting mode.
+        // This will be modified if callback-based waiting is later used.
         channel_regs.config().modify(|reg| {
             reg.int_error_mask().fill();
             reg.int_tc_mask().fill();
@@ -245,6 +248,7 @@ where
     /// Return true if the transfer is completed and can be destructured.
     #[inline]
     pub fn completed(&self) -> bool {
+        // We know that the channel is interrupt-masked, so we must use raw register.
         get_port_regs::<PORT>().raw_int_tc_status().get().get(CHANNEL)
     }
 
@@ -254,14 +258,14 @@ where
     /// not the case, the destination endpoint may be aliases by the
     /// DMA controller.
     /// 
-    /// This function also release the endpoints and clear the
-    /// associated interrupt.
+    /// This function also release the endpoints and disabled the channel.
+    /// 
+    /// SAFETY: Caller must ensure that the source and destination endpoint will no longer
+    /// be accessed in any way by the DMA controller.
     #[inline]
     unsafe fn destruct(mut self) -> (Src, Dst, DmaAccess<PORT, CHANNEL>) {
 
-        get_port_regs::<PORT>().int_tc_clear()
-            .set_with(|port| port.set(CHANNEL, true));
-
+        // Disabling the channel ofc...
         get_channel_regs::<PORT, CHANNEL>()
             .config().modify(|reg| {
                 reg.enable().clear();
@@ -279,9 +283,14 @@ where
     /// This will only succeed if the DMA transfer is completed ([`completed`]).
     pub fn try_wait(self) -> Result<(Src, Dst, DmaAccess<PORT, CHANNEL>), Self> {
         if self.completed() {
+            // We know that this channel is interrupt-masked, so it should not generate
+            // interrupts. So we have to manually clear the terminal count bit here.
+            get_port_regs::<PORT>().int_tc_clear()
+                .set_with(|port| port.set(CHANNEL, true));
             // SAFETY: This is safe because we know that the transfer
             // is completed, so we can destruct.
             Ok(unsafe { self.destruct() })
+
         } else {
             Err(self)
         }
@@ -331,11 +340,17 @@ where
             }
         });
 
-        without_interrupt(move || {
+        critical_section::with(|cs| {
+
             <DmaAccess<PORT, CHANNEL> as DmaInterruptSupport>
                 ::with_callback(move |slot| {
                     *slot = Some(wrapper);
-                });
+                }, cs);
+            
+            // Unmask interrupt for this channel so it will now generate interrupts.
+            get_channel_regs::<PORT, CHANNEL>().config()
+                .modify(|config| config.int_tc_mask().clear());
+
         });
         
     }
@@ -346,63 +361,66 @@ where
 /// Type alias for a boxed closure used as a DMA transfer callback.
 type DmaCallback = Box<dyn FnMut() + Send>;
 /// Internal type alias for a callbacks array.
-type DmaCallbacks<const CHANNELS: usize> = Mutex<[Option<DmaCallback>; CHANNELS]>;
+type DmaCallbacks<const CHANNELS: usize> = [Mutex<RefCell<Option<DmaCallback>>>; CHANNELS];
 /// Default value: no callback.
-const NO_CALLBACK: Option<DmaCallback> = None;
+const NO_CALLBACK: Mutex<RefCell<Option<DmaCallback>>> = Mutex::new(RefCell::new(None));
 /// Callbacks for DMA port 0.
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-static DMA0_CALLBACKS: DmaCallbacks<8> = Mutex::new([NO_CALLBACK; 8]);
+static DMA0_CALLBACKS: DmaCallbacks<8> = [NO_CALLBACK; 8];
 /// Callbacks for DMA port 1.
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-static DMA1_CALLBACKS: DmaCallbacks<4> = Mutex::new([NO_CALLBACK; 4]);
+static DMA1_CALLBACKS: DmaCallbacks<4> = [NO_CALLBACK; 4];
 /// Callbacks for DMA port 2.
 #[cfg(feature = "bl808-d0")]
-static DMA2_CALLBACKS: DmaCallbacks<8> = Mutex::new([NO_CALLBACK; 8]);
+static DMA2_CALLBACKS: DmaCallbacks<8> = [NO_CALLBACK; 8];
 
 
 /// Trait implemented on DMA ports that support interrupts on the current chip.
 pub trait DmaInterruptSupport {
-    /// Acquire an exclusive access to the callback corresponding to the current channel,
-    /// this should be done in an interrupt-free context to avoid deadlocking.
-    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>));
+    /// SAFETY: Caller must ensure that this function is called in an interrupt-free 
+    /// context and is the only possible owner of the DMA channel.
+    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>), cs: CriticalSection);
 }
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 impl<const CHANNEL: u8> DmaInterruptSupport for DmaAccess<0, CHANNEL> {
-    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>)) {
-        func(&mut DMA0_CALLBACKS.lock()[CHANNEL as usize]);
+    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>), cs: CriticalSection) {
+        func(&mut DMA0_CALLBACKS[CHANNEL as usize].borrow_ref_mut(cs));
     }
 }
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 impl<const CHANNEL: u8> DmaInterruptSupport for DmaAccess<1, CHANNEL> {
-    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>)) {
-        func(&mut DMA1_CALLBACKS.lock()[CHANNEL as usize]);
+    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>), cs: CriticalSection) {
+        func(&mut DMA1_CALLBACKS[CHANNEL as usize].borrow_ref_mut(cs));
     }
 }
 
 #[cfg(feature = "bl808-d0")]
 impl<const CHANNEL: u8> DmaInterruptSupport for DmaAccess<2, CHANNEL> {
-    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>)) {
-        func(&mut DMA2_CALLBACKS.lock()[CHANNEL as usize]);
+    fn with_callback(func: impl FnOnce(&mut Option<DmaCallback>), cs: CriticalSection) {
+        func(&mut DMA2_CALLBACKS[CHANNEL as usize].borrow_ref_mut(cs));
     }
 }
 
 
-/// Internal generic handler for DMA ports. This is internally only
-/// called from interrupt handlers.
-fn dma_handler<const PORT: u8>(callbacks: &mut [Option<DmaCallback>]) {
+/// Internal generic handler for DMA ports. This handler should be called only for DMA
+/// channels on which `wait_callback` has been called (so with unmasked interrupt).
+#[inline(never)]
+fn dma_handler(port_regs: dma::Dma, callbacks: &[Mutex<RefCell<Option<DmaCallback>>>], cs: CriticalSection) {
 
     // Get the status and clear all status.
-    let status = get_port_regs::<PORT>().int_tc_status().get();
-    // get_port_regs::<PORT>().int_tc_clear().set(status);
+    let status = port_regs.int_tc_status().get();
+    port_regs.int_tc_clear().set(status);
 
     // Iterate over all callbacks and check if the corresponding interrupt bit has been
     // set, then we remove the callback and call it.
-    for (i, callback) in callbacks.iter_mut().enumerate() {
+    for (i, callback) in callbacks.iter().enumerate() {
         if status.get(i as u8) {
-            if let Some(mut callback) = callback.take() {
-                // The interrupt bit should be cleared by the callback.
+            if let Some(mut callback) = callback.borrow_ref_mut(cs).take() {
+                // The callback will destruct and close the DMA channel, it's safe because
+                // we previously cleared the terminal count interrupt so it should not
+                // spin interrupt.
                 callback();
             }
         }
@@ -412,20 +430,20 @@ fn dma_handler<const PORT: u8>(callbacks: &mut [Option<DmaCallback>]) {
 
 /// Interrupt handler for DMA0 interrupts on M0/LP.
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-pub(crate) fn dma0_handler(_code: usize) {
-    dma_handler::<0>(&mut DMA0_CALLBACKS.lock()[..]);
+pub(crate) fn dma0_handler(_code: usize, cs: CriticalSection) {
+    dma_handler(get_port_regs::<0>(), &DMA0_CALLBACKS[..], cs);
 }
 
 /// Interrupt handler for DMA1 interrupts on M0/LP.
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-pub(crate) fn dma1_handler(_code: usize) {
-    dma_handler::<1>(&mut DMA1_CALLBACKS.lock()[..]);
+pub(crate) fn dma1_handler(_code: usize, cs: CriticalSection) {
+    dma_handler(get_port_regs::<1>(), &DMA1_CALLBACKS[..], cs);
 }
 
 /// Interrupt handler for DMA1 interrupts on M0/LP.
 #[cfg(feature = "bl808-d0")]
-pub(crate) fn dma2_handler(_code: usize) {
-    dma_handler::<2>(&mut DMA2_CALLBACKS.lock()[..]);
+pub(crate) fn dma2_handler(_code: usize, cs: CriticalSection) {
+    dma_handler(get_port_regs::<2>(), &DMA2_CALLBACKS[..], cs);
 }
 
 
@@ -452,7 +470,7 @@ pub struct DmaEndpointConfig {
     /// return `Const` length. The given length tell how many transfers of 
     /// the given `data_width` to do.
     pub increment: DmaIncrement,
-    /// Address of this DMA endpoint
+    /// Address of this DMA endpoint.
     pub address: *const (),
 }
 
@@ -490,109 +508,6 @@ pub trait DmaDstEndpoint {
 
 }
 
-// /// An abstract endpoint (source or destination) for DMA transfers.
-// /// 
-// /// The implementors have to define functions that provides the
-// /// address of the endpoint, increment enable, data width and burst
-// /// size. If the endpoint is a peripheral, it must also be given.
-// /// 
-// /// When DMA transfers data from a source to a destination. It first
-// /// copy data from source to an internal buffer and then copy back from
-// /// this buffer to the destination. This is why each endpoint defines
-// /// data width and burst size.
-// pub trait DmaEndpoint {
-
-//     /// This is called when the endpoint is about to be configured, it 
-//     /// also need to return the configuration to apply to the endpoint.
-//     /// 
-//     /// *Note that* this take an exclusive self reference, it's intended
-//     /// for use by some implementors to apply modifications to the
-//     /// endpoint instance before configuration.
-//     /// 
-//     /// TODO: Allow configuration of endpoints differently in source or 
-//     /// destination mode.
-//     fn configure(&mut self) -> DmaEndpointConfig;
-
-//     /// Release this endpoint from a DMA transfer, this is called when
-//     /// the DMA transfer is deconstructed and both endpoints are 
-//     /// released.
-//     fn release(&mut self) {}
-
-//     /// Customize this DMA endpoint by forcing its burst size. *This is the only
-//     /// configuration that can be forced.*
-//     fn with_burst_size(self, burst_size: DmaBurstSize) -> DmaEndpointWithBurstSize<Self>
-//     where
-//         Self: Sized,
-//     {
-//         DmaEndpointWithBurstSize { inner: self, burst_size }
-//     }
-
-// }
-
-// /// Specialized trait for source-capable DMA endpoints.
-// /// 
-// /// SAFETY: This trait is unsafe because **you must** ensure that the 
-// /// returned pointer lead to valid data regarding the configuration
-// /// returned by [`DmaEndpoint::configure`]. The pointed data is allowed
-// /// to be const referenced while the endpoint is configured.
-// pub unsafe trait DmaSrcEndpoint: DmaEndpoint {
-
-//     /// Get the pointer to the constant data of this endpoint.
-//     unsafe fn ptr(&self) -> *const ();
-
-// }
-
-// /// Specialized trait for destination-capable DMA endpoints.
-// /// 
-// /// SAFETY: This trait is unsafe because **you must** ensure that the 
-// /// returned pointer lead to valid data regarding the configuration
-// /// returned by [`DmaEndpoint::configure`]. The pointed data should
-// /// not be shared while the endpoint is configured to avoid concurrent
-// /// accesses and undefined behaviors.
-// pub unsafe trait DmaDstEndpoint: DmaEndpoint {
-
-//     /// Get the pointer to the mutable data of this endpoint.
-//     unsafe fn ptr(&self) -> *mut ();
-
-// }
-
-// /// Wrapper type for endpoints with a forced burst size. It is constructed
-// /// by the [`DmaEndpoint::with_burst_size`] method on an existing endpoint.
-// pub struct DmaEndpointWithBurstSize<E: DmaEndpoint> {
-//     pub inner: E,
-//     burst_size: DmaBurstSize,
-// }
-
-// impl<E: DmaEndpoint> DmaEndpoint for DmaEndpointWithBurstSize<E> {
-    
-//     #[inline]
-//     fn configure(&mut self) -> DmaEndpointConfig {
-//         let mut config = self.inner.configure();
-//         config.burst_size = self.burst_size;
-//         config
-//     }
-
-//     #[inline]
-//     fn release(&mut self) {
-//         self.inner.release();
-//     }
-
-// }
-
-// unsafe impl<E: DmaEndpoint + DmaSrcEndpoint> DmaSrcEndpoint for DmaEndpointWithBurstSize<E> {
-//     #[inline]
-//     unsafe fn ptr(&self) -> *const () {
-//         self.inner.ptr()
-//     }
-// }
-
-// unsafe impl<E: DmaEndpoint + DmaDstEndpoint> DmaDstEndpoint for DmaEndpointWithBurstSize<E> {
-//     #[inline]
-//     unsafe fn ptr(&self) -> *mut () {
-//         self.inner.ptr()
-//     }
-// }
-
 /// Implementation for string slices.
 impl DmaSrcEndpoint for &'static str {
 
@@ -627,6 +542,17 @@ impl<T: Copy> DmaSrcEndpoint for Box<T> {
         }
 
     }
+    
+}
+
+/// Same as for source endpoint on box.
+impl<T: Copy> DmaDstEndpoint for Box<T> {
+
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+        // SAFETY: Same as source endpoint.
+        unsafe { <Self as DmaSrcEndpoint>::configure(self) }
+    }
+
 }
 
 /// Implementation for static referenced types, the access is valid because the data is

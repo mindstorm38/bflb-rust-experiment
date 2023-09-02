@@ -40,12 +40,12 @@ use_chip!(bl808_d0);
 pub use bflb_hal as hal;
 
 // These modules are intentionally internal.
+mod allocator;
 mod clic;
 
-// Internal use.
-use hal::interrupt::{IRQ_COUNT, VECTOR};
-use linked_list_allocator::LockedHeap;
-
+use hal::interrupt::{IRQ_COUNT, VECTOR, InterruptHandler};
+use critical_section::CriticalSection;
+use allocator::RuntimeAllocator;
 
 /// Module providing externally linked symbols, defined either by 
 /// assembly or link script.
@@ -106,10 +106,10 @@ pub mod sym {
 
 /// The global bump allocator.
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: RuntimeAllocator = RuntimeAllocator::empty();
 
 /// All interrupt (asynchronous) handlers.
-static INTERRUPT_VECTOR: [fn(usize); IRQ_COUNT] = VECTOR;
+static INTERRUPT_VECTOR: [InterruptHandler; IRQ_COUNT] = VECTOR;
 
 
 /// This function is responsible for loading mutable static variables 
@@ -145,7 +145,7 @@ extern "C" fn _rust_mem_init() {
             // Init heap allocator.
             let start: *mut u8 = &mut sym::_ld_heap_start;
             let end: *mut u8 = &mut sym::_ld_heap_end;
-            ALLOCATOR.lock().init(start, end.offset_from(start) as _);
+            ALLOCATOR.with(|heap| heap.init(start, end.offset_from(start) as _));
 
         }
     } else {
@@ -215,7 +215,10 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
         return;
     };
 
-    (handler)(code);
+    // SAFETY: Interrupts are disabled by the hardware when going to interrupt handlers.
+    let cs = unsafe { CriticalSection::new() };
+    
+    (handler)(code, cs);
 
 }
 

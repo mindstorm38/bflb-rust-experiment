@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 bflb-rt = { path = "../../bflb-rt", version = "0.1", features = ["bl808-m0", "panic-abort"] }
-embedded-util = { path = "../../embedded-util", version = "0.1" }
