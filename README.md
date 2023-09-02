@@ -32,6 +32,9 @@ Get the binary file to flash:
 - `cargo objcopy -p test-ox64-m0 --target riscv32imac-unknown-none-elf --release -- -O binary test-m0.bin`
 - `cargo objcopy -p test-ox64-d0 --target riscv64gc-unknown-none-elf --release -- -O binary test-d0.bin`
 
+## Under linux
+Be sure to be in the right user group for opening the device file, then connect to it 
+using: `picocom --echo --imap lfcrlf -b 115200 /dev/ttyUSB0`.
 
 ## Documents
 - [Bouffalo SDK]

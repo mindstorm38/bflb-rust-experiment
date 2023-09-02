@@ -6,6 +6,7 @@ members = [
 	"usb-hal",
 	"examples/*",
 ]
+resolver = "2"
 
 [profile.dev]
 opt-level = 0
