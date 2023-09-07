@@ -14,18 +14,17 @@ const LINE_SIZE: usize = 64;
 /// Invalid the whole L1 data cache memory of the given pointer and size.
 pub unsafe fn l1d_invalidate(addr: usize, size: usize) {
 
-    let misalignment = addr % LINE_SIZE;
-    let mut aligned_size = size + misalignment;
-    let mut aligned_addr = addr - misalignment;
+    // Note: there is no need to align the given address, because the instruction just
+    // state that the cache line of this address will be given, so if we increment this
+    // address by the cache line size, we clear the next one, and so on...
+    let mut addr = addr;
+    let end_addr = addr + size;
 
-    unsafe {
-        riscv::std::fence();
-        while aligned_size > 0 {
-            riscv::theadcmo::dcache_ipa(aligned_addr);
-            aligned_addr += LINE_SIZE;
-            aligned_size -= LINE_SIZE;
-        }
-        riscv::std::fence();
+    unsafe { riscv::std::fence(); }
+    while addr < end_addr {
+        unsafe { riscv::theadcmo::dcache_ipa(addr); }
+        addr += LINE_SIZE;
     }
+    unsafe { riscv::std::fence(); }
 
 }

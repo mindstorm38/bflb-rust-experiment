@@ -216,6 +216,8 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
     };
 
     // SAFETY: Interrupts are disabled by the hardware when going to interrupt handlers.
+    // We give this token to the interruption handler so it can use it and assert to 
+    // mutexes that it's legal to access interrupt-free memory locations.
     let cs = unsafe { CriticalSection::new() };
     
     (handler)(code, cs);
@@ -234,10 +236,50 @@ pub fn default_trap_handler(code: usize) {
 #[panic_handler]
 #[cfg(feature = "panic-abort")]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
+
     // TODO: Instead of spin looping indefinitely, it might be possible 
     // to close clock gates and stop the core.
-    loop { core::hint::spin_loop() }
+    loop {
+        hal::hart::spin_loop()
+    }
+
 }
 
+/// This implementation of the panic handler will quickly initialize the UART TX on pin 14
+/// before communicating the panic message and informations.
+#[panic_handler]
+#[cfg(feature = "panic-uart-14")]
+fn panic(info: &core::panic::PanicInfo) -> ! {
 
-// TODO: Implement a panic with message to UART.
+    use hal::Peripherals;
+    use hal::uart::UartConfig;
+    use core::fmt::Write;
+
+    // We force create a peripheral because the situation is desperate, so we
+    // try to communicate the panic information through UART.
+    let peripherals = unsafe { Peripherals::new() };
+    let mut uart = peripherals.uart.p0.init_simplex_transmit(
+        peripherals.gpio.p14, 
+        &UartConfig::new(115200), 
+        &peripherals.clocks,
+    );
+
+    // Retrieve allocator information, may be useful in case of allocation crash.
+    let (alloc_cap, alloc_used, alloc_free) = ALLOCATOR.with(|heap| {
+        (heap.size(), heap.used(), heap.free())
+    });
+
+    let _ = writeln!(uart);
+    let _ = writeln!(uart, "============================================");
+    let _ = writeln!(uart, "Hart {} {info}", hal::hart::hart());
+    let _ = writeln!(uart, "Information:");
+    let _ = writeln!(uart, "- Alloc capacity: {alloc_cap} B");
+    let _ = writeln!(uart, "- Alloc used: {alloc_used} B");
+    let _ = writeln!(uart, "- Alloc free: {alloc_free} B");
+    let _ = writeln!(uart, "============================================");
+
+    loop {
+        hal::hart::spin_loop()
+    }
+    
+}

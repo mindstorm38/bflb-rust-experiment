@@ -214,7 +214,7 @@ impl<T> HartLocalMutex<T> {
 }
 
 /// Type alias for making a hart local with an interrupt-safe cell.
-pub type HartLocalCell<T> = HartLocal<Mutex<RefCell<T>>>;
+pub type HartLocalCell<T> = HartLocalMutex<RefCell<T>>;
 
 impl<T> HartLocalCell<T> {
 

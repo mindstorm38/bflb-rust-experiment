@@ -99,7 +99,7 @@ impl Peripherals {
         TAKEN
             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_ok()
-            .then_some(Self::new())
+            .then_some(unsafe { Self::new() })
     }
 
     /// Try taking ownership of the peripheral, this function panics if not
@@ -114,7 +114,18 @@ impl Peripherals {
         TAKEN.store(false, core::sync::atomic::Ordering::Release);
     }
 
-    fn new() -> Self {
+    /// Create a new peripheral structure, containing accesses to all abstracted 
+    /// peripherals that can be individually owned. This function is unsafe because the
+    /// caller must ensure that no other instance of these peripheral exists, because 
+    /// using two instances targetting the same peripheral will ultimately lead to 
+    /// unstable software.
+    /// 
+    /// **Therefore you should use `try_take` or `take` if you want to be sure that no
+    /// other one own this structure at the same time.** 
+    /// 
+    /// *This function is internally used by runtime in order to quickly setup a working
+    /// communication in case of panics.*
+    pub unsafe fn new() -> Self {
         Self {
             interrupts: Interrupts(()),
             clocks: Clocks(()),

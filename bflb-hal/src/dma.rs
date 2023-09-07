@@ -558,9 +558,10 @@ impl<T: Copy> DmaDstEndpoint for Box<T> {
 
         // When DMA has finished transfer to the box, that we know residing in RAM and
         // therefore we need to invalidate cache lines that have been bypassed by the DMA.
-        // let addr = &**self as *const T as usize;
-        // let size = core::mem::size_of::<T>();
-        // unsafe { l1d_invalidate(addr, size); }
+        // It's only needed for destination endpoint because data is written in it.
+        let addr = &**self as *const T as usize;
+        let size = core::mem::size_of::<T>();
+        unsafe { l1d_invalidate(addr, size); }
 
     }
 

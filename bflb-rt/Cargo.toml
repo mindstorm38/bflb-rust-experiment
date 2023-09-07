@@ -19,3 +19,5 @@ bl808-m0 = ["bflb-hal/bl808-m0"]
 bl808-d0 = ["bflb-hal/bl808-d0"]
 bl808-lp = ["bflb-hal/bl808-lp"]
 panic-abort = []
+panic-uart-14 = []
+

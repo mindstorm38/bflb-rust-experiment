@@ -74,8 +74,8 @@ pub fn main() {
     // INTERRUPT INIT
     
     interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
-    interrupts.set_enabled(interrupt::DMA0_ALL, true);
-    interrupts.set_enabled(interrupt::DMA1_ALL, true);
+    // interrupts.set_enabled(interrupt::DMA0_ALL, true);
+    // interrupts.set_enabled(interrupt::DMA1_ALL, true);
 
     // CONSOLE INIT
     let mut uart = peripherals.uart.p0.init_duplex(
@@ -93,15 +93,16 @@ pub fn main() {
         .into_transfer(DMA_MESSAGE, dest)
         .wait();
 
-    // let (_, mut uart, _) = dma
+    // let (_, mut uart, _) = peripherals.dma.p0.c0
     //     .into_transfer(DMA_MESSAGE, uart)
     //     .wait();
 
-        // .wait_callback(|_, mut uart, _| {
-        //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
-        // });
+    // .wait_callback(|_, mut uart, _| {
+    //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
+    // });
 
-    let _ = writeln!(uart, "{dest:?}");
+    let _ = writeln!(uart, "{dest:?}... after");
+    let _ = writeln!(uart, "next...");
 
     // LOOP
     time::wait_callback(0, move || {
@@ -114,7 +115,7 @@ pub fn main() {
         let seconds = time_ms / 1_000;
         time_ms -= seconds * 1_000;
 
-        let _ = writeln!(uart, "[{:02}:{:02}.{:03}] DMA interrupted: {} / {dest:?}", minutes, seconds, time_ms, INTERRUPTED.load(Ordering::Relaxed));
+        let _ = writeln!(uart, "[{:02}:{:02}.{:03}] DMA interrupted: {}", minutes, seconds, time_ms, INTERRUPTED.load(Ordering::Relaxed));
 
         // Callback again in 1 second.
         Some(1_000_000)
