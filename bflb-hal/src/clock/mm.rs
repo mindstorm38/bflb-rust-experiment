@@ -1,7 +1,7 @@
 //! Clock functions for MM (MultiMedia) peripherals. 
 //! Also known as DSP (Digital Signal Processor).
 
-use crate::bl808::{MM_GLB, GLB};
+use crate::arch::bl808::{MM_GLB, GLB};
 use super::Clocks;
 use super::PllAudioDiv;
 

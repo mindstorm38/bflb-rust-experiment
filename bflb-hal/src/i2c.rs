@@ -2,8 +2,8 @@
 
 use core::ptr::addr_of;
 
-use crate::bl808::{I2c as I2cRegs, I2C0, I2C1, I2C2, I2C3};
-use crate::bl808::i2c;
+use crate::arch::bl808::{I2c as I2cRegs, I2C0, I2C1, I2C2, I2C3};
+use crate::arch::bl808::i2c;
 
 // use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 
 //     DmaPeripheral, DmaDataWidth, DmaBurstSize, DmaIncrement};

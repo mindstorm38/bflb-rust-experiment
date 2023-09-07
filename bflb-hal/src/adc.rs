@@ -1,6 +1,6 @@
 //! Analog to Digital converter peripheral.
 
-use crate::bl808::{AON, GPIP};
+use crate::arch::bl808::{AON, GPIP};
 
 
 /// Exclusive access to ADC peripheral.

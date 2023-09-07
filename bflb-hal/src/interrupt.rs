@@ -5,7 +5,7 @@
 
 use riscv_hal::clic::{set_mintthresh, get_mintthresh};
 
-use crate::bl808::CLIC;
+use crate::arch::bl808::CLIC;
 
 use critical_section::CriticalSection;
 

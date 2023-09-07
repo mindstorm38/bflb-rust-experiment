@@ -3,8 +3,8 @@
 use core::ptr::addr_of;
 use core::fmt;
 
-use crate::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
-use crate::bl808::uart::UartBitPrd;
+use crate::arch::bl808::{Uart as UartRegs, GLB, UART0, UART1, UART2};
+use crate::arch::bl808::uart::UartBitPrd;
 
 use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
 use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 

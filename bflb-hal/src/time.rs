@@ -8,7 +8,7 @@ use smallvec::SmallVec;
 
 use crate::hart::HartLocalCell;
 use crate::clock::Clocks;
-use crate::bl808::addr;
+use crate::arch::bl808::addr;
 
 
 /// The tick frequency of the core timer.

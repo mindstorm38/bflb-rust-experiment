@@ -1,6 +1,6 @@
 //! Clock functions for UART peripheral.
 
-use crate::bl808::{GLB, HBN};
+use crate::arch::bl808::{GLB, HBN};
 use super::Clocks;
 
 impl Clocks {

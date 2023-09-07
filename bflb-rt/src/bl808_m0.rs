@@ -4,7 +4,7 @@ core::arch::global_asm!(include_str!("asm/common.asm"));
 core::arch::global_asm!(include_str!("asm/bl808_m0.asm"));
 
 
-use bflb_hal::bl808::{GLB, CLIC};
+use bflb_hal::arch::bl808::{GLB, CLIC};
 
 use crate::clic::ClicVectorTable;
 use crate::IRQ_COUNT;

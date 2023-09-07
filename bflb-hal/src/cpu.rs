@@ -1,6 +1,6 @@
 //! CPU interactions for BL808.
 
-use crate::bl808::{GLB, MM_GLB};
+use crate::arch::bl808::{GLB, MM_GLB};
 
 
 /// A peripheral for controlling CPU.

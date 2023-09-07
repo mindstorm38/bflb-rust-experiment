@@ -1,7 +1,7 @@
 //! Clock functions for I2C peripheral.
 
 
-use crate::bl808::{GLB, MM_GLB};
+use crate::arch::bl808::{GLB, MM_GLB};
 use super::Clocks;
 
 impl Clocks {

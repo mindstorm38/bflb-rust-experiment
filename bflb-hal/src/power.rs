@@ -1,7 +1,7 @@
 //! Internal LDO (Low Drop Out) power output management.
 
 
-use crate::bl808::GLB;
+use crate::arch::bl808::GLB;
 
 
 /// Power domain controller.

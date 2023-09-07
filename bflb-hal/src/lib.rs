@@ -18,8 +18,7 @@ compile_error!("bl808 m0 chip requires 'riscv32' target architecture");
 compile_error!("bl808 d0 chip requires 'riscv64' target architecture");
 
 
-#[cfg(any(feature = "bl808-m0", feature = "bl808-d0", feature = "bl808-lp"))]
-pub mod bl808;
+pub mod arch;
 
 mod sealed;
 

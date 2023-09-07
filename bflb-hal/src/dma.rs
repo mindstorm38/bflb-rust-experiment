@@ -10,7 +10,7 @@ use alloc::boxed::Box;
 
 use critical_section::{Mutex, CriticalSection};
 
-use crate::bl808::{DMA0, DMA1, DMA2, dma};
+use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
 
 
 /// This peripheral structure wraps all DMA ports available.

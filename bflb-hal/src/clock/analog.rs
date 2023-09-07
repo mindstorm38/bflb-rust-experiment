@@ -1,6 +1,6 @@
 //! Clock functions for Analogic/Digital peripherals.
 
-use crate::bl808::GLB;
+use crate::arch::bl808::GLB;
 use super::Clocks;
 
 

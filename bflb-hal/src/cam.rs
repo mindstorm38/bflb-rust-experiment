@@ -1,7 +1,7 @@
 //! Camera abstraction interface.
 
-use crate::bl808::{CSI, DVP_TSRC0, DVP_TSRC1, DSP2_MISC};
-use crate::bl808::dtsrc::Dtsrc;
+use crate::arch::bl808::{CSI, DVP_TSRC0, DVP_TSRC1, DSP2_MISC};
+use crate::arch::bl808::dtsrc::Dtsrc;
 
 
 pub mod imx477;

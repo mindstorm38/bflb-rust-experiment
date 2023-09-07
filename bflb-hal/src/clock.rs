@@ -21,7 +21,7 @@
 
 use embedded_util::PtrRw;
 
-use crate::bl808::{self, CpuRtc, HBN, AON, GLB, CCI};
+use crate::arch::bl808::{self, CpuRtc, HBN, AON, GLB, CCI};
 
 mod analog;
 mod mcu;

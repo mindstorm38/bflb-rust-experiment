@@ -27,8 +27,8 @@ use core::marker::PhantomData;
 
 use embedded_util::PtrRw;
 
-use crate::bl808::glb::GlbGpioCfg0;
-use crate::bl808::GLB;
+use crate::arch::bl808::glb::GlbGpioCfg0;
+use crate::arch::bl808::GLB;
 
 
 /// An exclusive access to a GPIO pin on a particular port.

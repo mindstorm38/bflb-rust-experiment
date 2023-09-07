@@ -1,6 +1,6 @@
 //! Clock functions for MCU peripherals.
 
-use crate::bl808::{PDS, HBN, GLB};
+use crate::arch::bl808::{PDS, HBN, GLB};
 use super::Clocks;
 use super::PllAudioDiv;
 
