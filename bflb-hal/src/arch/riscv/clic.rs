@@ -1,4 +1,4 @@
-//! # Core-Local Interrupt Controller.
+//! # Core-Local Interrupt Controller (standard extension).
 //! 
 //! When CLIC mode is enabled:
 //! - CSR *x*tvec has new field definitions:
@@ -135,31 +135,31 @@ embedded_util::reg! {
 
 
 #[inline(always)]
-pub fn set_mintthresh(threshold: u8) {
-    crate::csrw!(0x347, threshold);
+pub unsafe fn set_mintthresh(threshold: u8) {
+    unsafe { core::arch::asm!("csrw 0x347, {}", in(reg) threshold) }
 }
 
 #[inline(always)]
-pub fn get_mintthresh() -> u8 {
+pub unsafe fn get_mintthresh() -> u8 {
     let threshold;
     unsafe { core::arch::asm!("csrr {}, 0x347", out(reg) threshold) };
     threshold
 }
 
 #[inline(always)]
-pub fn set_sintthresh(threshold: u8) {
+pub unsafe fn set_sintthresh(threshold: u8) {
     unsafe { core::arch::asm!("csrw 0x147, {}", in(reg) threshold) }
 }
 
 #[inline(always)]
-pub fn get_sintthresh() -> u8 {
+pub unsafe fn get_sintthresh() -> u8 {
     let threshold;
     unsafe { core::arch::asm!("csrr {}, 0x147", out(reg) threshold) };
     threshold
 }
 
 #[inline(always)]
-pub fn set_uintthresh(threshold: u8) {
+pub unsafe fn set_uintthresh(threshold: u8) {
     unsafe { core::arch::asm!("csrw 0x047, {}", in(reg) threshold) }
 }
 

@@ -131,8 +131,7 @@ pub use ipc::Ipc;
 pub mod i2c;
 pub use i2c::I2c;
 
-// Externally implemented.
-use riscv_hal::clic::Clic;
+use super::riscv::clic::Clic;
 
 
 /// The register that stores the CPU identifier.

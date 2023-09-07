@@ -5,7 +5,7 @@ an example binary crate.
 ## BouffaloLab HAL
 This is an HAL implementation for BouffaloLab chips. It currently only 
 support BL808 as it's my main goal for now. It can be considered as a 
-Rust port of the official [Bouffalo SDK].
+Rust port of the official Bouffalo SDK.
 
 ## BouffaloLab Runtime
 This crate provides small runtime for building and linking binaries 
@@ -37,24 +37,25 @@ Be sure to be in the right user group for opening the device file, then connect 
 using: `picocom --echo --imap lfcrlf -b 115200 /dev/ttyUSB0`.
 
 ## Documents
-- [Bouffalo SDK]
-- [Sipeed SDK]
-- [BL808 RM]
-- [BL808 DS]
-- [QSPI Flash W25Q128JW]
-- [T-head C906]
-- [BLDevCube Tutorial]
-- [MIPI D-PHY]
-- [MIPI CSI-2]
-- [Linker Script]
 
-[Bouffalo SDK]: https://github.com/bouffalolab/bouffalo_sdk
-[Sipeed SDK]: https://github.com/sipeed/M1s_BL808_SDK
-[BL808 RM]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_en_1.3.pdf
-[BL808 DS]: https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf
-[T-head C906]: https://github.com/T-head-Semi/openc906
-[BLDevCube Tutorial]: https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html
-[MIPI D-PHY]: http://www.jmrcubed.com/vr/ref_tech/mipi_d_phy_specification_v01-00-00.pdf
-[MIPI CSI-2]: https://caxapa.ru/thumbs/799244/MIPI_Alliance_Specification_for_Camera_S.pdf
-[Linker Script]: https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html
-[QSPI Flash W25Q128JW]: https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW
+Chip documents:
+- [Bouffalo SDK](https://github.com/bouffalolab/bouffalo_sdk)
+- [Sipeed SDK](https://github.com/sipeed/M1s_BL808_SDK)
+- [BL808 RM](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_RM/en/BL808_RM_en_1.3.pdf)
+- [BL808 DS](https://raw.githubusercontent.com/bouffalolab/bl_docs/main/BL808_DS/en/BL808_DS_1.2_en.pdf)
+- [T-head C906](https://github.com/T-head-Semi/openc906)
+
+RISC-V and extensions:
+- [RISC-V Specifications](https://riscv.org/technical/specifications/)
+- [RISC-V Asm Manual](https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md)
+- [RISC-V CLIC Spec](https://raw.githubusercontent.com/riscv/riscv-fast-interrupt/master/clic.pdf)
+- [RISC-V PLIC Spec](https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc6.pdf)
+- [T-head RISC-V Extension](https://github.com/T-head-Semi/thead-extension-spec)
+- [SiFive EmbedDev QuickRef](https://five-embeddev.com/quickref/)
+
+Additional documents:
+- [BLDevCube Tutorial](https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html)
+- [MIPI D-PHY](http://www.jmrcubed.com/vr/ref_tech/mipi_d_phy_specification_v01-00-00.pdf)
+- [MIPI CSI-2](https://caxapa.ru/thumbs/799244/MIPI_Alliance_Specification_for_Camera_S.pdf)
+- [Linker Script](https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html)
+- [QSPI Flash W25Q128JW](https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q128JW)

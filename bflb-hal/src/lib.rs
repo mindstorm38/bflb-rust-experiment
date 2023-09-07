@@ -18,25 +18,31 @@ compile_error!("bl808 m0 chip requires 'riscv32' target architecture");
 compile_error!("bl808 d0 chip requires 'riscv64' target architecture");
 
 
+// Low-level module.
 pub mod arch;
 
+// Internal module for sealing traits.
 mod sealed;
 
+// Low-level abstractions.
 pub mod hart;
+pub mod cache;
 pub mod interrupt;
+
+// Peripheral abstractions.
 pub mod clock;
 pub mod power;
 pub mod time;
 pub mod cpu;
 pub mod dma;
 
+// I/O abstractions.
 pub mod gpio;
 pub mod uart;
 pub mod i2c;
 pub mod adc;
 
-// pub mod cam;
-
+// Internal reuses.
 use interrupt::Interrupts;
 use clock::Clocks;
 use time::Timer;
@@ -48,9 +54,6 @@ use adc::AdcAccess;
 use dma::Dma;
 
 use core::sync::atomic::{AtomicBool, Ordering};
-
-/// Re-export of the RISC-V HAL library.
-pub use riscv_hal as riscv;
 
 
 /// We want the peripherals to be a ZST.

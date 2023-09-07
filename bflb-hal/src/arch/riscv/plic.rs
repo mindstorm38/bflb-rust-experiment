@@ -1,4 +1,4 @@
-//! # Platform-Level Interrupt Controller.
+//! # Platform-Level Interrupt Controller (standard extension).
 //! 
 //! Sources:
 //! - https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc6.pdf

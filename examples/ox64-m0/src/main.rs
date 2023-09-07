@@ -101,7 +101,7 @@ pub fn main() {
         //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
         // });
 
-    // let _ = writeln!(uart, "{dest:?}");
+    let _ = writeln!(uart, "{dest:?}");
 
     // LOOP
     time::wait_callback(0, move || {

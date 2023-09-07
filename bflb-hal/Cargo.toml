@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 embedded-util = { path = "../embedded-util", version = "0.1" }
-riscv-hal = { path = "../riscv-hal", version = "0.1" }
 smallvec = { version = "1.11", features = ["union"] }
 critical-section = "1.1"
 

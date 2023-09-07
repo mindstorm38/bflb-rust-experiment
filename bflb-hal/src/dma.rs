@@ -11,6 +11,7 @@ use alloc::boxed::Box;
 use critical_section::{Mutex, CriticalSection};
 
 use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
+use crate::cache::l1d_invalidate;
 
 
 /// This peripheral structure wraps all DMA ports available.
@@ -551,6 +552,16 @@ impl<T: Copy> DmaDstEndpoint for Box<T> {
     unsafe fn configure(&mut self) -> DmaEndpointConfig {
         // SAFETY: Same as source endpoint.
         unsafe { <Self as DmaSrcEndpoint>::configure(self) }
+    }
+
+    fn close(&mut self) {
+
+        // When DMA has finished transfer to the box, that we know residing in RAM and
+        // therefore we need to invalidate cache lines that have been bypassed by the DMA.
+        // let addr = &**self as *const T as usize;
+        // let size = core::mem::size_of::<T>();
+        // unsafe { l1d_invalidate(addr, size); }
+
     }
 
 }

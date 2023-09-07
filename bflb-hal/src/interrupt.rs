@@ -3,8 +3,7 @@
 //! You need a runtime crate such as `bflb-rt` in order to configure
 //! interrupts given these numbers.
 
-use riscv_hal::clic::{set_mintthresh, get_mintthresh};
-
+use crate::arch::riscv::clic::{set_mintthresh, get_mintthresh};
 use crate::arch::bl808::CLIC;
 
 use critical_section::CriticalSection;
@@ -17,12 +16,12 @@ impl Interrupts {
 
     #[inline(always)]
     pub fn get_threshold(&self) -> u8 {
-        get_mintthresh()
+        unsafe { get_mintthresh() }
     }
 
     #[inline(always)]
     pub fn set_threshold(&mut self, level: u8) {
-        set_mintthresh(level)
+        unsafe { set_mintthresh(level) }
     }
 
     /// Return `true` if this interrupt is enabled.
