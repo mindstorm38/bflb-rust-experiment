@@ -88,6 +88,7 @@ pub fn main() {
     static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
     let dest = Box::new([0u8; 22]);
+    let dest2 = Box::new([0u8; 22]);
 
     let (_, dest, _dma) = peripherals.dma.p0.c0
         .into_transfer(DMA_MESSAGE, dest)
@@ -102,6 +103,7 @@ pub fn main() {
     // });
 
     let _ = writeln!(uart, "{dest:?}... after");
+    let _ = writeln!(uart, "{dest2:?}... after");
     let _ = writeln!(uart, "next...");
 
     // LOOP

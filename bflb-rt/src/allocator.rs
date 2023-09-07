@@ -65,7 +65,7 @@ unsafe impl GlobalAlloc for RuntimeAllocator {
         self.with(|heap| {
             match heap.allocate_first_fit(layout) {
                 Ok(allocation) => allocation.as_ptr(),
-                Err(_) => core::ptr::null_mut()
+                Err(()) => core::ptr::null_mut()
             }
         })
     }
