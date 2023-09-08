@@ -3,7 +3,7 @@ members = [
 	"embedded-util",
 	"bflb-hal", "bflb-rt", 
 	"usb-hal",
-	"examples/*",
+	"examples/ox64-m0",
 ]
 resolver = "2"
 

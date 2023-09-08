@@ -5,13 +5,19 @@
 use crate::arch::riscv;
 
 
-#[cfg(target_pointer_width = "32")]
-const LINE_SIZE: usize = 32;
-#[cfg(target_pointer_width = "64")]
-const LINE_SIZE: usize = 64;
+#[cfg(any(feature = "bl808-m0"))]
+pub const LINE_SIZE: usize = 32;
+#[cfg(any(feature = "bl808-d0"))]
+pub const LINE_SIZE: usize = 64;
 
 
-/// Invalid the whole L1 data cache memory of the given pointer and size.
+/// Invalid the L1 data cache memory of the given pointer and size.
+/// 
+/// If given size if 0, no cache line will be invalidated.
+/// 
+/// **This function is unsafe** because invalidating a cache line will not write back any
+/// dirty cache line, therefore you must ensure that the designated cache lines are not 
+/// dirty in order to avoid undefined behavior later in the program.
 pub unsafe fn l1d_invalidate(addr: usize, size: usize) {
 
     // Note: there is no need to align the given address, because the instruction just
@@ -20,11 +26,29 @@ pub unsafe fn l1d_invalidate(addr: usize, size: usize) {
     let mut addr = addr;
     let end_addr = addr + size;
 
-    unsafe { riscv::std::fence(); }
+    unsafe { riscv::fence(); }
     while addr < end_addr {
-        unsafe { riscv::theadcmo::dcache_ipa(addr); }
+        unsafe { riscv::xtheadcmo::dcache_ipa(addr); }
         addr += LINE_SIZE;
     }
-    unsafe { riscv::std::fence(); }
+    unsafe { riscv::fence(); }
+
+}
+
+/// Clean the L1 data cache memory of the given pointer and size. This basically write 
+/// back all dirty cache lines.
+/// 
+/// If given size if 0, no cache line will be cleaned.
+pub fn l1d_clean(addr: usize, size: usize) {
+
+    let mut addr = addr;
+    let end_addr = addr + size;
+
+    unsafe { riscv::fence(); }
+    while addr < end_addr {
+        unsafe { riscv::xtheadcmo::dcache_cpal1(addr); }
+        addr += LINE_SIZE;
+    }
+    unsafe { riscv::fence(); }
 
 }

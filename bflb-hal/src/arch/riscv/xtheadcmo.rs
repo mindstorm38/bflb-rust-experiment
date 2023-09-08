@@ -1,7 +1,6 @@
 //! T-Head CMO (Cache Management Operations).
 //! 
-//! Credit to https://github.com/rustsbi/xuantie, this file has been copied from the repo.
-//! 
+//! Credit: This file is imported from https://github.com/rustsbi/xuantie
 //! Official doc: https://github.com/T-head-Semi/thead-extension-spec/blob/master/xtheadcmo.adoc
 
 #![allow(unsafe_op_in_unsafe_fn)]
@@ -72,67 +71,6 @@ pub unsafe fn dcache_iall() {
 #[inline]
 pub unsafe fn dcache_ciall() {
     asm!(".insn i 0x0B, 0, x0, x0, 0x003")
-}
-
-/// IPUSH, fast interrupt stack push instruction
-///
-/// Push interrupt switch registers into current stack.
-/// It pushes `mcause`, `mepc`, `x1`, `x5` to `x7`, `x10` to `x17` and `x28` to `x31` into stack.
-/// Another word, the pushed `xi` integer registers are `ra`, `t0` to `t6`, and `a0` to `a7` (not in order)
-/// other than CSR registers `mcause` and `mepc`.
-///
-/// In pseudocode, it performs like:
-///
-/// ```no_run
-/// *sp.sub(1) = mcause;
-/// *sp.sub(2) = mepc;
-/// *sp.sub(3) = ra;
-/// /* ... Mem[sp - 4] ..= Mem[sp - 72] ← mcause, mepc, {xi} */
-/// *sp.sub(18) = t6;
-/// sp = sp.sub(18);
-/// ```
-///
-/// # Permissions
-///
-/// Must run on M mode.
-///
-/// # Exceptions
-///
-/// Raises store unaligned exception, store access exception, or illegal instruction exception.
-#[inline]
-pub unsafe fn ipush() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x004")
-}
-
-/// IPOP, fast interrupt stack pop instruction
-///
-/// Pop interrupt switch registers from current stack, and return from interrupt environment.
-/// It pops `mcause`, `mepc`, `x1`, `x5` to `x7`, `x10` to `x17` and `x28` to `x31` from stack.
-/// Another word, the popped `xi` integer registers are `ra`, `t0` to `t6`, and `a0` to `a7` (not in order)
-/// other than CSR registers `mcause` and `mepc`.
-///
-/// In pseudocode, it performs like:
-///
-/// ```no_run
-/// mcause = *sp.add(17);
-/// mepc = *sp.add(16);
-/// ra = *sp.add(15);
-/// /* ... mcause, mepc, {xi} ← Mem[sp + 68] ..= Mem[sp] */
-/// t6 = *sp.add(0);
-/// sp = sp.add(18);
-/// riscv::asm::mret();
-/// ```
-///
-/// # Permissions
-///
-/// Must run on M mode.
-///
-/// # Exceptions
-///
-/// Raises store unaligned exception, store access exception, or illegal instruction exception.
-#[inline]
-pub unsafe fn ipop() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x005")
 }
 
 /// ICACHE.IALL, I-cache invalid all items instruction
@@ -239,98 +177,6 @@ pub unsafe fn l2cache_iall() {
 #[inline]
 pub unsafe fn l2cache_ciall() {
     asm!(".insn i 0x0B, 0, x0, x0, 0x017")
-}
-
-/// SYNC, Synchronize instruction
-///
-/// Ensures that all instructions before retire earlier than this instruction,
-/// and all instructions after retire later than this instruction.
-///
-/// # Permissions
-///
-/// Can run on M, U mode, or S mode if applicable.
-///
-/// # Exceptions
-///
-/// Raises illegal instruction exception when `mxstatus.theadisaee = 0`, or
-/// when `mxstatus.theadisaee = 1` but run on U mode.
-///
-/// # Platform support
-///
-/// This instruction is supported on Xuantie C910, C906, E907 and E906 cores.
-#[inline]
-pub unsafe fn sync() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x018")
-}
-
-/// SYNC.S, Synchronize and broadcast instruction
-///
-/// Ensures that all instructions before retire earlier than this instruction,
-/// and all instructions after retire later than this instruction.
-/// This request will be broadcast to all other harts.
-///
-/// # Permissions
-///
-/// Can run on M, S or U mode.
-///
-/// # Exceptions
-///
-/// Raises illegal instruction exception when `mxstatus.theadisaee = 0`, or
-/// when `mxstatus.theadisaee = 1` but run on U mode.
-///
-/// # Platform support
-///
-/// This instruction is supported on Xuantie C910 core.
-#[inline]
-pub unsafe fn sync_s() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x019")
-}
-
-/// SYNC.I, Synchronize and clean instruction
-///
-/// Ensures that all instructions before retire earlier than this instruction,
-/// and all instructions after retire later than this instruction.
-/// The pipeline is emptied when this instruction retires.
-///
-/// # Permissions
-///
-/// Can run on M, U mode, or S mode if applicable.
-///
-/// # Exceptions
-///
-/// Raises illegal instruction exception when `mxstatus.theadisaee = 0`, or
-/// when `mxstatus.theadisaee = 1` but run on U mode.
-///
-/// # Platform support
-///
-/// This instruction is supported on Xuantie C910, C906, E907 and E906 cores.
-#[inline]
-pub unsafe fn sync_i() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x01A")
-}
-
-/// SYNC.IS, Synchronize, clean and broadcast instruction
-///
-/// Ensures that all instructions before retire earlier than this instruction,
-/// and all instructions after retire later than this instruction.
-/// The pipeline is emptied when this instruction retires.
-/// This request will be broadcast to all other harts.
-///
-/// # Permissions
-///
-/// Can run on M, S or U mode.
-///
-/// # Exceptions
-///
-/// Raises illegal instruction exception when `mxstatus.theadisaee = 0`, or
-/// when `mxstatus.theadisaee = 1` but run on U mode.
-///
-/// # Platform support
-///
-/// This instruction is supported on Xuantie C910 core.
-#[inline]
-pub unsafe fn sync_is() {
-    asm!(".insn i 0x0B, 0, x0, x0, 0x01B")
 }
 
 /// DCACHE.CSW, D-cache clean dirty item on way and set instruction
