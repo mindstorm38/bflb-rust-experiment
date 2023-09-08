@@ -1,8 +1,5 @@
-//! This module provides hart initialization code that allows a major
-//! feature that is hart-local variables. The runtime is based on the
-//! value stored in `mscratch` which is a unique hart ID. We are not
-//! relying on `mhartid` because IDs are not guaranteed to be 
-//! contiguous.
+//! Low-level hart functions like linear hart id (allowing hart local values), it also
+//! provides abstractions for low-level
 
 use core::sync::atomic::{Ordering, AtomicUsize};
 use core::cell::{RefCell, Ref, RefMut};
@@ -24,9 +21,8 @@ const _: () = assert!(HART_COUNT != 0);
 static HART_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 
-/// Init the current hart, should be called once on hart 
-/// initialization, just before chip specific initializer.
-pub fn init() {
+/// Init the current hart, **this is unsafe** because this should be called once per hart.
+pub unsafe fn init() {
 
     let id;
 
@@ -100,34 +96,22 @@ pub fn hart_zero() -> bool {
 /// interrupt on the hart.
 #[inline(always)]
 pub fn spin_loop() {
-    unsafe {
-        asm!("wfi");
-    }
+    unsafe { crate::arch::riscv::wfi() }
 }
 
-/// Disable interrupts on the current hart if needed, and returns 
-/// true if the interrupt was enabled.
+/// Data synchronization barrier. This function ensures that all memory accesses
+/// are completed when this function returns.
 #[inline(always)]
-fn acquire_interrupt() -> bool {
-    unsafe {
-        // Atomically clear the mstatus.mie bit.
-        let mut prev: u32;
-        asm!("csrrci {}, mstatus, 0b1000", out(reg) prev);
-        // Return true restore state if previous bit was 1.
-        (prev & 0b1000) != 0
-    }
+pub fn data_sync() {
+    unsafe { crate::arch::riscv::fence() }
 }
 
-/// Enable interrupts if it was previously the case, depending on
-/// the restore argument.
+/// Instruction synchronization barrier. This function will flush the processor's 
+/// instruction pipeline so that all instructions following the call are fetched from
+/// cache or memory.
 #[inline(always)]
-fn release_interrupt(restore: bool) {
-    // If we need to restore the interrupt to 1.
-    if restore {
-        unsafe {
-            asm!("csrsi mstatus, 0b1000");
-        }
-    }
+pub fn inst_sync() {
+    unsafe { crate::arch::riscv::ifence() }
 }
 
 /// This internal module is used if the critical section feature is
@@ -137,6 +121,7 @@ fn release_interrupt(restore: bool) {
 mod bl_critical_section {
 
     use critical_section::{RawRestoreState, Impl};
+    use core::arch::asm;
 
     // Internal type to implement the critical section of BfLab.
     struct BlCriticalSection;
@@ -144,14 +129,25 @@ mod bl_critical_section {
 
     unsafe impl Impl for BlCriticalSection {
 
-        #[inline]
+        #[inline(always)]
         unsafe fn acquire() -> RawRestoreState {
-            super::acquire_interrupt()
+            unsafe {
+                // Atomically clear the mstatus.mie bit.
+                let mut prev: u32;
+                asm!("csrrci {}, mstatus, 0b1000", out(reg) prev);
+                // Return true restore state if previous bit was 1.
+                (prev & 0b1000) != 0
+            }
         }
 
-        #[inline]
+        #[inline(always)]
         unsafe fn release(restore_state: RawRestoreState) {
-            super::release_interrupt(restore_state)
+            // If we need to restore the interrupt to 1.
+            if restore_state {
+                unsafe {
+                    asm!("csrsi mstatus, 0b1000");
+                }
+            }
         }
         
     }

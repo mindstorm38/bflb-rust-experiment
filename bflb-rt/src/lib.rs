@@ -163,7 +163,9 @@ extern "C" fn _rust_mem_init() {
 extern "C" fn _rust_init() {
 
     // All hart are initialized.
-    hal::hart::init();
+    unsafe {
+        hal::hart::init();
+    }
 
     // Only hart zero actually initialize chip-specific things.
     if hal::hart::hart_zero() {

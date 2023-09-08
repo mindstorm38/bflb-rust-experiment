@@ -12,17 +12,26 @@ pub mod clic;
 pub mod plic;
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-d0"))]
+pub mod xtheadcsr;
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-d0"))]
 pub mod xtheadcmo;
 
 
+/// Wait for interrupt.
+#[inline(always)]
+pub unsafe fn wfi() {
+    asm!("wfi");
+}
+
 /// Data synchronization fence.
-#[inline]
+#[inline(always)]
 pub unsafe fn fence() {
     asm!("fence")
 }
 
 /// Instruction synchronization fence.
-#[inline]
+#[inline(always)]
 pub unsafe fn ifence() {
     asm!("fence.i")
 }

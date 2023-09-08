@@ -11,7 +11,7 @@ use alloc::boxed::Box;
 use critical_section::{Mutex, CriticalSection};
 
 use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
-use crate::cache::l1d_invalidate;
+use crate::cache::{invalidate_data_range, clean_data_range};
 
 
 /// This peripheral structure wraps all DMA ports available.
@@ -534,6 +534,10 @@ impl<T: Copy> DmaSrcEndpoint for Box<T> {
         let size = core::mem::size_of::<T>();
         assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
 
+        // We want to be sure that the data that has been written to the box have been
+        // written back to the memory, so that DMA controller can see the actual data.
+        unsafe { clean_data_range(&**self as *const T as usize, size) }
+
         DmaEndpointConfig {
             peripheral: None,
             data_width: DmaDataWidth::Byte,
@@ -556,12 +560,16 @@ impl<T: Copy> DmaDstEndpoint for Box<T> {
 
     fn close(&mut self) {
 
-        // When DMA has finished transfer to the box, that we know residing in RAM and
+        // FIXME: Invalidating the box memory can overflow on neighbor bytes that are not
+        // stored inside of the box and may belong to other memory location that should 
+        // not be touched without notice.
+
+        // When DMA has finished transfer to the box, that we know is located in RAM and
         // therefore we need to invalidate cache lines that have been bypassed by the DMA.
         // It's only needed for destination endpoint because data is written in it.
         let addr = &**self as *const T as usize;
         let size = core::mem::size_of::<T>();
-        unsafe { l1d_invalidate(addr, size); }
+        unsafe { invalidate_data_range(addr, size); }
 
     }
 

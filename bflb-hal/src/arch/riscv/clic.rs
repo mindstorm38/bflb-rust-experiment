@@ -17,6 +17,8 @@
 //! Sources:
 //! - https://raw.githubusercontent.com/riscv/riscv-fast-interrupt/master/clic.pdf
 
+#![allow(unsafe_op_in_unsafe_fn)]
+
 
 embedded_util::mmio! {
 
@@ -136,36 +138,36 @@ embedded_util::reg! {
 
 #[inline(always)]
 pub unsafe fn set_mintthresh(threshold: u8) {
-    unsafe { core::arch::asm!("csrw 0x347, {}", in(reg) threshold) }
+    core::arch::asm!("csrw 0x347, {}", in(reg) threshold)
 }
 
 #[inline(always)]
 pub unsafe fn get_mintthresh() -> u8 {
     let threshold;
-    unsafe { core::arch::asm!("csrr {}, 0x347", out(reg) threshold) };
+    core::arch::asm!("csrr {}, 0x347", out(reg) threshold);
     threshold
 }
 
 #[inline(always)]
 pub unsafe fn set_sintthresh(threshold: u8) {
-    unsafe { core::arch::asm!("csrw 0x147, {}", in(reg) threshold) }
+    core::arch::asm!("csrw 0x147, {}", in(reg) threshold)
 }
 
 #[inline(always)]
 pub unsafe fn get_sintthresh() -> u8 {
     let threshold;
-    unsafe { core::arch::asm!("csrr {}, 0x147", out(reg) threshold) };
+    core::arch::asm!("csrr {}, 0x147", out(reg) threshold);
     threshold
 }
 
 #[inline(always)]
 pub unsafe fn set_uintthresh(threshold: u8) {
-    unsafe { core::arch::asm!("csrw 0x047, {}", in(reg) threshold) }
+    core::arch::asm!("csrw 0x047, {}", in(reg) threshold)
 }
 
 #[inline(always)]
 pub unsafe fn get_uintthresh() -> u8 {
     let threshold;
-    unsafe { core::arch::asm!("csrr {}, 0x047", out(reg) threshold) };
+    core::arch::asm!("csrr {}, 0x047", out(reg) threshold);
     threshold
 }
