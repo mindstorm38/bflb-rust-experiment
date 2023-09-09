@@ -213,8 +213,7 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
     let handler = if interrupt {
         INTERRUPT_VECTOR[code]
     } else {
-        // EXCEPTION_HANDLERS.get(code, default_trap_handler)
-        return;
+        panic!("hardware exception: {code}");
     };
 
     // SAFETY: Interrupts are disabled by the hardware when going to interrupt handlers.
@@ -224,12 +223,6 @@ extern "C" fn _rust_mtrap_handler(cause: usize) {
     
     (handler)(code, cs);
 
-}
-
-
-/// The default trap handler, do nothing.
-pub fn default_trap_handler(code: usize) {
-    let _ = code;
 }
 
 
