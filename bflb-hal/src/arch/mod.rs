@@ -1,5 +1,5 @@
 //! This modules contains all architecture and chip specific registers and MMIO 
-//! structures.
+//! structures. This module is not intended to provide a uniform abstraction.
 
 // Always included because all supported chips are RISC-V.
 pub mod riscv;

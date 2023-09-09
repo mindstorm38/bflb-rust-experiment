@@ -1,9 +1,6 @@
 //! Architecture-agnostic cache management functions. The provided functions are unsafe
 //! because you have to manually ensure that given addresses and calls will not break
 //! memory safety in the program.
-//! 
-//! These functions are usually unsafe because you must ensure that the operation will
-//! not create undefined behavior in the program.
 
 #![allow(unsafe_op_in_unsafe_fn)]
 

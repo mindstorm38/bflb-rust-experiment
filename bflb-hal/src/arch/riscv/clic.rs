@@ -149,3 +149,23 @@ embedded_util::reg! {
 super::impl_csr_rw!(Mintthresh, 0x347);
 super::impl_csr_rw!(Sintthresh, 0x147);
 super::impl_csr_rw!(Uintthresh, 0x047);
+
+
+/// Low-level Trap Vector Handler referenced by the Trap Vector Table.
+/// 
+/// This function type is intentionnaly never returning and unsafe
+/// because it will return from the function using *x*ret instruction.
+pub type ClicVectorHandler = unsafe extern "C" fn() -> !;
+
+/// Internal structure used to align the trap vector table.
+#[repr(C, align(64))]
+pub struct ClicVectorTable<const LEN: usize>(pub [ClicVectorHandler; LEN]);
+
+impl<const LEN: usize> ClicVectorTable<LEN> {
+
+    /// Construct a new CLIC vector table, all set to the given vector handler pointer.
+    pub const fn new(default: ClicVectorHandler) -> Self {
+        Self([default; LEN])
+    }
+
+}

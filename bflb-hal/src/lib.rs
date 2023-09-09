@@ -55,6 +55,45 @@ use dma::Dma;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 
+/// Initialize the current hart of the currently selected chip, this function needs to be
+/// called before actually using this abstraction layer, because some assumptions made by
+/// needs prior initialization by this function.
+/// 
+/// This function is unsafe because you must ensure that this function is called exactly
+/// once per hart, not calling it or calling it multiple time is undefined behavior.
+pub unsafe fn init() {
+    hart::init();
+    init_impl();
+}
+
+/// Init function specific to BL808 M0 core.
+#[cfg(feature = "bl808-m0")]
+fn init_impl() {
+
+    use arch::bl808::{CLIC, GLB};
+    use interrupt::IRQ_COUNT;
+
+    // We use all bits for interrupt level, no priority bit.
+    CLIC.cfg().modify(|reg| reg.nlbits().set(8));
+
+    for irq_num in 0..IRQ_COUNT {
+        let int = CLIC.int(irq_num);
+        int.enable().set(0);
+        int.pending().set(0);
+        int.attr().modify(|reg| reg.vectored().clear());
+        int.control().set(255);
+    }
+
+    // Disable UART sig swap for all pin groups.
+    GLB.parm_cfg0().modify(|reg| reg.uart_swap_set().clear());
+
+    // These registers are not properly initialized by default.
+    GLB.uart_cfg1().set_with(|reg| reg.0 = 0xFFFFFFFF);
+    GLB.uart_cfg2().set_with(|reg| reg.0 = 0x0000FFFF);
+        
+}
+
+
 /// We want the peripherals to be a ZST.
 const _: () = assert!(core::mem::size_of::<Peripherals>() == 0);
 

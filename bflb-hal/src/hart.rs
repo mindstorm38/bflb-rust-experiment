@@ -1,5 +1,5 @@
 //! Low-level hart functions like linear hart id (allowing hart local values), it also
-//! provides abstractions for low-level
+//! provides abstractions for low-level.
 
 use core::sync::atomic::{Ordering, AtomicUsize};
 use core::cell::{RefCell, Ref, RefMut};
@@ -21,8 +21,8 @@ const _: () = assert!(HART_COUNT != 0);
 static HART_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 
-/// Init the current hart, **this is unsafe** because this should be called once per hart.
-pub unsafe fn init() {
+/// Init the current hart, should be called once per hart.
+pub(crate) fn init() {
 
     let id;
 
@@ -90,6 +90,12 @@ pub fn hart_zero() -> bool {
             id == 0
         }
     }
+}
+
+/// Return the actual number of harts.
+#[inline]
+pub fn hart_count() -> usize {
+    HART_COUNTER.load(Ordering::Relaxed)
 }
 
 /// Spin loop hint adapted to low-level, it basically wait for 

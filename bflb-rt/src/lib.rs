@@ -13,27 +13,10 @@ extern crate alloc;
 compile_error!("no runtime chip selected, use the crate features to select one chip");
 
 
-/// Macro used to import the chip specific rust and assembly code
-/// depending on the selected runtime chip. These modules should 
-/// define the following standard functions, variables and constants:
-/// - `pub fn init()`, this function is called prior to entry and 
-///   should run chip specific initialization.
-/// - `pub const HART_COUNT: usize`, a constant that define the
-///   architectural maximum number of hart that can run on the chip.
-///   This number may be greater than the actual number of activated
-///   harts, but should not be under estimated because overflow harts
-///   will panic.
-macro_rules! use_chip {
-    ($id:ident) => {
-        mod $id;
-        use crate::$id as chip;
-    };
-}
-
 #[cfg(rt_chip = "bl808_m0")]
-use_chip!(bl808_m0);
+mod bl808_d0;
 #[cfg(rt_chip = "bl808_d0")]
-use_chip!(bl808_d0);
+mod bl808_m0;
 
 
 // Re-export HAL.
@@ -41,7 +24,6 @@ pub use bflb_hal as hal;
 
 // These modules are intentionally internal.
 mod allocator;
-mod clic;
 
 use hal::interrupt::{IRQ_COUNT, VECTOR, InterruptHandler, noop_handler};
 use critical_section::CriticalSection;
@@ -161,17 +143,10 @@ extern "C" fn _rust_mem_init() {
 /// chip **only on hart 0**.
 #[no_mangle]
 extern "C" fn _rust_init() {
-
-    // All hart are initialized.
-    unsafe {
-        hal::hart::init();
+    // SAFETY: We execute it once per hart.
+    unsafe { 
+        hal::init(); 
     }
-
-    // Only hart zero actually initialize chip-specific things.
-    if hal::hart::hart_zero() {
-        chip::init();
-    }
-
 }
 
 
