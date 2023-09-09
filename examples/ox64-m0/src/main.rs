@@ -13,7 +13,6 @@ use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
 use hal::cache::CacheAligned;
 use hal::uart::UartConfig;
 use hal::Peripherals;
-use hal::interrupt;
 use hal::time;
 
 
