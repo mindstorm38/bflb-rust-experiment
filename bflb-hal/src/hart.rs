@@ -40,7 +40,7 @@ pub(crate) fn init() {
         // For now we spin loop, maybe panic in the future but we need
         // to ensure that the panic handler will not access a 
         // HartLocal variable.
-        loop { spin_loop() }
+        loop { wait_for_interrupt() }
     }
 
     // Only use the mscratch register if there is more than one hart.
@@ -98,10 +98,9 @@ pub fn hart_count() -> usize {
     HART_COUNTER.load(Ordering::Relaxed)
 }
 
-/// Spin loop hint adapted to low-level, it basically wait for 
-/// interrupt on the hart.
+/// Wait a undefined time until an interrupt is received by the hart.
 #[inline(always)]
-pub fn spin_loop() {
+pub fn wait_for_interrupt() {
     unsafe { crate::arch::riscv::wfi() }
 }
 

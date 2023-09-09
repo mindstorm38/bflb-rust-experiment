@@ -164,7 +164,7 @@ extern "C" fn _rust_entry() -> ! {
 
     // This function should no return: spin loop.
     loop {
-        hal::hart::spin_loop();
+        hal::hart::wait_for_interrupt();
     }
 
 }
@@ -210,7 +210,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     // TODO: Instead of spin looping indefinitely, it might be possible 
     // to close clock gates and stop the core.
     loop {
-        hal::hart::spin_loop()
+        hal::hart::wait_for_interrupt()
     }
 
 }
@@ -255,7 +255,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     let _ = writeln!(uart, "============================================");
 
     loop {
-        hal::hart::spin_loop()
+        hal::hart::wait_for_interrupt()
     }
     
 }
