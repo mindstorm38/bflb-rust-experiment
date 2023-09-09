@@ -1,4 +1,5 @@
-//! Timer management on BL808.
+//! Main real time clock management, can be used for both synchronized and callback-based
+//! waiting. This module is 
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -9,9 +10,9 @@ use critical_section::CriticalSection;
 use smallvec::SmallVec;
 
 use crate::hart::{HartLocalCell, HartLocal};
-use crate::arch::bl808::addr;
-use crate::clock::Clocks;
 use crate::interrupt::MACHINE_TIMER;
+use crate::arch::bl808::addr;
+use crate::clock;
 
 
 /// The tick frequency of the core timer.
@@ -32,25 +33,17 @@ const RV32_MTIMECMP: *mut u64 = addr::T_HEAD_RV32_MTIMECMP_BASE as _;
 const RV64_MTIMECMP: *mut u64 = addr::T_HEAD_RV64_MTIMECMP0_BASE as _;
 
 
-/// Providing exclusive access to the core's internal RTC timer configuration. This timer
-/// is configured to have a *microsecond* resolution.
-pub struct Timer(pub(crate) ());
+/// Internal function to initialize the clock.
+pub(crate) fn init() {
+    
+    let divider = clock::get_mtimer_source_freq() / FREQ;
 
-impl Timer {
+    // SAFETY: This is called at the HAL init, our cores (M0/D0/LP) have only one hart so
+    // they should be the only one enabling their own RTC clock.
+    unsafe { clock::enable_mtimer_clock(divider); }
 
-    /// Initialize the core timer frequency in the given clocks handle.
-    /// 
-    /// *Note: The core timer needs to be initialized on each core on hart 0.*
-    pub fn init(&self, clocks: &mut Clocks) {
-        let divider = clocks.get_mtimer_source_freq() / FREQ;
-        clocks.enable_mtimer_clock(divider);
-    }
-
-    /// Set the time in microseconds.
-    #[inline]
-    pub fn set_time(&mut self, time: u64) {
-        set_time(time)
-    }
+    // SAFETY: Same as above: RTC clock is core-local, we reset it before using it.
+    unsafe { set_time(0) }
 
 }
 
@@ -68,9 +61,10 @@ pub fn get_time() -> u64 {
     unsafe { RV32_MTIME.read_volatile() }
 }
 
-/// Set the time in microseconds.
+/// Set the time in microseconds. This function is unsafe because this may (and will) 
+/// break the currently waiting callbacks.
 #[inline]
-fn set_time(time: u64) {
+pub unsafe fn set_time(time: u64) {
     #[cfg(feature = "bl808-d0")]
     unsafe {
         core::arch::asm!("csrw 0xC01, {}", in(reg) time);

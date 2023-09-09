@@ -231,7 +231,6 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     let mut uart = peripherals.uart.p0.init_simplex_transmit(
         peripherals.gpio.p14, 
         &UartConfig::new(115200), 
-        &peripherals.clocks,
     );
 
     // Retrieve allocator information, may be useful in case of allocation crash.

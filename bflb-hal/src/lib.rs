@@ -43,8 +43,6 @@ pub mod i2c;
 pub mod adc;
 
 // Internal reuses.
-use clock::Clocks;
-use time::Timer;
 use cpu::CpuControl;
 
 use gpio::PinAccess;
@@ -63,6 +61,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 /// once per hart, not calling it or calling it multiple time is undefined behavior.
 pub unsafe fn init() {
     hart::init();
+    time::init();  // FIXME: Other clocks needs to be initialized first.
     init_impl();
 }
 
@@ -111,10 +110,6 @@ static TAKEN: AtomicBool = AtomicBool::new(false);
 /// ports/channels. These ports/channels can be owned and managed 
 /// individually.
 pub struct Peripherals {
-    /// The chip's clocks.
-    pub clocks: Clocks,
-    /// The core RTC timer.
-    pub timer: Timer,
     /// The core's CPU control 
     pub cpu_control: CpuControl,
     /// GPIO pins access.
@@ -163,8 +158,6 @@ impl Peripherals {
     /// communication in case of panics.*
     pub unsafe fn new() -> Self {
         Self {
-            clocks: Clocks(()),
-            timer: Timer(()),
             cpu_control: CpuControl(()),
             gpio: Gpio {
                 p0: PinAccess(()),

@@ -8,8 +8,8 @@ use crate::arch::bl808::i2c;
 // use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 
 //     DmaPeripheral, DmaDataWidth, DmaBurstSize, DmaIncrement};
 use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
-use crate::clock::Clocks;
 use crate::sealed::Sealed;
+use crate::clock;
 
 
 /// A generic I²C port trait, used to abstract complexity of the underlying 
@@ -38,7 +38,6 @@ impl<const PORT: u8> I2cAccess<PORT> {
         scl: impl Into<Pin<SCL_PIN, Alternate>>,
         sda: impl Into<Pin<SDA_PIN, Alternate>>,
         config: &I2cConfig,
-        clocks: &Clocks,
     ) -> I2c<PORT, Pin<SCL_PIN, Alternate>, Pin<SDA_PIN, Alternate>> {
 
         // Valid SCL pins are ODD in range 0..=41
@@ -59,9 +58,9 @@ impl<const PORT: u8> I2cAccess<PORT> {
         };
 
         let hw_freq = match PORT {
-            0 | 1 => clocks.get_mcu_i2c_freq(),
-            2 => clocks.get_mm_i2c0_freq(),
-            3 => clocks.get_mm_i2c1_freq(),
+            0 | 1 => clock::i2c::get_mcu_i2c_freq(),
+            2 => clock::i2c::get_mm_i2c0_freq(),
+            3 => clock::i2c::get_mm_i2c1_freq(),
             _ => unreachable!()
         };
 

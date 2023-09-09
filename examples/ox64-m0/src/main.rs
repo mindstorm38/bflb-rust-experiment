@@ -20,9 +20,7 @@ use hal::time;
 pub fn main() {
 
     let peripherals = Peripherals::take();
-    let mut clocks = peripherals.clocks;
     let mut cpu_control = peripherals.cpu_control;
-    let timer = peripherals.timer;
 
     clocks.set_d0_cpu_enable(false);
     cpu_control.reset_d0();

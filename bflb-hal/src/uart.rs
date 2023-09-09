@@ -10,7 +10,7 @@ use crate::gpio::{Pin, PinPull, PinDrive, PinFunction, Alternate};
 use crate::dma::{DmaSrcEndpoint, DmaDstEndpoint, DmaEndpointConfig, 
     DmaPeripheral, DmaDataWidth, DmaBurstSize, DmaIncrement};
 use crate::sealed::Sealed;
-use crate::clock::Clocks;
+use crate::clock;
 
 
 /// Abstract definition of a UART port with write access.
@@ -51,38 +51,35 @@ impl<const PORT: u8> UartAccess<PORT> {
     pub fn init_duplex<const TX_PIN: u8, const RX_PIN: u8>(self, 
         tx: impl Into<Pin<TX_PIN, Alternate>>,
         rx: impl Into<Pin<RX_PIN, Alternate>>,
-        config: &UartConfig, 
-        clocks: &Clocks
+        config: &UartConfig,
     ) -> Uart<PORT, Pin<TX_PIN, Alternate>, Pin<RX_PIN, Alternate>> {
         let mut tx = tx.into();
         let mut rx = rx.into();
         attach_pin(&mut tx, Self::port_tx_function());
         attach_pin(&mut rx, Self::port_rx_function());
-        init::<PORT>(config, clocks, true, true);
+        init::<PORT>(config, true, true);
         Uart { tx, rx }
     }
 
     /// Configure this UART port for TX-only communications.
     pub fn init_simplex_transmit<const TX_PIN: u8>(self, 
         tx: impl Into<Pin<TX_PIN, Alternate>>,
-        config: &UartConfig, 
-        clocks: &Clocks
+        config: &UartConfig,
     ) -> Uart<PORT, Pin<TX_PIN, Alternate>, ()> {
         let mut tx = tx.into();
         attach_pin(&mut tx, Self::port_tx_function());
-        init::<PORT>(config, clocks, true, false);
+        init::<PORT>(config, true, false);
         Uart { tx, rx: () }
     }
 
     /// Configure this UART port for RX-only communications.
     pub fn init_simplex_receive<const RX_PIN: u8>(self, 
         rx: impl Into<Pin<RX_PIN, Alternate>>,
-        config: &UartConfig, 
-        clocks: &Clocks
+        config: &UartConfig,
     ) -> Uart<PORT, (), Pin<RX_PIN, Alternate>> {
         let mut rx = rx.into();
         attach_pin(&mut rx, Self::port_rx_function());
-        init::<PORT>(config, clocks, false, true);
+        init::<PORT>(config, false, true);
         Uart { tx: (), rx }
     }
 
@@ -262,16 +259,16 @@ fn get_registers<const PORT: u8>() -> UartRegs {
 }
 
 /// Get the UART MMIO registers structure associated to the given port.
-fn init<const PORT: u8>(config: &UartConfig, clocks: &Clocks, enable_tx: bool, enable_rx: bool) {
-    init_internal(get_registers::<PORT>(), config, clocks, enable_tx, enable_rx);
+fn init<const PORT: u8>(config: &UartConfig, enable_tx: bool, enable_rx: bool) {
+    init_internal(get_registers::<PORT>(), config, enable_tx, enable_rx);
 }
 
 /// Internal function used to initialize the I/O given a configuration and clocks.
 #[inline(never)]
-fn init_internal(regs: UartRegs, config: &UartConfig, clocks: &Clocks, enable_tx: bool, enable_rx: bool) {
+fn init_internal(regs: UartRegs, config: &UartConfig, enable_tx: bool, enable_rx: bool) {
 
     // Calculate the baudrate divisor from UART frequency.
-    let uart_freq = clocks.get_mcu_uart_freq();
+    let uart_freq = clock::uart::get_mcu_uart_freq();
     let div = (uart_freq * 10 / config.baudrate + 5) / 10;
 
     // Disable both TX and RX at start.
