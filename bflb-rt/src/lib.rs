@@ -43,7 +43,7 @@ pub use bflb_hal as hal;
 mod allocator;
 mod clic;
 
-use hal::interrupt::{IRQ_COUNT, VECTOR, InterruptHandler};
+use hal::interrupt::{IRQ_COUNT, VECTOR, InterruptHandler, noop_handler};
 use critical_section::CriticalSection;
 use allocator::RuntimeAllocator;
 
@@ -274,10 +274,16 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     let _ = writeln!(uart);
     let _ = writeln!(uart, "============================================");
     let _ = writeln!(uart, "Hart {} {info}", hal::hart::hart());
-    let _ = writeln!(uart, "Information:");
-    let _ = writeln!(uart, "- Alloc capacity: {alloc_cap} B");
-    let _ = writeln!(uart, "- Alloc used: {alloc_used} B");
-    let _ = writeln!(uart, "- Alloc free: {alloc_free} B");
+    let _ = writeln!(uart);
+    // Debug the allocator, this make debugging out of memory easier.
+    let _ = writeln!(uart, "[Allocator] used: {alloc_used}, free: {alloc_free}, cap: {alloc_cap}");
+    // Debug interrupt handlers.
+    let _ = writeln!(uart, "[Interrupt] handlers ({}):", INTERRUPT_VECTOR.len());
+    for (code, &handler) in INTERRUPT_VECTOR.iter().enumerate() {
+        if handler != noop_handler {
+            let _ = writeln!(uart, "            #{code:02}: {handler:?}");
+        }
+    }
     let _ = writeln!(uart, "============================================");
 
     loop {

@@ -210,7 +210,7 @@ impl<const PORT: u8, Tx: UartPin, Rx: UartPresentPin> DmaSrcEndpoint for Uart<PO
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::Incr1,
             increment: DmaIncrement::Const,
-            address: regs.fifo_rdata().0 as _
+            addr: regs.fifo_rdata().0 as _
         }
 
     }
@@ -239,7 +239,7 @@ impl<const PORT: u8, Tx: UartPresentPin, Rx: UartPin> DmaDstEndpoint for Uart<PO
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::Incr1,
             increment: DmaIncrement::Const,
-            address: regs.fifo_wdata().0 as _
+            addr: regs.fifo_wdata().0 as _
         }
 
     }

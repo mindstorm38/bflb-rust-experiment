@@ -7,8 +7,10 @@
 
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use crate::arch::riscv;
+use core::ops::{Deref, DerefMut};
+
 use crate::hart::{data_sync, inst_sync};
+use crate::arch::riscv;
 
 
 #[cfg(any(feature = "bl808-m0"))]
@@ -157,4 +159,28 @@ pub unsafe fn clean_invalidate_data_range(addr: usize, size: usize) {
     }
     data_sync();
 
+}
+
+/// A wrapper for type that force it to be aligned to cache line and force this structure
+/// to have a size multiple of the cache line size. This allows fixing unsound issues that
+/// may appear.
+#[cfg_attr(feature = "bl808-m0", repr(align(32)))]
+#[cfg_attr(feature = "bl808-d0", repr(align(64)))]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CacheAligned<T: ?Sized>(pub T);
+
+impl<T: ?Sized> Deref for CacheAligned<T> {
+    
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+
+}
+
+impl<T: ?Sized> DerefMut for CacheAligned<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }

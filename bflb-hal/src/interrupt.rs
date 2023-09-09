@@ -109,12 +109,15 @@ pub enum InterruptTrigger {
 /// Type alias for interrupt handler function pointer.
 pub type InterruptHandler = fn(usize, CriticalSection);
 
+/// Interrupt handler that doesn't do anything with the interrupt.
+pub fn noop_handler(_code: usize, _cs: CriticalSection) { }
+
 /// This constant array can be used as a base interrupt vector to be used by the HAL and 
 /// supported by the runtime. Each handle takes a critical section token for proving that
 /// the handler is effectively running with interrupts disabled.
 pub const VECTOR: [InterruptHandler; IRQ_COUNT] = {
 
-    let mut handlers: [InterruptHandler; IRQ_COUNT] = [|_, _| {}; IRQ_COUNT];
+    let mut handlers: [InterruptHandler; IRQ_COUNT] = [noop_handler; IRQ_COUNT];
 
     handlers[MACHINE_TIMER] = crate::time::mtimer_handler;
 

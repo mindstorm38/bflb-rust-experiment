@@ -11,7 +11,7 @@ use alloc::boxed::Box;
 use critical_section::{Mutex, CriticalSection};
 
 use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
-use crate::cache::{invalidate_data_range, clean_data_range};
+use crate::cache::{CacheAligned, invalidate_data_range, clean_data_range};
 
 
 /// This peripheral structure wraps all DMA ports available.
@@ -208,8 +208,8 @@ impl<const PORT: u8, const CHANNEL: u8> DmaAccess<PORT, CHANNEL> {
             reg.int_tc_mask().fill();
         });
 
-        channel_regs.src_addr().set(src_config.address as _);
-        channel_regs.dst_addr().set(dst_config.address as _);
+        channel_regs.src_addr().set(src_config.addr as _);
+        channel_regs.dst_addr().set(dst_config.addr as _);
 
         // Clear interrupt related to this channel.
         port_regs.int_tc_clear().set_with(|reg| reg.set(CHANNEL, true));
@@ -472,7 +472,7 @@ pub struct DmaEndpointConfig {
     /// the given `data_width` to do.
     pub increment: DmaIncrement,
     /// Address of this DMA endpoint.
-    pub address: *const (),
+    pub addr: usize
 }
 
 /// A source endpoint for a DMA transfer.
@@ -513,63 +513,22 @@ pub trait DmaDstEndpoint {
 impl DmaSrcEndpoint for &'static str {
 
     unsafe fn configure(&mut self) -> DmaEndpointConfig {
+
+        let addr = self.as_ptr() as usize;
+
+        // We don't know from where this static reference come from, so we flush it so
+        // we are sure that the real latest data is visible for the DMA controller.
+        // SAFETY: if this points to non-cached memory, it's not a problem, this will
+        //  just clean some random line but it's safe.
+        unsafe { clean_data_range(addr, self.len()) }
+
         DmaEndpointConfig {
             peripheral: None,
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::for_size(self.len()),
             increment: DmaIncrement::Incr(self.len()),
-            address: self.as_ptr() as _
+            addr,
         }
-    }
-
-}
-
-/// Implementation for boxed types, the access is exclusive and the data is leaked if the
-/// box is forgotten, this behavior allows us to make sure that the data cannot be aliased
-/// after leaking, because the DMA controller might alias it at any time.
-impl<T: Copy> DmaSrcEndpoint for Box<T> {
-
-    unsafe fn configure(&mut self) -> DmaEndpointConfig {
-
-        let size = core::mem::size_of::<T>();
-        assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
-
-        // We want to be sure that the data that has been written to the box have been
-        // written back to the memory, so that DMA controller can see the actual data.
-        unsafe { clean_data_range(&**self as *const T as usize, size) }
-
-        DmaEndpointConfig {
-            peripheral: None,
-            data_width: DmaDataWidth::Byte,
-            burst_size: DmaBurstSize::for_size(size),
-            increment: DmaIncrement::Incr(size),
-            address: &**self as *const T as *const ()
-        }
-
-    }
-    
-}
-
-/// Same as for source endpoint on box.
-impl<T: Copy> DmaDstEndpoint for Box<T> {
-
-    unsafe fn configure(&mut self) -> DmaEndpointConfig {
-        // SAFETY: Same as source endpoint.
-        unsafe { <Self as DmaSrcEndpoint>::configure(self) }
-    }
-
-    fn close(&mut self) {
-
-        // FIXME: Invalidating the box memory can overflow on neighbor bytes that are not
-        // stored inside of the box and may belong to other memory location that should 
-        // not be touched without notice.
-
-        // When DMA has finished transfer to the box, that we know is located in RAM and
-        // therefore we need to invalidate cache lines that have been bypassed by the DMA.
-        // It's only needed for destination endpoint because data is written in it.
-        let addr = &**self as *const T as usize;
-        let size = core::mem::size_of::<T>();
-        unsafe { invalidate_data_range(addr, size); }
 
     }
 
@@ -581,17 +540,89 @@ impl<T: Copy> DmaSrcEndpoint for &'static T {
 
     unsafe fn configure(&mut self) -> DmaEndpointConfig {
 
-        let size = core::mem::size_of::<T>();
+        let addr = &**self as *const T as usize;
+        let size = core::mem::size_of::<T>(); 
         assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
+
+        // SAFETY: Read comment above (for &'static str).
+        unsafe { clean_data_range(addr, size) }
 
         DmaEndpointConfig {
             peripheral: None,
             data_width: DmaDataWidth::Byte,
             burst_size: DmaBurstSize::for_size(size),
             increment: DmaIncrement::Incr(size),
-            address: &**self as *const T as *const ()
+            addr,
         }
 
+    }
+
+}
+
+/// Implementation for boxed types, the access is exclusive and the data is leaked if the
+/// box is forgotten, this behavior allows us to make sure that the data cannot be aliased
+/// after leaking, because the DMA controller might alias it at any time.
+impl<T: Copy> DmaSrcEndpoint for Box<T> {
+
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+
+        let addr = &**self as *const T as usize;
+        let size = core::mem::size_of::<T>();
+        assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
+
+        // SAFETY: Read comment above (for &'static str).
+        unsafe { clean_data_range(addr, size) }
+
+        DmaEndpointConfig {
+            peripheral: None,
+            data_width: DmaDataWidth::Byte,
+            burst_size: DmaBurstSize::for_size(size),
+            increment: DmaIncrement::Incr(size),
+            addr,
+        }
+
+    }
+    
+}
+
+/// Implementation for cache aligned boxed types. The cache alignment is required to make
+/// the cache working safely and therefore avoid Rust undefined behaviors.
+/// 
+/// When a transfer to a destination endpoint is done, the memory has been updated by the
+/// controller, but we need to ensure that the cache is aware of that modification, to do
+/// that we invalidate the cache line corresponding to the memory range of that value (the
+/// cache line is only invalidated if currently associated to that specific address). The
+/// whole problem came from that invalidation, we don't want to invalidate memory that
+/// belongs to another box. To avoid that, the type is required to be cache line aligned 
+/// (using the [`CacheAligned`] type wrapper), so no other instance can live in the same
+/// cache line.
+impl<T: Copy> DmaDstEndpoint for Box<CacheAligned<T>> {
+
+    unsafe fn configure(&mut self) -> DmaEndpointConfig {
+        
+        // We ignore the layout of CacheAligned, so we get the address of wrapped object.
+        let addr = &self.0 as *const T as usize;
+        let size = core::mem::size_of::<T>();
+        assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
+
+        // SAFETY: Read comment above (for &'static str).
+        unsafe { clean_data_range(addr, size) }
+
+        DmaEndpointConfig {
+            peripheral: None,
+            data_width: DmaDataWidth::Byte,
+            burst_size: DmaBurstSize::for_size(size),
+            increment: DmaIncrement::Incr(size),
+            addr,
+        }
+
+    }
+
+    fn close(&mut self) {
+        // SAFETY: Our type is cache aligned, so we don't risk invalidating other object.
+        let addr = &self.0 as *const T as usize;
+        let size = core::mem::size_of::<T>();
+        unsafe { invalidate_data_range(addr, size); }
     }
 
 }
@@ -617,7 +648,7 @@ impl<T: DmaPrimitiveType> DmaSrcEndpoint for &'static [T] {
             data_width: T::data_width(),
             burst_size: T::burst_size(),
             increment: DmaIncrement::Incr(self.len()),
-            address: self.as_ptr() as _
+            addr: self.as_ptr() as _
         }
     }
 

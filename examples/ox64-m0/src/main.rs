@@ -10,14 +10,11 @@ use core::fmt::Write;
 use bflb_rt::hal;
 
 use hal::clock::{XtalType, UartSel, McuRootSel, XclkSel, MmXclkSel};
+use hal::cache::CacheAligned;
 use hal::uart::UartConfig;
 use hal::Peripherals;
 use hal::interrupt;
 use hal::time;
-
-
-#[link_section = ".data"] // Loaded in RAM
-static DMA_MESSAGE: &'static str = "Hello world from DMA!\n";
 
 
 #[no_mangle]
@@ -87,12 +84,17 @@ pub fn main() {
 
     static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
-    let dest = Box::new([0u8; 22]);
-    let dest2 = Box::new([0u8; 22]);
+    let dest = Box::new(CacheAligned([0u8; 22]));
+
+    #[link_section = ".data"] // Loaded in RAM
+    static DMA_MESSAGE: &'static str = "Hello world from DMA!\n";
 
     let (_, dest, _dma) = peripherals.dma.p0.c0
         .into_transfer(DMA_MESSAGE, dest)
         .wait();
+
+    let _ = write!(uart, "src: {DMA_MESSAGE}");
+    let _ = write!(uart, "dst: {}", core::str::from_utf8(&**dest).unwrap());
 
     // let (_, mut uart, _) = peripherals.dma.p0.c0
     //     .into_transfer(DMA_MESSAGE, uart)
@@ -101,10 +103,6 @@ pub fn main() {
     // .wait_callback(|_, mut uart, _| {
     //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
     // });
-
-    let _ = writeln!(uart, "{dest:?}... after");
-    let _ = writeln!(uart, "{dest2:?}... after");
-    let _ = writeln!(uart, "next...");
 
     // LOOP
     time::wait_callback(0, move || {
