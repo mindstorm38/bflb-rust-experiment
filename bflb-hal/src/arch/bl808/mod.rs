@@ -208,7 +208,9 @@ pub const MJPEG: Mjpeg          = Mjpeg(addr::MJPEG_DEC_BASE as _);
 /// - M0: 96 interrupts, 4 bits priority
 /// - D0: No CLIC (TODO: Check that)
 /// - LP: 32 interrupts
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
 pub const CLIC: Clic            = Clic(addr::T_HEAD_RV32_CLIC_BASE as _);
+
 
 embedded_util::mmio! {
 
@@ -219,7 +221,6 @@ embedded_util::mmio! {
     }
 
 }
-
 
 embedded_util::reg! {
     

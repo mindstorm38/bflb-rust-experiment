@@ -23,7 +23,6 @@ pub fn main() {
     let peripherals = Peripherals::take();
     let mut clocks = peripherals.clocks;
     let mut cpu_control = peripherals.cpu_control;
-    let mut interrupts = peripherals.interrupts;
     let timer = peripherals.timer;
 
     clocks.set_d0_cpu_enable(false);
@@ -70,7 +69,7 @@ pub fn main() {
     
     // INTERRUPT INIT
     
-    interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
+    // interrupts.set_enabled(interrupt::MACHINE_TIMER, true);
     // interrupts.set_enabled(interrupt::DMA0_ALL, true);
     // interrupts.set_enabled(interrupt::DMA1_ALL, true);
 

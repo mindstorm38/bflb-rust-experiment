@@ -52,6 +52,7 @@ RISC-V and extensions:
 - [RISC-V PLIC Spec](https://raw.githubusercontent.com/riscv/riscv-plic-spec/master/riscv-plic-1.0.0_rc6.pdf)
 - [T-head RISC-V Extension](https://github.com/T-head-Semi/thead-extension-spec)
 - [SiFive EmbedDev QuickRef](https://five-embeddev.com/quickref/)
+- [SiFive Interrupt Cookbook](https://starfivetech.com/uploads/sifive-interrupt-cookbook-v1p2.pdf)
 
 Additional documents:
 - [BLDevCube Tutorial](https://bl-mcu-sdk.readthedocs.io/zh_CN/latest/get_started/devcube.html)

@@ -10,6 +10,7 @@
 use core::ops::{Deref, DerefMut};
 
 use crate::hart::{data_sync, inst_sync};
+use crate::arch::riscv::xtheadcsr::Mhcr;
 use crate::arch::riscv;
 
 
@@ -25,7 +26,7 @@ pub unsafe fn enable_inst() {
     data_sync();
     inst_sync();
     riscv::xtheadcmo::icache_iall();
-    riscv::xtheadcsr::modify_mhcr(|mhcr| mhcr.ie().fill());
+    Mhcr::modify_csr(|mhcr| mhcr.ie().fill());
     data_sync();
     inst_sync();
 }
@@ -35,7 +36,7 @@ pub unsafe fn enable_inst() {
 pub unsafe fn disable_inst() {
     data_sync();
     inst_sync();
-    riscv::xtheadcsr::modify_mhcr(|mhcr| mhcr.ie().clear());
+    Mhcr::modify_csr(|mhcr| mhcr.ie().clear());
     riscv::xtheadcmo::icache_iall();
     data_sync();
     inst_sync();
@@ -59,7 +60,7 @@ pub unsafe fn enable_data() {
     data_sync();
     inst_sync();
     riscv::xtheadcmo::dcache_iall();
-    riscv::xtheadcsr::modify_mhcr(|mhcr| {
+    Mhcr::modify_csr(|mhcr| {
         mhcr.de().fill();
         mhcr.wb().fill();
         mhcr.wa().fill();
@@ -76,7 +77,7 @@ pub unsafe fn enable_data() {
 pub unsafe fn disable_data() {
     data_sync();
     inst_sync();
-    riscv::xtheadcsr::modify_mhcr(|mhcr| mhcr.de().clear());
+    Mhcr::modify_csr(|mhcr| mhcr.de().clear());
     riscv::xtheadcmo::dcache_iall();
     data_sync();
     inst_sync();

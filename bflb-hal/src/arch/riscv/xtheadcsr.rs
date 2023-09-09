@@ -3,8 +3,6 @@
 //! Credit: This file is imported from https://github.com/rustsbi/xuantie
 //! No official documentation mentions these...
 
-#![allow(unsafe_op_in_unsafe_fn)]
-
 
 embedded_util::reg! {
 
@@ -57,22 +55,4 @@ embedded_util::reg! {
 
 }
 
-
-#[inline(always)]
-pub unsafe fn set_mhcr(mhcr: Mhcr) {
-    core::arch::asm!("csrw 0x7C1, {}", in(reg) mhcr.0)
-}
-
-#[inline(always)]
-pub unsafe fn get_mhcr() -> Mhcr {
-    let mut mhcr = Mhcr(0);
-    core::arch::asm!("csrr {}, 0x7C1", out(reg) mhcr.0);
-    mhcr
-}
-
-#[inline(always)]
-pub unsafe fn modify_mhcr(func: impl FnOnce(&mut Mhcr)) {
-    let mut mhcr = get_mhcr();
-    func(&mut mhcr);
-    set_mhcr(mhcr);
-}
+super::impl_csr_rw!(Mhcr, 0x7C1);

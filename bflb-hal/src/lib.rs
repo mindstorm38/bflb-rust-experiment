@@ -43,7 +43,6 @@ pub mod i2c;
 pub mod adc;
 
 // Internal reuses.
-use interrupt::Interrupts;
 use clock::Clocks;
 use time::Timer;
 use cpu::CpuControl;
@@ -73,8 +72,6 @@ static TAKEN: AtomicBool = AtomicBool::new(false);
 /// ports/channels. These ports/channels can be owned and managed 
 /// individually.
 pub struct Peripherals {
-    /// Handle to the interrupts manager.
-    pub interrupts: Interrupts,
     /// The chip's clocks.
     pub clocks: Clocks,
     /// The core RTC timer.
@@ -127,7 +124,6 @@ impl Peripherals {
     /// communication in case of panics.*
     pub unsafe fn new() -> Self {
         Self {
-            interrupts: Interrupts(()),
             clocks: Clocks(()),
             timer: Timer(()),
             cpu_control: CpuControl(()),

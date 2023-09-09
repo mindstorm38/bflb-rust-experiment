@@ -14,6 +14,8 @@
 //!   - \[30..31] set by hardware at start of hardware vectoring
 //!   - \[31..32] interrupt = 1, exception = 0
 //! 
+//! Each hart has its own CLIC memory mapped structure.
+//! 
 //! Sources:
 //! - https://raw.githubusercontent.com/riscv/riscv-fast-interrupt/master/clic.pdf
 
@@ -133,41 +135,17 @@ embedded_util::reg! {
         [6..8] mode,
     }
 
+    /// Global machine interrupt threshold.
+    pub struct Mintthresh: u8 {}
+
+    /// Global supervisor interrupt threshold.
+    pub struct Sintthresh: u8 {}
+
+    /// Global user interrupt threshold.
+    pub struct Uintthresh: u8 {}
+
 }
 
-
-#[inline(always)]
-pub unsafe fn set_mintthresh(threshold: u8) {
-    core::arch::asm!("csrw 0x347, {}", in(reg) threshold)
-}
-
-#[inline(always)]
-pub unsafe fn get_mintthresh() -> u8 {
-    let threshold;
-    core::arch::asm!("csrr {}, 0x347", out(reg) threshold);
-    threshold
-}
-
-#[inline(always)]
-pub unsafe fn set_sintthresh(threshold: u8) {
-    core::arch::asm!("csrw 0x147, {}", in(reg) threshold)
-}
-
-#[inline(always)]
-pub unsafe fn get_sintthresh() -> u8 {
-    let threshold;
-    core::arch::asm!("csrr {}, 0x147", out(reg) threshold);
-    threshold
-}
-
-#[inline(always)]
-pub unsafe fn set_uintthresh(threshold: u8) {
-    core::arch::asm!("csrw 0x047, {}", in(reg) threshold)
-}
-
-#[inline(always)]
-pub unsafe fn get_uintthresh() -> u8 {
-    let threshold;
-    core::arch::asm!("csrr {}, 0x047", out(reg) threshold);
-    threshold
-}
+super::impl_csr_rw!(Mintthresh, 0x347);
+super::impl_csr_rw!(Sintthresh, 0x147);
+super::impl_csr_rw!(Uintthresh, 0x047);

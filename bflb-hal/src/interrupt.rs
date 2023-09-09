@@ -3,65 +3,75 @@
 //! You need a runtime crate such as `bflb-rt` in order to configure
 //! interrupts given these numbers.
 
-use crate::arch::riscv::clic::{set_mintthresh, get_mintthresh};
+use core::fmt;
+
+use crate::arch::riscv::clic::Mintthresh;
 use crate::arch::bl808::CLIC;
 
 use critical_section::CriticalSection;
 
 
-/// Exclusive access to global control of the interrupts.
-pub struct Interrupts(pub(crate) ());
+/// An access to configure an interrupt number.
+#[derive(Clone, Copy)]
+pub struct Interrupt {
+    /// The interrupt code number.
+    pub code: usize,
+}
 
-impl Interrupts {
+impl Interrupt {
 
-    #[inline(always)]
-    pub fn get_threshold(&self) -> u8 {
-        unsafe { get_mintthresh() }
+    /// Create a new handle to the given interrupt. You should prefer using the predefined
+    /// interrupts defined in this module.
+    pub const fn new(code: usize) -> Self {
+        Self { code }
     }
 
-    #[inline(always)]
-    pub fn set_threshold(&mut self, level: u8) {
-        unsafe { set_mintthresh(level) }
+    /// Return true if this interrupt is enabled.
+    #[inline]
+    pub fn enabled(self) -> bool {
+        CLIC.int(self.code).enable().get() != 0
     }
 
-    /// Return `true` if this interrupt is enabled.
-    #[inline(always)]
-    pub fn is_enabled(&self, num: usize) -> bool {
-        CLIC.int(num).enable().get() != 0
+    /// Enable or not the interrupt. This function is unsafe because caller must guarantee
+    /// that this will not cause issues with the rest of the program, and this function
+    /// also doesn't guarantee any synchronization.
+    #[inline]
+    pub unsafe fn set_enabled(self, enabled: bool) {
+        CLIC.int(self.code).enable().set(enabled as _);
+    }
+
+    /// Return true if this interrupt is pending to be handled.
+    #[inline]
+    pub fn pending(self) -> bool {
+        CLIC.int(self.code).pending().get() != 0
     }
     
-    /// Enable or not the interrupt. This function doesn't guarantee
-    /// any kind of synchronization and ordering.
-    #[inline(always)]
-    pub fn set_enabled(&mut self, num: usize, enabled: bool) {
-        CLIC.int(num).enable().set(enabled as _);
-    }
-    
-    #[inline(always)]
-    pub fn is_pending(&self, num: usize) -> bool {
-        CLIC.int(num).pending().get() != 0
-    }
-    
-    #[inline(always)]
-    pub fn set_pending(&mut self, num: usize, pending: bool) {
+    /// Set this interrupt's pending state. Note that this is only possible to do when 
+    /// this interrupt is configured in edge-sensitive mode. This function is unsafe
+    /// because caller must guarantee that this will not cause issues in the program.
+    #[inline]
+    pub unsafe fn set_pending(self, pending: bool) {
         // NB: Look at Read-only or Read/Write in "pending" doc.
-        CLIC.int(num).pending().set(pending as _);
+        CLIC.int(self.code).pending().set(pending as _);
+    }
+
+    /// Return the current configured level for this interrupt.
+    #[inline]
+    pub fn level(self) -> u8 {
+        CLIC.int(self.code).control().get()
     }
     
-    #[inline(always)]
-    pub fn get_level(&self, num: usize) -> u8 {
-        CLIC.int(num).control().get()
-    }
-    
-    #[inline(always)]
-    pub fn set_level(&mut self, num: usize, level: u8) {
+    /// Set the current level of this interrupt, used when scheduling the interrupt.
+    #[inline]
+    pub unsafe fn set_level(self, level: u8) {
         // NB: Read doc of "control" to understand that no all level are valid bit patterns.
-        CLIC.int(num).control().set(level);
+        CLIC.int(self.code).control().set(level);
     }
-    
-    #[inline(always)]
-    pub fn get_trigger(&self, num: usize) -> InterruptTrigger {
-        let mut tmp = CLIC.int(num).attr().get();
+
+    /// Get the current trigger mode for this interrupt.
+    #[inline]
+    pub fn trigger(self) -> InterruptTrigger {
+        let mut tmp = CLIC.int(self.code).attr().get();
         match (tmp.edge_triggered().get(), tmp.negative_edge().get()) {
             (0, 0) => InterruptTrigger::PositiveLevel,
             (0, 1) => InterruptTrigger::NegativeLevel,
@@ -73,9 +83,9 @@ impl Interrupts {
         }
     }
     
-    #[inline(always)]
-    pub fn set_trigger(&mut self, num: usize, trigger: InterruptTrigger) {
-        CLIC.int(num).attr().modify(|reg| {
+    #[inline]
+    pub unsafe fn set_trigger(self, trigger: InterruptTrigger) {
+        CLIC.int(self.code).attr().modify(|reg| {
     
             let (edge, neg) = match trigger {
                 InterruptTrigger::PositiveLevel => (0, 0),
@@ -92,6 +102,27 @@ impl Interrupts {
 
 }
 
+impl fmt::Debug for Interrupt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Interrupt")
+            .field("code", &self.code)
+            .field("enabled", &self.enabled())
+            .field("pending", &self.pending())
+            .field("level", &self.level())
+            .field("trigger", &self.trigger())
+            .finish()
+    }
+}
+
+#[inline]
+pub fn get_threshold() -> u8 {
+    unsafe { Mintthresh::read_csr().0 }
+}
+
+#[inline]
+pub unsafe fn set_threshold(level: u8) {
+    unsafe { Mintthresh(level).write_csr() }
+}
 
 /// Trigger mode that can be configured for a particular interrupt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,24 +150,24 @@ pub const VECTOR: [InterruptHandler; IRQ_COUNT] = {
 
     let mut handlers: [InterruptHandler; IRQ_COUNT] = [noop_handler; IRQ_COUNT];
 
-    handlers[MACHINE_TIMER] = crate::time::mtimer_handler;
+    handlers[MACHINE_TIMER.code] = crate::time::mtimer_handler;
 
     #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
     {
-        handlers[DMA0_ALL] = super::dma::dma0_handler;
-        handlers[DMA1_ALL] = super::dma::dma1_handler;
+        handlers[DMA0_ALL.code] = super::dma::dma0_handler;
+        handlers[DMA1_ALL.code] = super::dma::dma1_handler;
     }
 
     #[cfg(feature = "bl808-d0")]
     {
-        handlers[DMA2_INT0] = super::dma::dma2_handler;
-        handlers[DMA2_INT1] = super::dma::dma2_handler;
-        handlers[DMA2_INT2] = super::dma::dma2_handler;
-        handlers[DMA2_INT3] = super::dma::dma2_handler;
-        handlers[DMA2_INT4] = super::dma::dma2_handler;
-        handlers[DMA2_INT5] = super::dma::dma2_handler;
-        handlers[DMA2_INT6] = super::dma::dma2_handler;
-        handlers[DMA2_INT7] = super::dma::dma2_handler;
+        handlers[DMA2_INT0.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT1.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT2.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT3.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT4.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT5.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT6.code] = super::dma::dma2_handler;
+        handlers[DMA2_INT7.code] = super::dma::dma2_handler;
     }
 
     handlers
@@ -154,7 +185,7 @@ macro_rules! def_irq {
     ) => {
         $(
             $(#[$meta])* 
-            pub const $name: usize = $value;
+            pub const $name: Interrupt = Interrupt::new($value);
         )*
     };
 }
@@ -250,9 +281,10 @@ def_irq! {
     MAC_GEN             = 16 + 61;
     MAC_PORT_TRIGGER    = 16 + 62;
     WIFI_IPC            = 16 + 63;
-    /// IRQ count on BL808 M0/LP core.
-    IRQ_COUNT           = 16 + 64;
 }
+
+#[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+pub const IRQ_COUNT: usize = 16 + 64;
 
 #[cfg(feature = "bl808-d0")]
 def_irq! {
@@ -315,6 +347,7 @@ def_irq! {
     AUDIO               = 16 + 64;
     WL_ALL              = 16 + 65;
     PDS                 = 16 + 66;
-    /// IRQ count on BL808 D0 core.
-    IRQ_COUNT           = 16 + 67;
 }
+
+#[cfg(feature = "bl808-d0")]
+pub const IRQ_COUNT: usize = 16 + 67;
