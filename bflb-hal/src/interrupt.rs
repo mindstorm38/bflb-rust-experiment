@@ -146,9 +146,9 @@ pub fn noop_handler(_code: usize, _cs: CriticalSection) { }
 /// This constant array can be used as a base interrupt vector to be used by the HAL and 
 /// supported by the runtime. Each handle takes a critical section token for proving that
 /// the handler is effectively running with interrupts disabled.
-pub const VECTOR: [InterruptHandler; IRQ_COUNT] = {
+pub const VECTOR: [InterruptHandler; COUNT] = {
 
-    let mut handlers: [InterruptHandler; IRQ_COUNT] = [noop_handler; IRQ_COUNT];
+    let mut handlers: [InterruptHandler; COUNT] = [noop_handler; COUNT];
 
     handlers[MACHINE_TIMER.code] = crate::time::mtimer_handler;
 
@@ -284,7 +284,7 @@ def_irq! {
 }
 
 #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
-pub const IRQ_COUNT: usize = 16 + 64;
+pub const COUNT: usize = 16 + 64;
 
 #[cfg(feature = "bl808-d0")]
 def_irq! {
@@ -350,4 +350,4 @@ def_irq! {
 }
 
 #[cfg(feature = "bl808-d0")]
-pub const IRQ_COUNT: usize = 16 + 67;
+pub const COUNT: usize = 16 + 67;

@@ -25,7 +25,7 @@ pub use bflb_hal as hal;
 // These modules are intentionally internal.
 mod allocator;
 
-use hal::interrupt::{IRQ_COUNT, VECTOR, InterruptHandler, noop_handler};
+use hal::interrupt::{COUNT, VECTOR, InterruptHandler, noop_handler};
 use critical_section::CriticalSection;
 use allocator::RuntimeAllocator;
 
@@ -91,7 +91,7 @@ pub mod sym {
 static ALLOCATOR: RuntimeAllocator = RuntimeAllocator::empty();
 
 /// All interrupt (asynchronous) handlers.
-static INTERRUPT_VECTOR: [InterruptHandler; IRQ_COUNT] = VECTOR;
+static INTERRUPT_VECTOR: [InterruptHandler; COUNT] = VECTOR;
 
 
 /// This function is responsible for loading mutable static variables 

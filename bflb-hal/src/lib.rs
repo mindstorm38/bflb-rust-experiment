@@ -71,12 +71,12 @@ pub unsafe fn init() {
 fn init_impl() {
 
     use arch::bl808::{CLIC, GLB};
-    use interrupt::IRQ_COUNT;
+    use interrupt::COUNT;
 
     // We use all bits for interrupt level, no priority bit.
     CLIC.cfg().modify(|reg| reg.nlbits().set(8));
 
-    for irq_num in 0..IRQ_COUNT {
+    for irq_num in 0..COUNT {
         let int = CLIC.int(irq_num);
         int.enable().set(0);
         int.pending().set(0);
