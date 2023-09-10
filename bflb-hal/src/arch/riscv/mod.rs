@@ -31,7 +31,7 @@ macro_rules! impl_csr_rw {
             pub unsafe fn read_csr() -> Self {
                 unsafe {
                     let mut val = Self(0);
-                    core::arch::asm!(concat!("csrw {}, ", $csr), out(reg) val.0);
+                    core::arch::asm!(concat!("csrr {}, ", $csr), out(reg) val.0);
                     val
                 }
             }

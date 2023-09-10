@@ -25,7 +25,7 @@ pub use bflb_hal as hal;
 // These modules are intentionally internal.
 mod allocator;
 
-use hal::interrupt::{COUNT, VECTOR, InterruptHandler, noop_handler};
+use hal::interrupt::{COUNT as INT_COUNT, VECTOR, InterruptHandler, noop_handler};
 use critical_section::CriticalSection;
 use allocator::RuntimeAllocator;
 
@@ -91,7 +91,7 @@ pub mod sym {
 static ALLOCATOR: RuntimeAllocator = RuntimeAllocator::empty();
 
 /// All interrupt (asynchronous) handlers.
-static INTERRUPT_VECTOR: [InterruptHandler; COUNT] = VECTOR;
+static INTERRUPT_VECTOR: [InterruptHandler; INT_COUNT] = VECTOR;
 
 
 /// This function is responsible for loading mutable static variables 
@@ -221,8 +221,9 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 #[cfg(feature = "panic-uart-14")]
 fn panic(info: &core::panic::PanicInfo) -> ! {
 
-    use hal::Peripherals;
+    use hal::interrupt::Interrupt;
     use hal::uart::UartConfig;
+    use hal::Peripherals;
     use core::fmt::Write;
 
     // We force create a peripheral because the situation is desperate, so we
@@ -239,19 +240,37 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     });
 
     let _ = writeln!(uart);
-    let _ = writeln!(uart, "============================================");
+    let _ = writeln!(uart, "============== Panic");
     let _ = writeln!(uart, "Hart {} {info}", hal::hart::hart());
-    let _ = writeln!(uart);
-    // Debug the allocator, this make debugging out of memory easier.
-    let _ = writeln!(uart, "[Allocator] used: {alloc_used}, free: {alloc_free}, cap: {alloc_cap}");
-    // Debug interrupt handlers.
-    let _ = writeln!(uart, "[Interrupt] handlers ({}):", INTERRUPT_VECTOR.len());
-    for (code, &handler) in INTERRUPT_VECTOR.iter().enumerate() {
-        if handler != noop_handler {
-            let _ = writeln!(uart, "            #{code:02}: {handler:?}");
+
+    let _ = writeln!(uart, "============== Allocator");
+    let _ = writeln!(uart, "     capacity: {alloc_cap}");
+    let _ = writeln!(uart, "         used: {alloc_used}");
+    let _ = writeln!(uart, "         free: {alloc_free}");
+
+    let _ = writeln!(uart, "============== Interrupts");
+    // let _ = writeln!(uart, "    threshold: {}", get_threshold());  // FIXME: Invalid opcode???
+    for code in 0..INT_COUNT {
+        
+        let int = Interrupt::new(code);
+        let enabled = int.enabled();
+        let pending = int.pending();
+        let handler = INTERRUPT_VECTOR[code];
+
+        // Do not show uninteresting interrupts.
+        if !enabled && !pending && handler == noop_handler {
+            continue;
         }
+        
+        let _ = write!(uart, "        {code:>5}: ");
+        if int.enabled() { let _ = write!(uart, "enabled "); }
+        if int.pending() { let _ = write!(uart, "pending "); }
+        if handler != noop_handler {
+            let _ = write!(uart, "-> {:?}", handler);
+        }
+        let _ = writeln!(uart);
+
     }
-    let _ = writeln!(uart, "============================================");
 
     loop {
         hal::hart::wait_for_interrupt()
