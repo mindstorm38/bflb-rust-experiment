@@ -368,8 +368,8 @@ pub fn debug_clock_diagram(write: &mut dyn fmt::Write) -> fmt::Result {
         mm::D0RootSel::MmXclk => "mm xclk",
         mm::D0RootSel::D0Pll => "d0 pll",
     })?;
-    writeln!(write, "       d0 cpu: {:>9} Hz <- / {} <- cg <- d0 root", mm::get_d0_cpu_freq(), mm::get_d0_cpu_div())?;
-    writeln!(write, "     mm bclk2: {:>9} Hz <- cg <- / {} <- d0 cpu", mm::get_mm_bclk2_freq(), mm::get_mm_bclk2_div())?;
+    writeln!(write, "       d0 cpu: {:>9} Hz <- /{} <- cg <- d0 root", mm::get_d0_cpu_freq(), mm::get_d0_cpu_div())?;
+    writeln!(write, "     mm bclk2: {:>9} Hz <- cg <- /{} <- d0 cpu", mm::get_mm_bclk2_freq(), mm::get_mm_bclk2_div())?;
     
     writeln!(write, "============== UART clocks")?;
     writeln!(write, "     mcu uart: {:>9} Hz <- cg <- /{} <- {}", uart::get_mcu_uart_freq(), uart::get_mcu_uart_div(), match uart::get_mcu_uart_sel() {
