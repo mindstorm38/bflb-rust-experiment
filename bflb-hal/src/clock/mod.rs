@@ -340,6 +340,36 @@ pub fn debug_clock_diagram(write: &mut dyn fmt::Write) -> fmt::Result {
     writeln!(write, "       m0 cpu: {:>9} Hz <- /{} <- mcu root", mcu::get_m0_cpu_freq(), mcu::get_m0_cpu_div())?;
     writeln!(write, "    mcu pbclk: {:>9} Hz <- /{} <- m0 cpu", mcu::get_mcu_pbclk_freq(), mcu::get_mcu_pbclk_div())?;
     writeln!(write, "       lp cpu: {:>9} Hz <- /{} <- mcu pbclk", mcu::get_lp_cpu_freq(), mcu::get_lp_cpu_div())?;
+
+    writeln!(write, "============== MM clocks")?;
+    writeln!(write, "  mm pll 160m: {:>9} Hz <- {}", mm::get_mm_pll160_freq(), match mm::get_mm_pll160_sel() {
+        mm::MmPll160Sel::MmWifiPll160 => "cg <- wifi pll 160m",
+        mm::MmPll160Sel::CpuPll160 => "cpu pll 160",
+    })?;
+    writeln!(write, "  mm pll 240m: {:>9} Hz <- {}", mm::get_mm_pll240_freq(), match mm::get_mm_pll240_sel() {
+        mm::MmPll240Sel::MmWifiPll240 => "cg <- wifi pll 240m",
+        mm::MmPll240Sel::MmAudioPllDiv2 => "/2 <- audio pll",
+    })?;
+    writeln!(write, "  mm pll 320m: {:>9} Hz <- {}", mm::get_mm_pll320_freq(), match mm::get_mm_pll320_sel() {
+        mm::MmPll320Sel::MmWifiPll320 => "cg <- wifi pll 320m",
+        mm::MmPll320Sel::MmAudioPllDiv1 => "/1 <- audio pll",
+    })?;
+    writeln!(write, "     mm bclk1: {:>9} Hz <- cg <- {}", mm::get_mm_bclk1_freq(), match mm::get_mm_bclk1_sel() {
+        mm::MmBclk1Sel::MmXclk => "mm xclk",
+        mm::MmBclk1Sel::MmPll160 => "mm pll 160m",
+        mm::MmBclk1Sel::MmPll240 => "mm pll 240m",
+    })?;
+    writeln!(write, "       d0 pll: {:>9} Hz <- {}", mm::get_d0_pll_freq(), match mm::get_d0_pll_sel() {
+        mm::D0PllSel::MmPll240 => "mm pll 240m",
+        mm::D0PllSel::MmPll320 => "mm pll 320m",
+        mm::D0PllSel::CpuPll400 => "cpu pll 400m",
+    })?;
+    writeln!(write, "      d0 root: {:>9} Hz <- {}", mm::get_d0_root_freq(), match mm::get_d0_root_sel() {
+        mm::D0RootSel::MmXclk => "mm xclk",
+        mm::D0RootSel::D0Pll => "d0 pll",
+    })?;
+    writeln!(write, "       d0 cpu: {:>9} Hz <- / {} <- cg <- d0 root", mm::get_d0_cpu_freq(), mm::get_d0_cpu_div())?;
+    writeln!(write, "     mm bclk2: {:>9} Hz <- cg <- / {} <- d0 cpu", mm::get_mm_bclk2_freq(), mm::get_mm_bclk2_div())?;
     
     writeln!(write, "============== UART clocks")?;
     writeln!(write, "     mcu uart: {:>9} Hz <- cg <- /{} <- {}", uart::get_mcu_uart_freq(), uart::get_mcu_uart_div(), match uart::get_mcu_uart_sel() {
