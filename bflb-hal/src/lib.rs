@@ -64,6 +64,7 @@ pub unsafe fn init() {
     init_impl();
     clock::init(); // Need before initializing timer clock.
     time::init();
+    dma::init();
 }
 
 /// Init function specific to BL808 M0 core.

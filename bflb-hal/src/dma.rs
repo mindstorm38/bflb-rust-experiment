@@ -10,9 +10,8 @@ use alloc::boxed::Box;
 
 use critical_section::{Mutex, CriticalSection};
 
-use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
 use crate::cache::{CacheAligned, clean_data_range, clean_invalidate_data_range};
-
+use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
 
 /// This peripheral structure wraps all DMA ports available.
 pub struct Dma {
@@ -90,6 +89,33 @@ impl Dma {
     }
 
 }
+
+
+/// Internal function to initialize the DMA peripheral.
+pub(crate) fn init() {
+
+    #[cfg(any(feature = "bl808-m0", feature = "bl808-lp"))]
+    unsafe {
+        use crate::interrupt;
+        interrupt::DMA0_ALL.set_enabled(true);
+        interrupt::DMA1_ALL.set_enabled(true);
+    }
+
+    #[cfg(feature = "bl808-d0")]
+    unsafe {
+        use crate::interrupt;
+        interrupt::DMA2_INT0.set_enabled(true);
+        interrupt::DMA2_INT1.set_enabled(true);
+        interrupt::DMA2_INT2.set_enabled(true);
+        interrupt::DMA2_INT3.set_enabled(true);
+        interrupt::DMA2_INT4.set_enabled(true);
+        interrupt::DMA2_INT5.set_enabled(true);
+        interrupt::DMA2_INT6.set_enabled(true);
+        interrupt::DMA2_INT7.set_enabled(true);
+    }
+
+}
+
 
 /// Represent an exclusive access to a DMA channel on a particular DMA
 /// port. This can be used to initiate a transfer.
