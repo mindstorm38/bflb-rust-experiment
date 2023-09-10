@@ -14,9 +14,9 @@ compile_error!("no runtime chip selected, use the crate features to select one c
 
 
 #[cfg(rt_chip = "bl808_m0")]
-mod bl808_d0;
-#[cfg(rt_chip = "bl808_d0")]
 mod bl808_m0;
+#[cfg(rt_chip = "bl808_d0")]
+mod bl808_d0;
 
 
 // Re-export HAL.
