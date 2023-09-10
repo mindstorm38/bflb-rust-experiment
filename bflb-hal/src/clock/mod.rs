@@ -33,8 +33,8 @@
 
 #![allow(unsafe_op_in_unsafe_fn)]
 
+use core::fmt;
 use embedded_util::PtrRw;
-
 use crate::arch::bl808::{self, CpuRtc, HBN, AON, GLB};
 
 pub mod analog;
@@ -133,31 +133,21 @@ pub fn get_xtal_freq() -> u32 {
 }
 
 /// Power on crystal clock and wait for it being enabled.
-pub unsafe fn enable_xtal() -> Result<(), ()> {
+/// This basically enable the clock gate of the external clock pin on the chip.
+pub unsafe fn enable_xtal() {
     
     AON.rf_top_aon().modify(|reg| {
         reg.pu_xtal_aon().set(1);
         reg.pu_xtal_buf_aon().set(1);
     });
 
-    let mut timeout = 0;
-
-    loop {
-
-        // self.chip.timer().sleep_arch(Duration::from_micros(10))?;
-
+    for _ in 0..1000 {
         if AON.tsen().get().xtal_rdy().get() != 0 {
-            break;
+            return;
         }
-
-        timeout += 1;
-        if timeout >= 120 {
-            return Err(())
-        }
-
     }
 
-    Ok(())
+    panic!("enable xtal timed out");
 
 }
 
@@ -185,6 +175,19 @@ pub fn get_xclk_freq() -> u32 {
 }
 
 
+pub fn get_dig32k_div() -> u32 {
+    GLB.dig_clk_cfg0().get().dig_32k_div().get() + 1
+}
+
+pub unsafe fn set_dig32k_div(div: u32) {
+    GLB.dig_clk_cfg0().modify(|reg| reg.dig_32k_div().set(div - 1));
+}
+
+pub fn get_dig32k_freq() -> u32 {
+    get_xtal_freq() / get_dig32k_div()
+}
+
+
 /// Get the selector the F32k clock.
 pub fn get_f32k_sel() -> F32kSel {
     match HBN.glb().get().f32k_sel().get() {
@@ -209,10 +212,7 @@ pub fn get_f32k_freq() -> u32 {
     match get_f32k_sel() {
         F32kSel::Rc32k => 32_000,
         F32kSel::Xtal32k => 32_000,
-        F32kSel::Dig32k => {
-            let div = GLB.dig_clk_cfg0().get().dig_32k_div().get() + 1;
-            get_xtal_freq() / div
-        }
+        F32kSel::Dig32k => get_dig32k_freq(),
     }
 }
 
@@ -237,7 +237,6 @@ impl From<u32> for XtalType {
             3 => Self::Mhz38p4,
             4 => Self::Mhz40,
             5 => Self::Mhz26,
-            // 6 => Self::Mhz32Rc, // TODO: Check if relevant (because it's only used to select RC32M)
             _ => Self::None
         }
     }
@@ -255,4 +254,69 @@ pub enum F32kSel {
     Rc32k = 0,
     Xtal32k = 1,
     Dig32k = 2,
+}
+
+
+/// Internal function to initialize the clock routes.
+pub(crate) fn init() {
+
+    unsafe {
+        
+        mm::set_d0_cpu_enable(false);
+
+        set_xtal_type(XtalType::Mhz40);
+        enable_xtal();
+
+        set_xclk_sel(XclkSel::Rc32m);
+
+        // For M0:
+        mcu::set_mcu_root_sel(mcu::McuRootSel::Xclk);
+        mcu::set_m0_cpu_div(1);
+        mcu::set_mcu_pbclk_div(1);
+        mcu::set_mcu_pbclk_div_act_pulse(true);
+        while !mcu::get_mcu_pbclk_prot_done() {}
+        mcu::set_lp_cpu_div(1);
+        mcu::set_lp_cpu_div_act_pulse(true);
+        while !mcu::get_lp_cpu_prot_done() {}
+
+        // For D0:
+        // clocks.set_mm_xclk_sel(Mux2::Sel0); // RC32M
+        // clocks.set_d0_root_sel(Mux2::Sel0); // MM xclock
+        // clocks.set_d0_cpu_div(1);
+        // clocks.set_d0_secondary_div(1);
+        // clocks.set_d0_secondary_div_act_pulse(true);
+        // while !clocks.get_d0_secondary_prot_done() {}
+
+        set_xclk_sel(XclkSel::Xtal);
+        mm::set_mm_xclk_sel(mm::MmXclkSel::Xtal);
+
+        dma::set_dma_enable(true);
+
+        uart::setup_mcu_uart(uart::UartSel::Xclk, 1, true);
+        uart::set_mcu_uart0_enable(true);
+
+        analog::set_adc_dac_enable(true);
+
+    }
+
+}
+
+
+/// Function that can be used to write a clock diagram, showing sources frequency, 
+/// selectors
+pub fn debug_clock_diagram(write: &mut dyn fmt::Write) -> fmt::Result {
+
+    writeln!(write, "     xtal: {:>8} Hz", get_xtal_freq())?;
+    writeln!(write, "  xtal32k: {:>8} Hz", 32000)?;
+    writeln!(write, "    rc32k: {:>8} Hz", 32000)?;
+    writeln!(write, "    rc32m: {:>8} Hz", 32000000)?;
+    writeln!(write, "   dig32k: {:>8} Hz <- cg <- div {} <- xtal", get_dig32k_freq(), get_dig32k_div())?;
+    writeln!(write, "     f32k: {:>8} Hz <- {}", get_f32k_freq(), match get_f32k_sel() {
+        F32kSel::Rc32k => "rc32k",
+        F32kSel::Xtal32k => "xtal32k",
+        F32kSel::Dig32k => "dig32k",
+    })?;
+    
+    Ok(())
+
 }

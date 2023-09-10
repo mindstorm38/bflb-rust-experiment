@@ -61,8 +61,9 @@ use core::sync::atomic::{AtomicBool, Ordering};
 /// once per hart, not calling it or calling it multiple time is undefined behavior.
 pub unsafe fn init() {
     hart::init();
-    time::init();  // FIXME: Other clocks needs to be initialized first.
     init_impl();
+    clock::init(); // Need before initializing timer clock.
+    time::init();
 }
 
 /// Init function specific to BL808 M0 core.
@@ -89,7 +90,7 @@ fn init_impl() {
     // These registers are not properly initialized by default.
     GLB.uart_cfg1().set_with(|reg| reg.0 = 0xFFFFFFFF);
     GLB.uart_cfg2().set_with(|reg| reg.0 = 0x0000FFFF);
-        
+    
 }
 
 

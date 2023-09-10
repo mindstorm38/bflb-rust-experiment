@@ -33,7 +33,7 @@ const RV32_MTIMECMP: *mut u64 = addr::T_HEAD_RV32_MTIMECMP_BASE as _;
 const RV64_MTIMECMP: *mut u64 = addr::T_HEAD_RV64_MTIMECMP0_BASE as _;
 
 
-/// Internal function to initialize the clock.
+/// Internal function to initialize the timer clock.
 pub(crate) fn init() {
     
     let divider = clock::get_mtimer_source_freq() / FREQ;
@@ -42,8 +42,8 @@ pub(crate) fn init() {
     // they should be the only one enabling their own RTC clock.
     unsafe { clock::enable_mtimer_clock(divider); }
 
-    // SAFETY: Same as above: RTC clock is core-local, we reset it before using it.
-    unsafe { set_time(0) }
+    // // SAFETY: Same as above: RTC clock is core-local, we reset it before using it.
+    // unsafe { set_time(0) }
 
 }
 
