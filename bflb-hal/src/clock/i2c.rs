@@ -83,7 +83,7 @@ pub unsafe fn set_mm_i2c1_div(div: u32) {
     MM_GLB.mm_clk_ctrl_peri3().modify(|reg| reg.i2c1_clk_div().set(div - 1));
 }
 
-fn get_mm_i2c_base_freq() -> u32 {
+pub fn get_mm_i2c_base_freq() -> u32 {
     match get_mm_i2c_sel() {
         MmI2cSel::MmBclk1 => get_mm_bclk1_freq(),
         MmI2cSel::MmXclk => get_mm_xclk_freq(),

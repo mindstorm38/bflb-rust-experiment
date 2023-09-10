@@ -27,6 +27,8 @@ pub fn main() {
         &UartConfig::new(115200), 
     );
 
+    hal::clock::debug_clock_diagram(&mut uart).unwrap();
+
     static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
     let dest = Box::new(CacheAligned([0u8; 22]));
@@ -40,14 +42,6 @@ pub fn main() {
 
     let _ = write!(uart, "src: {DMA_MESSAGE}");
     let _ = write!(uart, "dst: {}", core::str::from_utf8(&**dest).unwrap());
-
-    // let (_, mut uart, _) = peripherals.dma.p0.c0
-    //     .into_transfer(DMA_MESSAGE, uart)
-    //     .wait();
-
-    // .wait_callback(|_, mut uart, _| {
-    //     let _ = writeln!(uart, "RTC time: {}", time::get_time());
-    // });
 
     // LOOP
     time::wait_callback(0, move || {
@@ -66,18 +60,5 @@ pub fn main() {
         Some(1_000_000)
 
     });
-
-    // // DMA
-    // peripherals.dma.p0.c0
-    //     .into_transfer(DMA_MESSAGE, uart)
-    //     .wait_callback(move |_, mut uart, _| {
-
-    //         // LOOP
-    //         time::wait_callback(0, move || {
-    //             let _ = writeln!(uart, "RTC time: {}", time::get_time());
-    //             Some(1_000_000)
-    //         });
-
-    //     });
     
 }

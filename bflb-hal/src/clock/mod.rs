@@ -306,17 +306,60 @@ pub(crate) fn init() {
 /// selectors
 pub fn debug_clock_diagram(write: &mut dyn fmt::Write) -> fmt::Result {
 
-    writeln!(write, "     xtal: {:>8} Hz", get_xtal_freq())?;
-    writeln!(write, "  xtal32k: {:>8} Hz", 32000)?;
-    writeln!(write, "    rc32k: {:>8} Hz", 32000)?;
-    writeln!(write, "    rc32m: {:>8} Hz", 32000000)?;
-    writeln!(write, "   dig32k: {:>8} Hz <- cg <- div {} <- xtal", get_dig32k_freq(), get_dig32k_div())?;
-    writeln!(write, "     f32k: {:>8} Hz <- {}", get_f32k_freq(), match get_f32k_sel() {
+    writeln!(write, "============== Root clocks")?;
+    writeln!(write, "         xtal: {:>9} Hz", get_xtal_freq())?;
+    writeln!(write, "      xtal32k: {:>9} Hz", 32000)?;
+    writeln!(write, "        rc32k: {:>9} Hz", 32000)?;
+    writeln!(write, "        rc32m: {:>9} Hz", 32000000)?;
+    writeln!(write, "       dig32k: {:>9} Hz <- cg <- /{} <- xtal", get_dig32k_freq(), get_dig32k_div())?;
+    writeln!(write, "         f32k: {:>9} Hz <- {}", get_f32k_freq(), match get_f32k_sel() {
         F32kSel::Rc32k => "rc32k",
         F32kSel::Xtal32k => "xtal32k",
         F32kSel::Dig32k => "dig32k",
     })?;
+    writeln!(write, "         xclk: {:>9} Hz <- {}", get_xclk_freq(), match get_xclk_sel() {
+        XclkSel::Xtal => "xtal",
+        XclkSel::Rc32m => "rc32m",
+    })?;
+    writeln!(write, "      mm xclk: {:>9} Hz <- {}", mm::get_mm_xclk_freq(), match mm::get_mm_xclk_sel() {
+        mm::MmXclkSel::Xtal => "xtal",
+        mm::MmXclkSel::Rc32m => "rc32m",
+    })?;
     
+    writeln!(write, "============== MCU clocks")?;
+    writeln!(write, "      mcu pll: {:>9} Hz <- {}", mcu::get_mcu_pll_freq(), match mcu::get_mcu_pll_sel() {
+        mcu::McuPllSel::CpuPll => "cpu pll",
+        mcu::McuPllSel::AudioPll => "audio pll",
+        mcu::McuPllSel::WifiPll240 => "wifi pll 240m",
+        mcu::McuPllSel::WifiPll320 => "wifi pll 320m",
+    })?;
+    writeln!(write, "     mcu root: {:>9} Hz <- {}", mcu::get_mcu_root_freq(), match mcu::get_mcu_root_sel() {
+        mcu::McuRootSel::Xclk => "xclk",
+        mcu::McuRootSel::McuPll => "cg <- mcu pll",
+    })?;
+    writeln!(write, "       m0 cpu: {:>9} Hz <- /{} <- mcu root", mcu::get_m0_cpu_freq(), mcu::get_m0_cpu_div())?;
+    writeln!(write, "    mcu pbclk: {:>9} Hz <- /{} <- m0 cpu", mcu::get_mcu_pbclk_freq(), mcu::get_mcu_pbclk_div())?;
+    writeln!(write, "       lp cpu: {:>9} Hz <- /{} <- mcu pbclk", mcu::get_lp_cpu_freq(), mcu::get_lp_cpu_div())?;
+    
+    writeln!(write, "============== UART clocks")?;
+    writeln!(write, "     mcu uart: {:>9} Hz <- cg <- /{} <- {}", uart::get_mcu_uart_freq(), uart::get_mcu_uart_div(), match uart::get_mcu_uart_sel() {
+        uart::UartSel::McuPbclk => "mcu pbclk",
+        uart::UartSel::Pll160 => "pll 160",
+        uart::UartSel::Xclk => "xclk",
+    })?;
+    
+    writeln!(write, "============== I2C clocks")?;
+    writeln!(write, "      mcu i2c: {:>9} Hz <- cg <- /{} <- {}", i2c::get_mcu_i2c_freq(), i2c::get_mcu_i2c_div(), match i2c::get_mcu_i2c_sel() {
+        i2c::McuI2cSel::McuPbclk => "mcu pbclk",
+        i2c::McuI2cSel::Xclk => "xclk",
+    })?;
+    writeln!(write, "  mm i2c base: {:>9} Hz <- {}", i2c::get_mm_i2c_base_freq(), match i2c::get_mm_i2c_sel() {
+        i2c::MmI2cSel::MmBclk1 => "mm bclk1",
+        i2c::MmI2cSel::MmXclk => "mm xclk",
+    })?;
+    writeln!(write, "      mm i2c1: {:>9} Hz <- /{} <- mm i2c base", i2c::get_mm_i2c0_freq(), i2c::get_mm_i2c0_div())?;
+    writeln!(write, "      mm i2c2: {:>9} Hz <- /{} <- mm i2c base", i2c::get_mm_i2c1_freq(), i2c::get_mm_i2c1_div())?;
+
     Ok(())
 
 }
