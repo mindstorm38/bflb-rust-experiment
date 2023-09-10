@@ -41,7 +41,7 @@ SECTIONS {
 
     /*
      * The read only initialized data is kept in flash.
-     / For now, we can't place it in RAM: it crashes.
+     * For now, we can't place it in RAM: it crashes.
      */
     .rodata : {
 

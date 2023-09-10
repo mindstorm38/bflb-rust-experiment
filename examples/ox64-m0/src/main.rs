@@ -15,6 +15,10 @@ use hal::Peripherals;
 use hal::time;
 
 
+#[link_section = ".data"] // Loaded in RAM
+static DMA_MESSAGE: [u8; 22] = *b"Hello world from DMA!\n";
+
+
 #[no_mangle]
 pub fn main() {
 
@@ -27,21 +31,20 @@ pub fn main() {
         &UartConfig::new(115200), 
     );
 
-    hal::clock::debug_clock_diagram(&mut uart).unwrap();
+    // hal::clock::debug_clock_diagram(&mut uart).unwrap();
+
+    let dma = peripherals.dma.p0.c0;
 
     static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
     let dest = Box::new(CacheAligned([0u8; 22]));
 
-    #[link_section = ".data"] // Loaded in RAM
-    static DMA_MESSAGE: &'static str = "Hello world from DMA!\n";
-
-    let (_, dest, _dma) = peripherals.dma.p0.c0
-        .into_transfer(DMA_MESSAGE, dest)
+    let (_, dest, _dma) = dma
+        .into_transfer(&DMA_MESSAGE, dest)
         .wait();
 
-    let _ = write!(uart, "src: {DMA_MESSAGE}");
-    let _ = write!(uart, "dst: {}", core::str::from_utf8(&**dest).unwrap());
+    let _ = writeln!(uart, "src: {:?}", core::str::from_utf8(&DMA_MESSAGE).unwrap());
+    let _ = writeln!(uart, "dst: {:?}", core::str::from_utf8(&**dest).unwrap());
 
     // LOOP
     time::wait_callback(0, move || {
