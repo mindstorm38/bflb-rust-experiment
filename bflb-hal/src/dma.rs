@@ -11,7 +11,7 @@ use alloc::boxed::Box;
 use critical_section::{Mutex, CriticalSection};
 
 use crate::arch::bl808::{DMA0, DMA1, DMA2, dma};
-use crate::cache::{CacheAligned, invalidate_data_range, clean_data_range};
+use crate::cache::{CacheAligned, clean_data_range, clean_invalidate_data_range};
 
 
 /// This peripheral structure wraps all DMA ports available.
@@ -605,8 +605,15 @@ impl<T: Copy> DmaDstEndpoint for Box<CacheAligned<T>> {
         let size = core::mem::size_of::<T>();
         assert_ne!(size, 0, "zero sized types cannot be transferred through DMA");
 
-        // SAFETY: Read comment above (for &'static str).
-        unsafe { clean_data_range(addr, size) }
+        // We invalidate the whole cache aligned wrapper. It should be aligned, but we
+        // check this using assert, to be sure. We also use "clean and invalidate" because
+        // this box will be overwritten by the DMA transfer, so when we get control again
+        // we want to update the cache from the memory.
+        unsafe {
+            let self_addr = &**self as *const CacheAligned<T> as usize;
+            let self_size = core::mem::size_of::<CacheAligned<T>>();
+            clean_invalidate_data_range(self_addr, self_size);
+        }
 
         DmaEndpointConfig {
             peripheral: None,
@@ -616,13 +623,6 @@ impl<T: Copy> DmaDstEndpoint for Box<CacheAligned<T>> {
             addr,
         }
 
-    }
-
-    fn close(&mut self) {
-        // SAFETY: Our type is cache aligned, so we don't risk invalidating other object.
-        let addr = &self.0 as *const T as usize;
-        let size = core::mem::size_of::<T>();
-        unsafe { invalidate_data_range(addr, size); }
     }
 
 }
