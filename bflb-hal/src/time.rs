@@ -1,16 +1,14 @@
 //! Main real time clock management, can be used for both synchronized and callback-based
 //! waiting. This module is 
 
-use core::sync::atomic::{AtomicBool, Ordering};
-
 use alloc::collections::VecDeque;
 use alloc::boxed::Box;
 
 use critical_section::CriticalSection;
 use smallvec::SmallVec;
 
-use crate::hart::{HartLocalCell, HartLocal};
 use crate::interrupt::MACHINE_TIMER;
+use crate::hart::HartLocalCell;
 use crate::arch::bl808::addr;
 use crate::clock;
 
@@ -42,8 +40,9 @@ pub(crate) fn init() {
     // they should be the only one enabling their own RTC clock.
     unsafe { clock::enable_mtimer_clock(divider); }
 
-    // // SAFETY: Same as above: RTC clock is core-local, we reset it before using it.
-    // unsafe { set_time(0) }
+    // SAFETY: We are in the init phase and each CPU has its own timer interrupt. We need
+    // this interrupt to be able to use the wait_callback function.
+    unsafe { MACHINE_TIMER.set_enabled(true); }
 
 }
 
@@ -158,8 +157,6 @@ where
 
 /// The ordered queue of callbacks. It's hart local because timer interrupts are.
 static CALLBACK_QUEUE: HartLocalCell<VecDeque<Box<dyn TimerCallback>>> = HartLocalCell::new_cell(VecDeque::new());
-/// For each hart, tell if the timer interrupt has been enable on the current hart.
-static INTERRUPT_ENABLED: HartLocal<AtomicBool> = HartLocal::new(AtomicBool::new(false));
 
 /// Internal function to insert the given callback into the queue. **This function 
 /// requires to be executed in an interrupt-free context to avoid deadlocking.**
@@ -203,19 +200,11 @@ where
     F: Send + 'static
 {
     critical_section::with(|cs| {
-
-        // TODO: Check if relevant.
-        if INTERRUPT_ENABLED.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
-            // SAFETY: We guard this call from 
-            unsafe { MACHINE_TIMER.set_enabled(true); }
-        }
-
         let mut queue = CALLBACK_QUEUE.borrow_ref_mut(cs);
         insert_callback(&mut queue, Box::new(TimerCallbackImpl {
             target_time: get_time() + duration,
             callback,
         }))
-
     });
 }
 
