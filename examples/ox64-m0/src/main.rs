@@ -18,6 +18,8 @@ use hal::time;
 #[link_section = ".data"] // Loaded in RAM
 static DMA_MESSAGE: [u8; 22] = *b"Hello world from DMA!\n";
 
+static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
 
 #[no_mangle]
 pub fn main() {
@@ -35,33 +37,33 @@ pub fn main() {
 
     let dma = peripherals.dma.p0.c0;
 
-    static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+    let dst = Box::new(CacheAligned([0u8; 22]));
 
-    let dest = Box::new(CacheAligned([0u8; 22]));
+    dma.into_transfer(&DMA_MESSAGE, dst)
+        .wait_callback(move |_, dst, _| {
 
-    let (_, dest, _dma) = dma
-        .into_transfer(&DMA_MESSAGE, dest)
-        .wait();
+            INTERRUPTED.store(true, Ordering::Relaxed);
 
-    let _ = writeln!(uart, "src: {:?}", core::str::from_utf8(&DMA_MESSAGE).unwrap());
-    let _ = writeln!(uart, "dst: {:?}", core::str::from_utf8(&**dest).unwrap());
+            let _ = writeln!(uart, "dst: {:?}", core::str::from_utf8(&**dst).unwrap());
 
-    // LOOP
-    time::wait_callback(0, move || {
+            // LOOP
+            time::wait_callback(0, move || {
 
-        let mut time_ms = time::get_time() / 1_000;
+                let mut time_ms = time::get_time() / 1_000;
 
-        let minutes = time_ms / 60_000;
-        time_ms -= minutes * 60_000;
+                let minutes = time_ms / 60_000;
+                time_ms -= minutes * 60_000;
 
-        let seconds = time_ms / 1_000;
-        time_ms -= seconds * 1_000;
+                let seconds = time_ms / 1_000;
+                time_ms -= seconds * 1_000;
 
-        let _ = writeln!(uart, "[{:02}:{:02}.{:03}] DMA interrupted: {}", minutes, seconds, time_ms, INTERRUPTED.load(Ordering::Relaxed));
+                let _ = writeln!(uart, "[{:02}:{:02}.{:03}] DMA interrupted: {}", minutes, seconds, time_ms, INTERRUPTED.load(Ordering::Relaxed));
 
-        // Callback again in 1 second.
-        Some(1_000_000)
+                // Callback again in 1 second.
+                Some(1_000_000)
 
-    });
+            });
+
+        });
     
 }
