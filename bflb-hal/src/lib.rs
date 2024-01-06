@@ -132,7 +132,7 @@ impl Peripherals {
         TAKEN
             .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_ok()
-            .then_some(unsafe { Self::new() })
+            .then(|| unsafe { Self::new() })
     }
 
     /// Try taking ownership of the peripheral, this function panics if not
